@@ -8,7 +8,7 @@ import AudioToolbox // 【新功能】 為了複製震動回饋
 // MARK: - App Group 常數
 let appGroupID = "group.com.shihchieh.clippyisle"
 
-// MARK: - 【錯誤修正】 將 saveFileData 移出 MainActor
+// MARK: - 【V3 修復】 將 saveFileData 移出 MainActor
 // 將資料寫入共享容器 (用於自動抓取 / 拖曳)
 // 這現在是一個獨立函式，可以在任何執行緒上被呼叫
 func saveFileDataToAppGroup(data: Data, type: String) -> String? {
@@ -33,6 +33,684 @@ func saveFileDataToAppGroup(data: Data, type: String) -> String? {
     }
 }
 
+
+// MARK: - 【V3 修復】 補回 AppearanceMode
+enum AppearanceMode: String, CaseIterable, Identifiable {
+    case system, light, dark
+    var id: Self { self }
+
+    // 【本地化】 改用 Key
+    var name: LocalizedStringKey {
+        switch self {
+        case .system:
+            return "System"
+        case .light:
+            return "Light Mode"
+        case .dark:
+            return "Dark Mode"
+        }
+    }
+}
+
+// MARK: - 【V3 修復】 補回 ClipboardItem
+// 【V3 修復】 新增 displayName 用於 URL 更名
+struct ClipboardItem: Identifiable, Codable, Hashable {
+    let id: UUID
+    var content: String
+    var type: String
+    var filename: String? // 用於儲存大檔案的名稱
+    var isPinned: Bool = false
+    var timestamp: Date // 【新功能】 紀錄複製時間
+    var displayName: String? // 【V3 修復】 用於 URL 更名
+
+    var fileData: Data? = nil
+
+    enum CodingKeys: String, CodingKey {
+        case id, content, type, filename, isPinned, timestamp
+        case displayName // 【V3 修復】 新增
+    }
+}
+
+// MARK: - 【V3 修復】 補回 ClippyIsleAttributes
+// !!! 這必須與 ClippyIsleWidget.swift 中的定義完全一致 !!!
+struct ClippyIsleAttributes: ActivityAttributes {
+    
+    // 【V3 修復】 將 ColorUtility 嵌套於此，確保 App 和 Widget 100% 同步
+    struct ColorUtility {
+        static func color(forName name: String) -> Color {
+            switch name.lowercased() {
+            case "green": return .green
+            case "orange": return .orange
+            case "red": return .red
+            case "pink": return .pink
+            case "purple": return .purple
+            case "black": return .black
+            case "white": return .white
+            default: return .blue
+            }
+        }
+    }
+    
+    public struct ContentState: Codable, Hashable {
+        var itemCount: Int
+        var themeColorName: String
+        var itemsLabel: String // 【V3 修復】 新增本地化標籤
+    }
+    // 【本地化】 appName 改為在啟動時傳入
+}
+
+// MARK: - 【V3 修復】 補回 ClipboardManager
+@MainActor
+class ClipboardManager: ObservableObject {
+
+    @Published var items: [ClipboardItem] = [] {
+        // 【功能修改】 移除 didSet，改由 sortAndSave 手動觸發
+         didSet {
+             // 【功能修改】 釘選/刪除/新增時，自動觸發排序、儲存和更新
+             if !isSorting { // 防止在排序時重複觸發
+                 sortAndSave()
+             }
+         }
+    }
+
+    @Published var activity: Activity<ClippyIsleAttributes>? = nil
+    // 【功能修改】 移除 didSet，改用 .onChange 處理非同步
+    @Published var isLiveActivityOn: Bool
+
+    // 【功能修改】 用於防止排序時觸發 didSet
+    var isSorting = false
+
+    let userDefaults: UserDefaults
+    let fileManager = FileManager.default // FileManager 現在是類別屬性
+
+    // 【穩定性修復】 移除 lastImported... 檢查，放寬重複貼上的限制
+    // private var lastImportedContent: String?
+    // private var lastImportedImageData: Data?
+
+    // 【錯誤修正】 將 init() 宣告為 public
+    public init() {
+        guard let defaults = UserDefaults(suiteName: appGroupID) else {
+            fatalError("❌ [偵錯] 致命錯誤: 無法初始化 App Group UserDefaults。請檢查 App Group ID 是否正確並在 'Signing & Capabilities' 中設定。")
+        }
+        self.userDefaults = defaults
+        print("✅ [偵錯] UserDefaults 初始化成功。")
+
+        // 從標準 UserDefaults 讀取開關狀態
+        self.isLiveActivityOn = UserDefaults.standard.bool(forKey: "isLiveActivityOn")
+
+        loadItems()
+        cleanupItems() // 【新功能】 啟動時執行清理
+        // 【穩定性修復】 syncActivityState 留到 onAppear 且權限確認後再做
+    }
+
+    // 取得 App Group 共享資料夾的 URL
+    func getSharedContainerURL() -> URL? {
+        return fileManager.containerURL(forSecurityApplicationGroupIdentifier: appGroupID)
+    }
+
+    // 【錯誤修正】 saveFileData 已被移出此類別 (避免 MainActor 警告)
+
+    // 從共享資料夾載入檔案資料
+    func loadFileData(filename: String) -> Data? {
+        guard let containerURL = getSharedContainerURL() else {
+            print("❌ [偵錯] 載入檔案失敗：無法取得共享容器 URL。")
+            return nil
+        }
+        let fileURL = containerURL.appendingPathComponent(filename)
+        do {
+            // 【V3 修復】 修正 "No exact matches" 錯誤，明確加入 options
+            let data = try Data(contentsOf: fileURL, options: [])
+            print("✅ [偵錯] 成功從 \(filename) 載入檔案資料。")
+            return data
+        } catch {
+            print("❌ [偵錯] 載入檔案 \(filename) 失败: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    // 【功能修改】 排序、儲存、更新 (三合一)
+    func sortAndSave() {
+        print("ℹ️ [偵錯] 執行 sortAndSave...")
+        isSorting = true // 標記開始排序
+
+        // 1. 排序 (釘選優先，然後時間)
+        items.sort { $0.timestamp > $1.timestamp }
+        items.sort { $0.isPinned && !$1.isPinned }
+
+        // 2. 儲存 (Metadata)
+        guard let defaults = userDefaults as UserDefaults? else {
+            isSorting = false
+            return
+        }
+
+        do {
+            let encodedData = try JSONEncoder().encode(items)
+            defaults.set(encodedData, forKey: "clippedItems")
+            print("✅ [偵錯] saveItems: 成功儲存 \(items.count) 個項目。")
+        } catch {
+            print("❌ [偵錯] saveItems: JSON 編碼失敗: \(error.localizedDescription)")
+        }
+
+        // 3. 更新動態島
+        updateActivity()
+
+        isSorting = false // 標記結束排序
+    }
+
+
+    // 載入項目列表 (Metadata)
+    func loadItems() {
+        guard let data = userDefaults.data(forKey: "clippedItems") else {
+            print("ℹ️ [偵錯] loadItems: 找不到 'clippedItems' 鍵，可能是首次啟動。")
+            return
+        }
+
+        do {
+            let decodedItems = try JSONDecoder().decode([ClipboardItem].self, from: data)
+            // 【功能修改】 載入時才排序
+            var sortedItems = decodedItems
+            sortedItems.sort { $0.timestamp > $1.timestamp }
+            sortedItems.sort { $0.isPinned && !$1.isPinned }
+
+            self.items = sortedItems
+            print("✅ [偵錯] loadItems: 成功載入 \(decodedItems.count) 個項目。")
+        } catch {
+            print("❌ [偵錯] loadItems: JSON 解碼失敗: \(error)。這可能是因為資料結構已變更。")
+            // 【修復】 如果解碼失敗 (資料結構不相容)，自動清除舊的損壞資料
+            userDefaults.removeObject(forKey: "clippedItems")
+            self.items = []
+            print("ℹ️ [偵錯] loadItems: 已清除損壞的舊資料。")
+        }
+    }
+
+    // 【新功能】 清理舊的或多餘的項目
+    func cleanupItems() {
+        print("ℹ️ [偵錯] 執行清理...")
+
+        // 從標準 UserDefaults 讀取設定
+        let clearAfterDays = UserDefaults.standard.integer(forKey: "clearAfterDays")
+        let maxItemCount = UserDefaults.standard.integer(forKey: "maxItemCount")
+
+        // 預設值 (如果使用者從未開啟過設定)
+        let effectiveDays = (clearAfterDays == 0 && maxItemCount == 0) ? 30 : clearAfterDays
+        let effectiveCount = (clearAfterDays == 0 && maxItemCount == 0) ? 100 : maxItemCount
+
+        var itemsDidChange = false
+        var tempItems = self.items
+
+        // 1. 根據天數清理 (0 = 永不)
+        if effectiveDays > 0 {
+            let calendar = Calendar.current
+            let dateLimit = calendar.date(byAdding: .day, value: -effectiveDays, to: Date())!
+
+            let originalCount = tempItems.count
+            // 只移除未釘選且早於限制日期的項目
+            tempItems.removeAll { !$0.isPinned && $0.timestamp < dateLimit }
+
+            if tempItems.count != originalCount {
+                print("ℹ️ [偵錯] 清理：移除了 \(originalCount - tempItems.count) 個超過 \(effectiveDays) 天的項目。")
+                itemsDidChange = true
+            }
+        }
+
+        // 2. 根據最大數量清理 (0 = 無限制)
+        if effectiveCount > 0 && tempItems.count > effectiveCount {
+            print("ℹ️ [偵錯] 清理：項目 \(tempItems.count) 個，超過最大數量 \(effectiveCount)。")
+            // 再次確保排序正確 (釘選的在最前面)
+            tempItems.sort { $0.timestamp > $1.timestamp }
+            tempItems.sort { $0.isPinned && !$1.isPinned }
+
+            // 移除多餘的 (會自動從後面開始刪，保留最新的)
+            while tempItems.count > effectiveCount {
+                // 尋找最後一個未釘選的項目並移除
+                if let lastNonPinnedIndex = tempItems.lastIndex(where: { !$0.isPinned }) {
+                    tempItems.remove(at: lastNonPinnedIndex)
+                } else {
+                    // 如果全都是釘選的，且還是超過數量，那就沒辦法了，停止移除
+                    break
+                }
+            }
+            itemsDidChange = true
+        }
+
+        if itemsDidChange {
+            self.items = tempItems
+            // sortAndSave() 會被 @Published 自動觸發
+        }
+    }
+
+    // 【新功能】 釘選/取消釘選
+    func togglePin(for item: ClipboardItem) {
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        items[index].isPinned.toggle()
+        // sortAndSave() 會被 @Published 自動觸發 (並重新排序)
+    }
+
+    // 【新功能】 更名
+    // 【V3 修復】 區分 URL 和一般文字
+    func renameItem(item: ClipboardItem, newName: String) {
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        
+        // 【V3 修復】 如果是 URL，只更新 displayName，否則更新 content
+        if items[index].type == UTType.url.identifier {
+            items[index].displayName = newName
+        } else {
+            // 對於文字、圖片或其他檔案，更新 content
+            items[index].content = newName
+        }
+        // sortAndSave() 會被 @Published 自動觸發
+    }
+
+
+    // MARK: - 【新功能】 自動抓取剪貼簿
+    @MainActor
+    func checkClipboard() {
+        print("ℹ️ [偵錯] 正在檢查系統剪貼簿...")
+        let pasteboard = UIPasteboard.general
+
+        // 1. 檢查圖片
+        if let image = pasteboard.image {
+            // 【修復】 明確使用 PNG 資料
+            guard let imageData = image.pngData() else { return }
+
+            // 【穩定性修Fix】 移除 lastImportedImageData 檢查
+            /*
+            if let lastData = lastImportedImageData, lastData == imageData {
+                print("ℹ️ [偵錯] 剪貼簿中的圖片已匯入。")
+                return
+            }
+             */
+
+            // 檢查圖片是否已存在於列表 (以檔案大小為依據)
+            let existingImageFilenames = items.filter { $0.type == UTType.png.identifier }.compactMap { $0.filename }
+            for filename in existingImageFilenames {
+                if let data = loadFileData(filename: filename), data == imageData {
+                    print("ℹ️ [偵錯] 剪貼簿中的圖片已存在於列表中。")
+                    // 【錯誤修正】 註解掉不存在的變數
+                    // lastImportedImageData = imageData
+                    // lastImportedContent = nil
+                    return
+                }
+            }
+
+            print("ℹ️ [偵錯] 偵測到新圖片，正在儲存...")
+            // 【錯誤修正】 呼叫獨立的函式
+            let filename = saveFileDataToAppGroup(data: imageData, type: UTType.png.identifier)
+
+            // 【錯誤修正】 補回 newItem 的建立
+            let newItem = ClipboardItem(
+                id: UUID(),
+                content: String(localized: "Image"), // 【本地化】
+                type: UTType.png.identifier, // 【修復】
+                filename: filename,
+                isPinned: false,
+                timestamp: Date()
+                // displayName 預設為 nil
+            )
+
+            items.insert(newItem, at: 0) // 這會觸發 didSet
+            // 【穩定性修Fix】 移除 lastImportedImageData 檢查
+            // 【錯誤修正】 註解掉不存在的變數
+            // lastImportedImageData = imageData
+            // lastImportedContent = nil
+            print("✅ [偵錯] 成功從剪貼簿加入圖片。")
+
+        // 2. 檢查 URL
+        } else if let url = pasteboard.url {
+            let urlString = url.absoluteString
+
+            // 【穩定性修Fix】 移除 lastImportedContent 檢查
+            /*
+            if let lastContent = lastImportedContent, lastContent == urlString {
+                 print("ℹ️ [偵錯] 剪貼簿中的 URL 已匯入。")
+                return
+            }
+             */
+
+            if items.contains(where: { $0.content == urlString && $0.type == UTType.url.identifier }) {
+                print("ℹ️ [偵錯] 剪貼簿中的 URL 已存在於列表中。")
+                // 【錯誤修正】 註解掉不存在的變數
+                // lastImportedContent = urlString
+                return
+            }
+
+            print("ℹ️ [偵錯] 偵測到新 URL: \(urlString)")
+            // 【錯誤修正】 補回 newItem 的建立
+            let newItem = ClipboardItem(
+                id: UUID(),
+                content: urlString,
+                type: UTType.url.identifier,
+                filename: nil,
+                isPinned: false,
+                timestamp: Date()
+                // displayName 預設為 nil
+            )
+
+            items.insert(newItem, at: 0) // 這會觸發 didSet
+            // 【穩定性修Fix】 移除 lastImportedContent 檢查
+            // 【錯誤修正】 註解掉不存在的變數
+            // lastImportedContent = urlString
+            // lastImportedImageData = nil
+
+        // 3. 檢查純文字
+        } else if let text = pasteboard.string, !text.isEmpty {
+
+            // 【穩定性修Fix】 移除 lastImportedContent 檢查
+            /*
+            if let lastContent = lastImportedContent, lastContent == text {
+                 print("ℹ️ [偵錯] 剪貼簿中的文字已匯入。")
+                return
+            }
+             */
+
+             if items.contains(where: { $0.content == text && $0.type == UTType.text.identifier }) {
+                print("ℹ️ [偵錯] 剪貼簿中的文字已存在於列表中。")
+                // 【錯誤修正】 註解掉不存在的變數
+                // lastImportedContent = text
+                return
+            }
+
+            print("ℹ️ [偵錯] 偵測到新文字: \(text.prefix(30))...")
+
+            // 檢查文字是否其實是 URL
+            let itemType = (URL(string: text) != nil && (text.starts(with: "http") || text.starts(with: "https"))) ? UTType.url.identifier : UTType.text.identifier
+
+            // 【錯誤修正】 補回 newItem 的建立
+            let newItem = ClipboardItem(
+                id: UUID(),
+                content: text,
+                type: itemType,
+                filename: nil,
+                isPinned: false,
+                timestamp: Date()
+                // displayName 預設為 nil
+            )
+
+            items.insert(newItem, at: 0) // 這會觸發 didSet
+            // 【穩定性修Fix】 移除 lastImportedContent 檢查
+            // 【錯誤修正】 註解掉不存在的變數
+            // lastImportedContent = text
+            // lastImportedImageData = nil
+        } else {
+             print("ℹ️ [偵錯] 剪貼簿為空或包含不支援的類型。")
+        }
+    }
+
+    // MARK: - 【新功能】 處理從其他 App 拖曳進來的項目
+    // 【錯誤修正】 移除 @MainActor，因為它會在背景執行緒被呼叫
+    func handleDroppedProviders(_ providers: [NSItemProvider]) {
+        print("ℹ️ [偵錯] 偵測到拖曳項目: \(providers.count) 個")
+
+        for provider in providers {
+            // 優先處理檔案 URL (例如從「檔案」App 拖曳)
+            // 【拖曳修正】 修正 .fileURL 的處理邏輯
+            if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
+                // 【錯誤修正】 移除多餘的 `_ =`
+                provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { (item, error) in
+                    guard let url = item as? URL, error == nil else {
+                        print("❌ [偵錯] 拖曳 fileURL 失敗: \(error?.localizedDescription ?? "未知錯誤")")
+                        return
+                    }
+
+                    // 確保我們可以存取這個 URL (必須)
+                    if url.startAccessingSecurityScopedResource() {
+                        defer { url.stopAccessingSecurityScopedResource() }
+
+                        do {
+                            let data = try Data(contentsOf: url)
+                            let filename = url.lastPathComponent
+                            let type = UTType(filenameExtension: url.pathExtension)?.identifier ?? UTType.data.identifier
+
+                            print("✅ [偵錯] 拖曳 fileURL 成功: \(filename) (\(data.count) bytes)")
+
+                            // 儲存檔案
+                            // 【錯誤修正】 呼叫獨立的函式
+                            let savedFilename = saveFileDataToAppGroup(data: data, type: type)
+
+                            DispatchQueue.main.async {
+                                let newItem = ClipboardItem(
+                                    id: UUID(),
+                                    content: filename, // 顯示檔名
+                                    type: type,
+                                    filename: savedFilename,
+                                    isPinned: false,
+                                    timestamp: Date()
+                                )
+                                self.items.insert(newItem, at: 0)
+                            }
+                        } catch {
+                            print("❌ [偵錯] 拖曳 fileURL 讀取資料失敗: \(error.localizedDescription)")
+                        }
+                    } else {
+                        print("❌ [偵錯] 拖曳 fileURL 無法存取安全範圍資源。")
+                    }
+                }
+            }
+            // 處理圖片 (例如從「照片」App 或 Safari 拖曳)
+            else if provider.canLoadObject(ofClass: UIImage.self) {
+                // 【錯誤修正】 加上 `_ =` 壓制警告
+                _ = provider.loadObject(ofClass: UIImage.self) { (object, error) in
+                    guard let image = object as? UIImage, let data = image.pngData() else { return }
+
+                    print("✅ [偵錯] 拖曳 UIImage 成功 (\(data.count) bytes)")
+                    // 【錯誤修正】 呼叫獨立的函式
+                    let filename = saveFileDataToAppGroup(data: data, type: UTType.png.identifier)
+
+                    DispatchQueue.main.async {
+                        let newItem = ClipboardItem(
+                            id: UUID(),
+                            content: String(localized: "Image"), // 【本地化】
+                            type: UTType.png.identifier,
+                            filename: filename,
+                            isPinned: false,
+                            timestamp: Date()
+                        )
+                        self.items.insert(newItem, at: 0)
+                    }
+                }
+            }
+            // 處理 URL (例如從 Safari 網址列拖曳)
+            else if provider.canLoadObject(ofClass: URL.self) {
+                // 【錯誤修正】 加上 `_ =` 壓制警告
+                _ = provider.loadObject(ofClass: URL.self) { (object, error) in
+                    guard let url = object else { return }
+
+                    print("✅ [偵錯] 拖曳 URL 成功: \(url.absoluteString)")
+                    DispatchQueue.main.async {
+                        let newItem = ClipboardItem(
+                            id: UUID(),
+                            content: url.absoluteString,
+                            type: UTType.url.identifier,
+                            filename: nil,
+                            isPinned: false,
+                            timestamp: Date()
+                        )
+                        self.items.insert(newItem, at: 0)
+                    }
+                }
+            }
+            // 處理純文字
+            else if provider.canLoadObject(ofClass: String.self) {
+                // 【錯誤修正】 加上 `_ =` 壓制警告
+                _ = provider.loadObject(ofClass: String.self) { (object, error) in
+                    guard let text = object else { return }
+
+                    print("✅ [偵錯] 拖曳 String 成功: \(text.prefix(30))...")
+                    DispatchQueue.main.async {
+                        let itemType = (URL(string: text) != nil && (text.starts(with: "http") || text.starts(with: "https"))) ? UTType.url.identifier : UTType.text.identifier
+
+                        let newItem = ClipboardItem(
+                            id: UUID(),
+                            content: text,
+                            type: itemType,
+                            filename: nil,
+                            isPinned: false,
+                            timestamp: Date()
+                        )
+                        self.items.insert(newItem, at: 0)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - 動態島控制
+
+    // 【新功能】 同步 App 偏好與系統動態島的實際狀態
+    func syncActivityState() {
+        let activities = Activity<ClippyIsleAttributes>.activities
+
+        // 檢查系統的實際狀態
+        if activities.isEmpty {
+            // 系統中 *沒有* 正在執行的動態島
+            if self.isLiveActivityOn {
+                // 但我們的開關顯示 "On"
+                print("ℹ️ [偵錯] sync: 偵測到不同步 (系統中無島，但開關為ON)。將開關設為OFF。")
+                self.isLiveActivityOn = false // 【邏輯修復】 以系統狀態為準
+                UserDefaults.standard.set(false, forKey: "isLiveActivityOn")
+            }
+        } else {
+            // 系統中 *有* 正在執行的動態島
+            self.activity = activities.first // 抓取實例
+            if !self.isLiveActivityOn {
+                // 但我們的開關顯示 "Off"
+                print("ℹ️ [偵錯] sync: 偵測到不同步 (系統中有島，但開關為OFF)。將開關設為ON。")
+                self.isLiveActivityOn = true // 【邏輯修復】 以系統狀態為準
+                UserDefaults.standard.set(true, forKey: "isLiveActivityOn")
+            } else {
+                // 狀態一致，更新 activity 實例
+                print("ℹ️ [偵錯] sync: 狀態一致，已同步 activity 實例。")
+                updateActivity() // 順便更新一下內容
+            }
+        }
+    }
+
+    // 【功能修改】 改為 async
+    func startActivity() async {
+        // 檢查權限 (在 ContentView 中完成)
+
+        // 檢查是否已有
+        guard Activity<ClippyIsleAttributes>.activities.isEmpty else {
+            print("ℹ️ [偵錯] Live Activity 已在執行中。")
+            self.activity = Activity<ClippyIsleAttributes>.activities.first
+            self.isLiveActivityOn = true
+            return
+        }
+
+        let themeColorName = UserDefaults.standard.string(forKey: "themeColorName") ?? "blue"
+        // 【V3 修復】 新增本地化標籤
+        let itemsLabel = String(localized: "items")
+
+        let attributes = ClippyIsleAttributes() // appName 已移至 Widget
+        let contentState = ClippyIsleAttributes.ContentState(
+            itemCount: items.count,
+            themeColorName: themeColorName,
+            itemsLabel: itemsLabel // 【V3 修復】 傳遞
+        )
+        let content = ActivityContent(state: contentState, staleDate: nil)
+
+        do {
+            let activity = try Activity.request(
+                attributes: attributes,
+                content: content,
+                pushType: nil
+            )
+            self.activity = activity
+            print("✅ [偵錯] Live Activity 啟動成功！")
+            // 【功能修改】 確保狀態同步
+            DispatchQueue.main.async {
+                self.isLiveActivityOn = true
+                UserDefaults.standard.set(true, forKey: "isLiveActivityOn")
+            }
+        } catch {
+            print("❌ [偵錯] Live Activity 啟動失敗: \(error.localizedDescription)")
+            DispatchQueue.main.async {
+                self.isLiveActivityOn = false // 啟動失敗，把開關關回去
+                UserDefaults.standard.set(false, forKey: "isLiveActivityOn")
+            }
+        }
+    }
+
+    // 【V4 修復】 updateActivity 移到這裡，它屬於 ClipboardManager
+    // 【V3 白色修復】 允許傳入新顏色，以避免時間差 (race condition)
+    func updateActivity(newColorName: String? = nil) {
+        // 【功能修改】 只有在 activity 實例存在時才更新
+        guard let activity = self.activity, activity.activityState == .active else {
+            print("ℹ️ [偵錯] updateActivity: 找不到活動的 activity，不更新。")
+            return
+        }
+
+        // 【V3 白色修復】 優先使用傳入的 newColorName，如果沒有才讀取 UserDefaults
+        let themeColorName = newColorName ?? (UserDefaults.standard.string(forKey: "themeColorName") ?? "blue")
+        // 【V3 修復】 新增本地化標籤
+        let itemsLabel = String(localized: "items")
+        
+        let contentState = ClippyIsleAttributes.ContentState(
+            itemCount: items.count,
+            themeColorName: themeColorName,
+            itemsLabel: itemsLabel // 【V3 修復】 傳遞
+        )
+        let content = ActivityContent(state: contentState, staleDate: nil)
+
+        Task {
+            await activity.update(content)
+            print("ℹ️ [偵錯] Live Activity 已更新，項目總數: \(items.count)，顏色: \(themeColorName)")
+        }
+    }
+
+    // 【V4 修復】 endActivity 移到這裡，它屬於 ClipboardManager
+    // 【功能修改】 改為 async
+    func endActivity() async {
+        // 【修復】 改為結束所有可能的動態島，並更新狀態
+        let tasks = Activity<ClippyIsleAttributes>.activities.map { activity in
+            Task {
+                await activity.end(nil, dismissalPolicy: .immediate)
+            }
+        }
+
+        // 等待所有結束任務完成
+        for task in tasks {
+            await task.value
+        }
+
+        DispatchQueue.main.async {
+            self.activity = nil
+            self.isLiveActivityOn = false // 確保開關狀態也更新
+            UserDefaults.standard.set(false, forKey: "isLiveActivityOn")
+            print("ℹ️ [偵錯] Live Activity 已結束。")
+        }
+    }
+}
+
+
+// MARK: - 【V3 修復】 補回 WebView
+struct WebView: UIViewRepresentable {
+    let urlString: String
+
+    func makeUIView(context: Context) -> WKWebView {
+        let webView = WKWebView()
+
+        // 【修復】 允許 YouTube 影片播放
+        webView.configuration.allowsInlineMediaPlayback = true
+        webView.configuration.allowsPictureInPictureMediaPlayback = true
+
+        // 【VFix】 解決地圖（或其他網站）顯示「不支援的瀏覽S器」問題
+        webView.customUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+
+        if let url = URL(string: urlString) {
+            webView.load(URLRequest(url: url))
+        }
+        return webView
+    }
+
+    func updateUIView(_ uiView: WKWebView, context: Context) {
+        // 【修復】 避免不必要的重載
+        if let url = URL(string: urlString), uiView.url != url {
+             uiView.load(URLRequest(url: url))
+        }
+    }
+}
+
 // MARK: - 【V3 修復】 可選取的文字視圖 (UIViewRepresentable)
 // 為了提供完整的原生選單 (翻譯、朗讀) 和網址偵測，
 // 我們使用 UIKit 的 UITextView。
@@ -51,6 +729,8 @@ struct SelectableTextView: UIViewRepresentable {
         textView.textColor = .label // 配合淺色/深色模式
         return textView
     }
+
+
 
     func updateUIView(_ uiView: UITextView, context: Context) {
         uiView.text = text
@@ -76,10 +756,12 @@ struct PreviewView: View {
                     .textSelection(.enabled)
             } else if item.type == UTType.url.identifier || item.type == UTType.text.identifier && (item.content.starts(with: "http://") || item.content.starts(with: "https")) {
                 // 【新功能】 網頁預覽
+                // 【V3 修復】 預覽時永遠使用 content (原始 URL)
                 WebView(urlString: item.content)
             } else {
                 // 【V3 修復】 使用 UITextView (UIViewRepresentable)
                 // 這將提供完整的原生選單 (拷貝、查詢、翻譯、朗讀) 並自動啟用網址
+                // 【V3 修復】 預覽時永遠使用 content (原始文字)
                 SelectableTextView(text: item.content)
                     .padding()
             }
@@ -111,7 +793,8 @@ struct SettingsView: View {
 
     // 【即時顏色修復】 在 View 內部即時計算顏色
     var themeColor: Color {
-        ColorUtility.color(forName: themeColorName)
+        // 【V3 修復】 改用嵌套的 ColorUtility
+        ClippyIsleAttributes.ColorUtility.color(forName: themeColorName)
     }
 
     // 【新功能】 計算設定頁面本身的外觀
@@ -161,7 +844,8 @@ struct SettingsView: View {
                         ForEach(colorOptions, id: \.self) { colorName in
                             HStack {
                                 Image(systemName: "circle.fill")
-                                    .foregroundColor(ColorUtility.color(forName: colorName))
+                                    // 【V3 修復】 改用嵌套的 ColorUtility
+                                    .foregroundColor(ClippyIsleAttributes.ColorUtility.color(forName: colorName))
                                     .overlay(
                                         // 【新功能】 加上邊框，讓黑色/白色在不同模式下都可見
                                         Circle().stroke(Color.primary.opacity(0.2), lineWidth: 1)
@@ -181,7 +865,7 @@ struct SettingsView: View {
                     Button(action: {
                         dismiss()
                     }) {
-                        Text("Done") // 【本地化】
+                        Text("Done") // 【本地M化】
                     }
                 }
             }
@@ -198,22 +882,12 @@ struct SettingsView: View {
 }
 
 
-// MARK: - 【新功能】 顏色管理
+// MARK: - 【V3 修復】 移除獨立的 ColorUtility
+/*
 struct ColorUtility {
-    static func color(forName name: String) -> Color {
-        switch name.lowercased() {
-        case "green": return .green
-        case "orange": return .orange
-        case "red": return .red
-        case "pink": return .pink
-        case "purple": return .purple
-        // 【新功能】 新增黑色和白色
-        case "black": return .black
-        case "white": return .white
-        default: return .blue
-        }
-    }
+    ...
 }
+*/
 
 // MARK: - 【新功能】 時間格式化
 extension Date {
@@ -269,7 +943,8 @@ struct ClipboardItemRow: View {
             .buttonStyle(.plain) // 移除按鈕的預設樣式
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(item.content)
+                // 【V3 修復】 優先顯示 displayName，如果沒有才顯示 content
+                Text(item.displayName ?? item.content)
                     .lineLimit(1)
                     .font(.body)
                     .foregroundColor(.primary)
@@ -329,6 +1004,7 @@ struct ContentView: View {
     // 【新功能】 更名用
     @State private var itemToRename: ClipboardItem?
     @State private var newName: String = ""
+    @State private var isShowingRenameAlert = false // 【V3 修復】 新增一個 Bool 狀態來觸發 Alert
 
     // 【新功能】 讀取主題顏色
     @AppStorage("themeColorName") private var themeColorName: String = "blue"
@@ -336,7 +1012,8 @@ struct ContentView: View {
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode.RawValue = AppearanceMode.system.rawValue
 
     var themeColor: Color {
-        ColorUtility.color(forName: themeColorName)
+        // 【V3 修復】 改用嵌套的 ColorUtility
+        ClippyIsleAttributes.ColorUtility.color(forName: themeColorName)
     }
 
     // 【新功能】 計算 App 應用的外觀
@@ -381,7 +1058,8 @@ struct ContentView: View {
             clipboardManager.cleanupItems()
             // 也要更新動態島 (如果顏色變了)
             if clipboardManager.isLiveActivityOn {
-                clipboardManager.updateActivity()
+                // 【V4 修復】 傳遞當前的顏色 (修復白色主題BUG)
+                clipboardManager.updateActivity(newColorName: themeColorName)
             }
         } content: {
             // 【顏色即時更新修復】 將 $themeColorName 綁定傳入 SettingsView
@@ -392,10 +1070,8 @@ struct ContentView: View {
                 .tint(themeColor)
         }
         // 【新功能】 更名提示框
-        .alert(Text("Rename Item"), isPresented: Binding(
-            get: { itemToRename != nil },
-            set: { if !$0 { itemToRename = nil } }
-        )) {
+        // 【V3 修復】 改用 $isShowingRenameAlert 觸發，並移除複雜的 Binding
+        .alert(Text("Rename Item"), isPresented: $isShowingRenameAlert) {
             // 【錯誤修正】 TextField 的提示文字不能包在 Text() 裡，直接給字串即可
             TextField("Enter new name", text: $newName) // 【本地化】
             Button(action: {
@@ -462,9 +1138,10 @@ struct ContentView: View {
             }
         }
         // 【新功能】 當主題顏色改變時，立刻更新動態島
-        .onChange(of: themeColorName) {
+        .onChange(of: themeColorName) { newColor in // 【V4 修復】 捕捉新顏色
             if clipboardManager.isLiveActivityOn {
-                clipboardManager.updateActivity()
+                // 【V4 修復】 將新顏色直接傳遞過去 (修復白色主題BUG)
+                clipboardManager.updateActivity(newColorName: newColor)
             }
         }
     }
@@ -501,7 +1178,9 @@ struct ContentView: View {
                     },
                     renameAction: {
                         itemToRename = item
-                        newName = item.content
+                        // 【V3 修復】 更名時優先使用 displayName
+                        newName = item.displayName ?? item.content
+                        isShowingRenameAlert = true // 【V3 修復】 觸發 Alert
                     },
                     shareAction: {
                         shareItem(item: item)
@@ -550,6 +1229,7 @@ struct ContentView: View {
 
     // 【新功能】 點擊圖示複製
     func copyItemToClipboard(item: ClipboardItem) {
+        // 【V3 修復】 複製時永遠使用 content (原始 URL)
         if item.type == UTType.png.identifier, let filename = item.filename, let data = clipboardManager.loadFileData(filename: filename), let uiImage = UIImage(data: data) {
             // 複製圖片
             UIPasteboard.general.image = uiImage
@@ -600,6 +1280,7 @@ struct ContentView: View {
     func shareItem(item: ClipboardItem) {
         var itemsToShare: [Any] = []
 
+        // 【V3 修復】 分享時永遠使用 content (原始 URL / 檔案)
         if let filename = item.filename, let data = clipboardManager.loadFileData(filename: filename) {
             // 如果是檔案，分享檔案資料
             itemsToShare.append(data)
@@ -639,6 +1320,8 @@ struct ContentView: View {
 
     // 建立拖曳項目
     func createDragItem(for item: ClipboardItem) -> NSItemProvider {
+        
+        // 【V3 修復】 拖曳時永遠使用 content (原始 URL / 檔案)
 
         // 【修復 4】 提供多種格式 (UIImage 和 Data) 以最大化相容性
         if item.type == UTType.png.identifier,
@@ -703,12 +1386,4 @@ struct ContentView: View {
 #Preview {
     ContentView()
 }
-
-
-
-
-
-
-
-
 
