@@ -6,14 +6,117 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		EAF2527E2EAD209600BE2A3A /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EAF2527D2EAD209600BE2A3A /* WidgetKit.framework */; };
+		EAF252802EAD209600BE2A3A /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EAF2527F2EAD209600BE2A3A /* SwiftUI.framework */; };
+		EAF2528D2EAD209700BE2A3A /* ClippyIsleWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = EAF2527B2EAD209600BE2A3A /* ClippyIsleWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		EAF252A22EAD217600BE2A3A /* ClippyIsleShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = EAF252982EAD217500BE2A3A /* ClippyIsleShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		EAF2528B2EAD209700BE2A3A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = EAF252602EAD1F8600BE2A3A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EAF2527A2EAD209600BE2A3A;
+			remoteInfo = ClippyIsleWidgetExtension;
+		};
+		EAF252A02EAD217600BE2A3A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = EAF252602EAD1F8600BE2A3A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EAF252972EAD217500BE2A3A;
+			remoteInfo = ClippyIsleShare;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		EAF252922EAD209700BE2A3A /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				EAF252A22EAD217600BE2A3A /* ClippyIsleShare.appex in Embed Foundation Extensions */,
+				EAF2528D2EAD209700BE2A3A /* ClippyIsleWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		EAF252682EAD1F8600BE2A3A /* ClippyIsle.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ClippyIsle.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EAF2527B2EAD209600BE2A3A /* ClippyIsleWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ClippyIsleWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		EAF2527D2EAD209600BE2A3A /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		EAF2527F2EAD209600BE2A3A /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		EAF252932EAD20B300BE2A3A /* ClippyIsleWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ClippyIsleWidgetExtension.entitlements; sourceTree = "<group>"; };
+		EAF252982EAD217500BE2A3A /* ClippyIsleShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ClippyIsleShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		EAF2528E2EAD209700BE2A3A /* Exceptions for "ClippyIsleWidget" folder in "ClippyIsleWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = EAF2527A2EAD209600BE2A3A /* ClippyIsleWidgetExtension */;
+		};
+		EAF252A32EAD217600BE2A3A /* Exceptions for "ClippyIsleShare" folder in "ClippyIsleShare" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = EAF252972EAD217500BE2A3A /* ClippyIsleShare */;
+		};
+		EAF252A92EAD297100BE2A3A /* Exceptions for "ClippyIsle" folder in "ClippyIsle" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = EAF252672EAD1F8600BE2A3A /* ClippyIsle */;
+		};
+		EAF252AE2EAD726B00BE2A3A /* Exceptions for "ClippyIsleShare" folder in "ClippyIsle" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Localizable.xcstrings,
+			);
+			target = EAF252672EAD1F8600BE2A3A /* ClippyIsle */;
+		};
+		EAF252AF2EAD726B00BE2A3A /* Exceptions for "ClippyIsleShare" folder in "ClippyIsleWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Localizable.xcstrings,
+			);
+			target = EAF2527A2EAD209600BE2A3A /* ClippyIsleWidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		EAF2526A2EAD1F8600BE2A3A /* ClippyIsle */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				EAF252A92EAD297100BE2A3A /* Exceptions for "ClippyIsle" folder in "ClippyIsle" target */,
+			);
 			path = ClippyIsle;
+			sourceTree = "<group>";
+		};
+		EAF252812EAD209600BE2A3A /* ClippyIsleWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				EAF2528E2EAD209700BE2A3A /* Exceptions for "ClippyIsleWidget" folder in "ClippyIsleWidgetExtension" target */,
+			);
+			path = ClippyIsleWidget;
+			sourceTree = "<group>";
+		};
+		EAF252992EAD217500BE2A3A /* ClippyIsleShare */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				EAF252AE2EAD726B00BE2A3A /* Exceptions for "ClippyIsleShare" folder in "ClippyIsle" target */,
+				EAF252AF2EAD726B00BE2A3A /* Exceptions for "ClippyIsleShare" folder in "ClippyIsleWidgetExtension" target */,
+				EAF252A32EAD217600BE2A3A /* Exceptions for "ClippyIsleShare" folder in "ClippyIsleShare" target */,
+			);
+			path = ClippyIsleShare;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -26,13 +129,33 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		EAF252782EAD209600BE2A3A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EAF252802EAD209600BE2A3A /* SwiftUI.framework in Frameworks */,
+				EAF2527E2EAD209600BE2A3A /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EAF252952EAD217500BE2A3A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		EAF2525F2EAD1F8600BE2A3A = {
 			isa = PBXGroup;
 			children = (
+				EAF252932EAD20B300BE2A3A /* ClippyIsleWidgetExtension.entitlements */,
 				EAF2526A2EAD1F8600BE2A3A /* ClippyIsle */,
+				EAF252812EAD209600BE2A3A /* ClippyIsleWidget */,
+				EAF252992EAD217500BE2A3A /* ClippyIsleShare */,
+				EAF2527C2EAD209600BE2A3A /* Frameworks */,
 				EAF252692EAD1F8600BE2A3A /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,8 +164,19 @@
 			isa = PBXGroup;
 			children = (
 				EAF252682EAD1F8600BE2A3A /* ClippyIsle.app */,
+				EAF2527B2EAD209600BE2A3A /* ClippyIsleWidgetExtension.appex */,
+				EAF252982EAD217500BE2A3A /* ClippyIsleShare.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		EAF2527C2EAD209600BE2A3A /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				EAF2527D2EAD209600BE2A3A /* WidgetKit.framework */,
+				EAF2527F2EAD209600BE2A3A /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -55,10 +189,13 @@
 				EAF252642EAD1F8600BE2A3A /* Sources */,
 				EAF252652EAD1F8600BE2A3A /* Frameworks */,
 				EAF252662EAD1F8600BE2A3A /* Resources */,
+				EAF252922EAD209700BE2A3A /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				EAF2528C2EAD209700BE2A3A /* PBXTargetDependency */,
+				EAF252A12EAD217600BE2A3A /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				EAF2526A2EAD1F8600BE2A3A /* ClippyIsle */,
@@ -69,6 +206,50 @@
 			productName = ClippyIsle;
 			productReference = EAF252682EAD1F8600BE2A3A /* ClippyIsle.app */;
 			productType = "com.apple.product-type.application";
+		};
+		EAF2527A2EAD209600BE2A3A /* ClippyIsleWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EAF2528F2EAD209700BE2A3A /* Build configuration list for PBXNativeTarget "ClippyIsleWidgetExtension" */;
+			buildPhases = (
+				EAF252772EAD209600BE2A3A /* Sources */,
+				EAF252782EAD209600BE2A3A /* Frameworks */,
+				EAF252792EAD209600BE2A3A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				EAF252812EAD209600BE2A3A /* ClippyIsleWidget */,
+			);
+			name = ClippyIsleWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = ClippyIsleWidgetExtension;
+			productReference = EAF2527B2EAD209600BE2A3A /* ClippyIsleWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		EAF252972EAD217500BE2A3A /* ClippyIsleShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EAF252A42EAD217600BE2A3A /* Build configuration list for PBXNativeTarget "ClippyIsleShare" */;
+			buildPhases = (
+				EAF252942EAD217500BE2A3A /* Sources */,
+				EAF252952EAD217500BE2A3A /* Frameworks */,
+				EAF252962EAD217500BE2A3A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				EAF252992EAD217500BE2A3A /* ClippyIsleShare */,
+			);
+			name = ClippyIsleShare;
+			packageProductDependencies = (
+			);
+			productName = ClippyIsleShare;
+			productReference = EAF252982EAD217500BE2A3A /* ClippyIsleShare.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -83,6 +264,12 @@
 					EAF252672EAD1F8600BE2A3A = {
 						CreatedOnToolsVersion = 26.0.1;
 					};
+					EAF2527A2EAD209600BE2A3A = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
+					EAF252972EAD217500BE2A3A = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
 				};
 			};
 			buildConfigurationList = EAF252632EAD1F8600BE2A3A /* Build configuration list for PBXProject "ClippyIsle" */;
@@ -91,6 +278,7 @@
 			knownRegions = (
 				en,
 				Base,
+				"zh-Hant",
 			);
 			mainGroup = EAF2525F2EAD1F8600BE2A3A;
 			minimizedProjectReferenceProxies = 1;
@@ -100,12 +288,28 @@
 			projectRoot = "";
 			targets = (
 				EAF252672EAD1F8600BE2A3A /* ClippyIsle */,
+				EAF2527A2EAD209600BE2A3A /* ClippyIsleWidgetExtension */,
+				EAF252972EAD217500BE2A3A /* ClippyIsleShare */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		EAF252662EAD1F8600BE2A3A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EAF252792EAD209600BE2A3A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EAF252962EAD217500BE2A3A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,7 +326,34 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		EAF252772EAD209600BE2A3A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EAF252942EAD217500BE2A3A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		EAF2528C2EAD209700BE2A3A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EAF2527A2EAD209600BE2A3A /* ClippyIsleWidgetExtension */;
+			targetProxy = EAF2528B2EAD209700BE2A3A /* PBXContainerItemProxy */;
+		};
+		EAF252A12EAD217600BE2A3A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EAF252972EAD217500BE2A3A /* ClippyIsleShare */;
+			targetProxy = EAF252A02EAD217600BE2A3A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		EAF252712EAD1F8700BE2A3A /* Debug */ = {
@@ -185,6 +416,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
@@ -242,6 +474,7 @@
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -251,16 +484,20 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ClippyIsle/ClippyIsle.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = J894ABBU74;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ClippyIsle/Info.plist;
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -283,16 +520,20 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ClippyIsle/ClippyIsle.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = J894ABBU74;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ClippyIsle/Info.plist;
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -303,6 +544,132 @@
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		EAF252902EAD209700BE2A3A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = ClippyIsleWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = J894ABBU74;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ClippyIsleWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ClippyIsleWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = J894ABBU74.ClippyIsle.ClippyIsleWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		EAF252912EAD209700BE2A3A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = ClippyIsleWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = J894ABBU74;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ClippyIsleWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ClippyIsleWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = J894ABBU74.ClippyIsle.ClippyIsleWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		EAF252A52EAD217600BE2A3A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ClippyIsleShare/ClippyIsleShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = J894ABBU74;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ClippyIsleShare/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ClippyIsleShare;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = J894ABBU74.ClippyIsle.ClippyIsleShare;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		EAF252A62EAD217600BE2A3A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ClippyIsleShare/ClippyIsleShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = J894ABBU74;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ClippyIsleShare/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ClippyIsleShare;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = J894ABBU74.ClippyIsle.ClippyIsleShare;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
@@ -327,6 +694,24 @@
 			buildConfigurations = (
 				EAF252742EAD1F8700BE2A3A /* Debug */,
 				EAF252752EAD1F8700BE2A3A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EAF2528F2EAD209700BE2A3A /* Build configuration list for PBXNativeTarget "ClippyIsleWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EAF252902EAD209700BE2A3A /* Debug */,
+				EAF252912EAD209700BE2A3A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EAF252A42EAD217600BE2A3A /* Build configuration list for PBXNativeTarget "ClippyIsleShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EAF252A52EAD217600BE2A3A /* Debug */,
+				EAF252A62EAD217600BE2A3A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
