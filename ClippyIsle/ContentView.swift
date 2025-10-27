@@ -291,14 +291,35 @@ class ClipboardManager: ObservableObject {
     func renameItem(item: ClipboardItem, newName: String) {
         guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
         
-        // 【V3 修復】 如果是 URL，只更新 displayName，否則更新 content
-        if items[index].type == UTType.url.identifier {
-            items[index].displayName = newName
-        } else {
-            // 對於文字、圖片或其他檔案，更新 content
-            items[index].content = newName
-        }
+        // 【V5 文字更名修復】
+        // 統一邏輯：更名 *永遠* 只是修改 displayName，*絕對* 不動 content
+        // 如果新名稱為空，則清除 displayName (恢復顯示 content)
+        items[index].displayName = newName.isEmpty ? nil : newName
+        
         // sortAndSave() 會被 @Published 自動觸發
+    }
+    
+    // 【V5 標題修復】 新增輔助函式，自動截斷長內容
+    private func createDisplayName(from content: String, isURL: Bool = false, maxLength: Int = 30) -> String? { //【修復】 將 80 改為 30
+        // 如果是 URL 且長度 > maxLength，試著只取 host
+        if isURL, content.count > maxLength, let url = URL(string: content), let host = url.host {
+            // 如果 host 還是太長, 就截斷 host
+            if host.count > maxLength {
+                return String(host.prefix(maxLength)) + "..."
+            }
+            // 否則使用 host (例如 www.google.com)
+            return host
+        }
+        
+        // 如果是文字或短 URL
+        if content.count > maxLength {
+            // 移除換行符號，然後截斷
+            let trimmedContent = content.replacingOccurrences(of: "\n", with: " ")
+            return String(trimmedContent.prefix(maxLength)) + "..."
+        }
+        
+        // 如果內容不長，不需要 displayName，直接顯示 content 即可
+        return nil
     }
 
 
@@ -313,100 +334,59 @@ class ClipboardManager: ObservableObject {
             // 【修復】 明確使用 PNG 資料
             guard let imageData = image.pngData() else { return }
 
-            // 【穩定性修Fix】 移除 lastImportedImageData 檢查
-            /*
-            if let lastData = lastImportedImageData, lastData == imageData {
-                print("ℹ️ [偵錯] 剪貼簿中的圖片已匯入。")
-                return
-            }
-             */
-
             // 檢查圖片是否已存在於列表 (以檔案大小為依據)
             let existingImageFilenames = items.filter { $0.type == UTType.png.identifier }.compactMap { $0.filename }
             for filename in existingImageFilenames {
                 if let data = loadFileData(filename: filename), data == imageData {
                     print("ℹ️ [偵錯] 剪貼簿中的圖片已存在於列表中。")
-                    // 【錯誤修正】 註解掉不存在的變數
-                    // lastImportedImageData = imageData
-                    // lastImportedContent = nil
                     return
                 }
             }
 
             print("ℹ️ [偵錯] 偵測到新圖片，正在儲存...")
-            // 【錯誤修正】 呼叫獨立的函式
             let filename = saveFileDataToAppGroup(data: imageData, type: UTType.png.identifier)
 
-            // 【錯誤修正】 補回 newItem 的建立
             let newItem = ClipboardItem(
                 id: UUID(),
                 content: String(localized: "Image"), // 【本地化】
                 type: UTType.png.identifier, // 【修復】
                 filename: filename,
                 isPinned: false,
-                timestamp: Date()
-                // displayName 預設為 nil
+                timestamp: Date(),
+                displayName: nil // 圖片不需要預設 displayName
             )
 
-            items.insert(newItem, at: 0) // 這會觸發 didSet
-            // 【穩定性修Fix】 移除 lastImportedImageData 檢查
-            // 【錯誤修正】 註解掉不存在的變數
-            // lastImportedImageData = imageData
-            // lastImportedContent = nil
+            items.insert(newItem, at: 0)
             print("✅ [偵錯] 成功從剪貼簿加入圖片。")
 
         // 2. 檢查 URL
         } else if let url = pasteboard.url {
             let urlString = url.absoluteString
 
-            // 【穩定性修Fix】 移除 lastImportedContent 檢查
-            /*
-            if let lastContent = lastImportedContent, lastContent == urlString {
-                 print("ℹ️ [偵錯] 剪貼簿中的 URL 已匯入。")
-                return
-            }
-             */
-
             if items.contains(where: { $0.content == urlString && $0.type == UTType.url.identifier }) {
                 print("ℹ️ [偵錯] 剪貼簿中的 URL 已存在於列表中。")
-                // 【錯誤修正】 註解掉不存在的變數
-                // lastImportedContent = urlString
                 return
             }
 
             print("ℹ️ [偵錯] 偵測到新 URL: \(urlString)")
-            // 【錯誤修正】 補回 newItem 的建立
             let newItem = ClipboardItem(
                 id: UUID(),
                 content: urlString,
                 type: UTType.url.identifier,
                 filename: nil,
                 isPinned: false,
-                timestamp: Date()
-                // displayName 預設為 nil
+                timestamp: Date(),
+                // 【V5 標題修復】 自動建立 displayName
+                displayName: createDisplayName(from: urlString, isURL: true)
             )
 
-            items.insert(newItem, at: 0) // 這會觸發 didSet
-            // 【穩定性修Fix】 移除 lastImportedContent 檢查
-            // 【錯誤修正】 註解掉不存在的變數
-            // lastImportedContent = urlString
-            // lastImportedImageData = nil
+            items.insert(newItem, at: 0)
 
         // 3. 檢查純文字
         } else if let text = pasteboard.string, !text.isEmpty {
 
-            // 【穩定性修Fix】 移除 lastImportedContent 檢查
-            /*
-            if let lastContent = lastImportedContent, lastContent == text {
-                 print("ℹ️ [偵錯] 剪貼簿中的文字已匯入。")
-                return
-            }
-             */
-
              if items.contains(where: { $0.content == text && $0.type == UTType.text.identifier }) {
                 print("ℹ️ [偵錯] 剪貼簿中的文字已存在於列表中。")
-                // 【錯誤修正】 註解掉不存在的變數
-                // lastImportedContent = text
                 return
             }
 
@@ -415,22 +395,18 @@ class ClipboardManager: ObservableObject {
             // 檢查文字是否其實是 URL
             let itemType = (URL(string: text) != nil && (text.starts(with: "http") || text.starts(with: "https"))) ? UTType.url.identifier : UTType.text.identifier
 
-            // 【錯誤修正】 補回 newItem 的建立
             let newItem = ClipboardItem(
                 id: UUID(),
                 content: text,
                 type: itemType,
                 filename: nil,
                 isPinned: false,
-                timestamp: Date()
-                // displayName 預設為 nil
+                timestamp: Date(),
+                // 【V5 標題修復】 自動建立 displayName
+                displayName: createDisplayName(from: text, isURL: itemType == UTType.url.identifier)
             )
 
-            items.insert(newItem, at: 0) // 這會觸發 didSet
-            // 【穩定性修Fix】 移除 lastImportedContent 檢查
-            // 【錯誤修正】 註解掉不存在的變數
-            // lastImportedContent = text
-            // lastImportedImageData = nil
+            items.insert(newItem, at: 0)
         } else {
              print("ℹ️ [偵錯] 剪貼簿為空或包含不支援的類型。")
         }
@@ -443,16 +419,13 @@ class ClipboardManager: ObservableObject {
 
         for provider in providers {
             // 優先處理檔案 URL (例如從「檔案」App 拖曳)
-            // 【拖曳修正】 修正 .fileURL 的處理邏輯
             if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
-                // 【錯誤修正】 移除多餘的 `_ =`
                 provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { (item, error) in
                     guard let url = item as? URL, error == nil else {
                         print("❌ [偵錯] 拖曳 fileURL 失敗: \(error?.localizedDescription ?? "未知錯誤")")
                         return
                     }
 
-                    // 確保我們可以存取這個 URL (必須)
                     if url.startAccessingSecurityScopedResource() {
                         defer { url.stopAccessingSecurityScopedResource() }
 
@@ -463,8 +436,6 @@ class ClipboardManager: ObservableObject {
 
                             print("✅ [偵錯] 拖曳 fileURL 成功: \(filename) (\(data.count) bytes)")
 
-                            // 儲存檔案
-                            // 【錯誤修正】 呼叫獨立的函式
                             let savedFilename = saveFileDataToAppGroup(data: data, type: type)
 
                             DispatchQueue.main.async {
@@ -474,7 +445,8 @@ class ClipboardManager: ObservableObject {
                                     type: type,
                                     filename: savedFilename,
                                     isPinned: false,
-                                    timestamp: Date()
+                                    timestamp: Date(),
+                                    displayName: nil // 檔案名稱不需要 displayName
                                 )
                                 self.items.insert(newItem, at: 0)
                             }
@@ -488,12 +460,10 @@ class ClipboardManager: ObservableObject {
             }
             // 處理圖片 (例如從「照片」App 或 Safari 拖曳)
             else if provider.canLoadObject(ofClass: UIImage.self) {
-                // 【錯誤修正】 加上 `_ =` 壓制警告
                 _ = provider.loadObject(ofClass: UIImage.self) { (object, error) in
                     guard let image = object as? UIImage, let data = image.pngData() else { return }
 
                     print("✅ [偵錯] 拖曳 UIImage 成功 (\(data.count) bytes)")
-                    // 【錯誤修正】 呼叫獨立的函式
                     let filename = saveFileDataToAppGroup(data: data, type: UTType.png.identifier)
 
                     DispatchQueue.main.async {
@@ -503,7 +473,8 @@ class ClipboardManager: ObservableObject {
                             type: UTType.png.identifier,
                             filename: filename,
                             isPinned: false,
-                            timestamp: Date()
+                            timestamp: Date(),
+                            displayName: nil // 圖片不需要 displayName
                         )
                         self.items.insert(newItem, at: 0)
                     }
@@ -511,19 +482,21 @@ class ClipboardManager: ObservableObject {
             }
             // 處理 URL (例如從 Safari 網址列拖曳)
             else if provider.canLoadObject(ofClass: URL.self) {
-                // 【錯誤修正】 加上 `_ =` 壓制警告
                 _ = provider.loadObject(ofClass: URL.self) { (object, error) in
                     guard let url = object else { return }
-
-                    print("✅ [偵錯] 拖曳 URL 成功: \(url.absoluteString)")
+                    let urlString = url.absoluteString
+                    
+                    print("✅ [偵錯] 拖曳 URL 成功: \(urlString)")
                     DispatchQueue.main.async {
                         let newItem = ClipboardItem(
                             id: UUID(),
-                            content: url.absoluteString,
+                            content: urlString,
                             type: UTType.url.identifier,
                             filename: nil,
                             isPinned: false,
-                            timestamp: Date()
+                            timestamp: Date(),
+                            // 【V5 標題修復】 自動建立 displayName
+                            displayName: self.createDisplayName(from: urlString, isURL: true)
                         )
                         self.items.insert(newItem, at: 0)
                     }
@@ -531,7 +504,6 @@ class ClipboardManager: ObservableObject {
             }
             // 處理純文字
             else if provider.canLoadObject(ofClass: String.self) {
-                // 【錯誤修正】 加上 `_ =` 壓制警告
                 _ = provider.loadObject(ofClass: String.self) { (object, error) in
                     guard let text = object else { return }
 
@@ -545,7 +517,9 @@ class ClipboardManager: ObservableObject {
                             type: itemType,
                             filename: nil,
                             isPinned: false,
-                            timestamp: Date()
+                            timestamp: Date(),
+                            // 【V5 標題修復】 自動建立 displayName
+                            displayName: self.createDisplayName(from: text, isURL: itemType == UTType.url.identifier)
                         )
                         self.items.insert(newItem, at: 0)
                     }
@@ -828,7 +802,8 @@ struct SettingsView: View {
                 } header: {
                      Text("Storage Policy") // 【本地化】
                 } footer: {
-                    Text("App will automatically clean up old or redundant 'unpinned' items on each launch. If days and count are set to default, 30 days / 100 items will be applied.") // 【本地化】
+                    // 【V6 本地化修復】 將英文說明改為繁體中文
+                    Text("App 會在每次啟動時自動清理舊的或多餘的「未釘選」項目。如果天數和數量設為預設值，將套用 30 天 / 100 個項目的規則。") // 【本地化】
                 }
 
                 Section {
@@ -977,6 +952,7 @@ struct ClipboardItemRow: View {
             Button(role: .destructive, action: deleteAction) {
                 Label("Delete", systemImage: "trash") // 【本地化】
             }
+            .tint(.red) // 【V5 紅色修復】 強制刪除按鈕為紅色，不受佈景主題影響
 
             // 【新功能】 更名按鈕
             Button(action: renameAction) {
@@ -1123,8 +1099,15 @@ struct ContentView: View {
             print("ℹ️ [偵錯] App 返回前景，重新載入與同步...")
             checkActivityStatus() // 【穩定性修復】 1. 重新檢查權限
             clipboardManager.loadItems() // 2. 載入
-            clipboardManager.checkClipboard() // 3. 檢查 (這會觸發 sortAndSave)
-            clipboardManager.cleanupItems() // 4. 清理
+            // 【V7 耗電修復】 移除 checkClipboard()。此為最耗電的操作，
+            // 移除後可大幅降低 App 返回前景時的 "背景" 電力消耗。
+            // clipboardManager.checkClipboard() // 3. 檢查 (這會觸發 sortAndSave)
+            
+            // 【V7.1 耗電修Fix】 移除 cleanupItems()。
+            // cleanupItems() 會在 init() 和 關閉設定時 執行，
+            // 不需要每次返回前景都執行，這也會觸發 sort/save/update，造成耗電。
+            // clipboardManager.cleanupItems() // 4. 清理
+            
             // 5. syncActivityState 會在 checkActivityStatus() 確認權限後才執行
         }
         // 【功能修改】 使用 .onChange 處理非同步的開關
@@ -1386,4 +1369,10 @@ struct ContentView: View {
 #Preview {
     ContentView()
 }
+
+
+
+
+
+
 
