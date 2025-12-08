@@ -20,9 +20,10 @@ struct ClippyIsleWidgetEntryView : View {
 
     var body: some View {
         VStack(spacing: 8) {
-            Image(systemName: "paperclip")
-                .font(.largeTitle)
-                .foregroundColor(themeColor)
+            Image("AppLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 60, height: 60)
             Text("\(entry.itemCount) items")
                 .font(.headline)
                 .foregroundColor(.secondary)

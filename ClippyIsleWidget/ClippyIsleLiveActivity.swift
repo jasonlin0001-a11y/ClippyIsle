@@ -92,8 +92,10 @@ struct ClippyIsleLiveActivity: Widget {
                 // Expanded UI
                 DynamicIslandExpandedRegion(.leading) {
                     HStack {
-                        Image(systemName: "paperclip")
-                            .foregroundColor(Color.resolveThemeColor(name: context.state.themeColorName))
+                        Image("AppLogo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 24, height: 24)
                         Text("Clippy Isle")
                             .font(.headline)
                     }
@@ -107,14 +109,16 @@ struct ClippyIsleLiveActivity: Widget {
                     // Removed subtitle area
                 }
             } compactLeading: {
-                 Image(systemName: "paperclip")
-                    .foregroundColor(Color.resolveThemeColor(name: context.state.themeColorName))
+                Image("AppLogo")
+                    .resizable()
+                    .scaledToFit()
             } compactTrailing: {
                 Text("\(context.state.itemCount)")
                     .foregroundColor(.secondary)
             } minimal: {
-                 Image(systemName: "paperclip")
-                    .foregroundColor(Color.resolveThemeColor(name: context.state.themeColorName))
+                Image("AppLogo")
+                    .resizable()
+                    .scaledToFit()
             }
         }
     }
@@ -135,8 +139,10 @@ struct LiveActivityView: View {
                 Label {
                     Text("Clippy Isle")
                 } icon: {
-                    Image(systemName: "paperclip")
-                        .foregroundColor(themeColor)
+                    Image("AppLogo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 20, height: 20)
                 }
                 
                 Spacer()
