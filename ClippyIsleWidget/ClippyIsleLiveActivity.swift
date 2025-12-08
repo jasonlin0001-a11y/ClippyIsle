@@ -92,10 +92,9 @@ struct ClippyIsleLiveActivity: Widget {
                 // Expanded UI
                 DynamicIslandExpandedRegion(.leading) {
                     HStack {
-                        Image("AppLogo")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 24, height: 24)
+                        Image(systemName: "c.circle.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(Color(red: 0.74, green: 0.74, blue: 0.74))
                         Text("Clippy Isle")
                             .font(.headline)
                     }
@@ -109,18 +108,16 @@ struct ClippyIsleLiveActivity: Widget {
                     // Removed subtitle area
                 }
             } compactLeading: {
-                Image("AppLogo")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 20, height: 20)
+                Image(systemName: "c.circle.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(Color(red: 0.74, green: 0.74, blue: 0.74))
             } compactTrailing: {
                 Text("\(context.state.itemCount)")
                     .foregroundColor(.secondary)
             } minimal: {
-                Image("AppLogo")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 16, height: 16)
+                Image(systemName: "c.circle.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(Color(red: 0.74, green: 0.74, blue: 0.74))
             }
         }
     }
@@ -141,10 +138,9 @@ struct LiveActivityView: View {
                 Label {
                     Text("Clippy Isle")
                 } icon: {
-                    Image("AppLogo")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 20, height: 20)
+                    Image(systemName: "c.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(Color(red: 0.74, green: 0.74, blue: 0.74))
                 }
                 
                 Spacer()

@@ -20,10 +20,9 @@ struct ClippyIsleWidgetEntryView : View {
 
     var body: some View {
         VStack(spacing: 8) {
-            Image("AppLogo")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 60, height: 60)
+            Image(systemName: "c.circle.fill")
+                .font(.system(size: 50))
+                .foregroundColor(Color(red: 0.74, green: 0.74, blue: 0.74))
             Text("\(entry.itemCount) items")
                 .font(.headline)
                 .foregroundColor(.secondary)
