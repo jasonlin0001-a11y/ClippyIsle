@@ -112,6 +112,7 @@ struct ClippyIsleLiveActivity: Widget {
                 Image("AppLogo")
                     .resizable()
                     .scaledToFit()
+                    .frame(width: 20, height: 20)
             } compactTrailing: {
                 Text("\(context.state.itemCount)")
                     .foregroundColor(.secondary)
@@ -119,6 +120,7 @@ struct ClippyIsleLiveActivity: Widget {
                 Image("AppLogo")
                     .resizable()
                     .scaledToFit()
+                    .frame(width: 16, height: 16)
             }
         }
     }
