@@ -1,6 +1,11 @@
 import WidgetKit
 import SwiftUI
 
+// Color extension for shared cement gray color
+extension Color {
+    static let cementGray = Color(red: 0.74, green: 0.74, blue: 0.74)
+}
+
 struct ClippyIsleWidget: Widget {
     let kind: String = "ClippyIsleWidget"
 
@@ -22,7 +27,7 @@ struct ClippyIsleWidgetEntryView : View {
         VStack(spacing: 8) {
             Image(systemName: "c.circle.fill")
                 .font(.system(size: 50))
-                .foregroundColor(Color(red: 0.74, green: 0.74, blue: 0.74)) // Cement gray
+                .foregroundColor(.cementGray)
             Text("\(entry.itemCount) items")
                 .font(.headline)
                 .foregroundColor(.secondary)
