@@ -84,6 +84,9 @@ public struct ClippyIsleAttributes: ActivityAttributes {
 // MARK: - Color Utility
 public extension ClippyIsleAttributes {
     struct ColorUtility {
+        // Cement gray color matching the app logo (used in widgets)
+        public static let cementGray = Color(red: 0.74, green: 0.74, blue: 0.74)
+        
         public static func color(forName name: String) -> Color {
             switch name {
             case "green": return .green

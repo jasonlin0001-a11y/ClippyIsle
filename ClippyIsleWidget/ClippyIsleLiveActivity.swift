@@ -51,9 +51,6 @@ struct ScrollingHighlightTextView: View {
 
 // **新增**: 用於解析主題顏色的輔助擴充
 extension Color {
-    // Cement gray color matching the app logo
-    static let cementGray = Color(red: 0.74, green: 0.74, blue: 0.74)
-    
     static func resolveThemeColor(name: String) -> Color {
         if name == "custom" {
             // 嘗試從 App Group UserDefaults 讀取自訂顏色
@@ -97,7 +94,7 @@ struct ClippyIsleLiveActivity: Widget {
                     HStack {
                         Image(systemName: "c.circle.fill")
                             .font(.system(size: 20))
-                            .foregroundColor(.cementGray)
+                            .foregroundColor(ClippyIsleAttributes.ColorUtility.cementGray)
                         Text("Clippy Isle")
                             .font(.headline)
                     }
@@ -113,14 +110,14 @@ struct ClippyIsleLiveActivity: Widget {
             } compactLeading: {
                 Image(systemName: "c.circle.fill")
                     .font(.system(size: 16))
-                    .foregroundColor(.cementGray)
+                    .foregroundColor(ClippyIsleAttributes.ColorUtility.cementGray)
             } compactTrailing: {
                 Text("\(context.state.itemCount)")
                     .foregroundColor(.secondary)
             } minimal: {
                 Image(systemName: "c.circle.fill")
                     .font(.system(size: 14))
-                    .foregroundColor(.cementGray)
+                    .foregroundColor(ClippyIsleAttributes.ColorUtility.cementGray)
             }
         }
     }
@@ -143,7 +140,7 @@ struct LiveActivityView: View {
                 } icon: {
                     Image(systemName: "c.circle.fill")
                         .font(.system(size: 16))
-                        .foregroundColor(.cementGray)
+                        .foregroundColor(ClippyIsleAttributes.ColorUtility.cementGray)
                 }
                 
                 Spacer()
