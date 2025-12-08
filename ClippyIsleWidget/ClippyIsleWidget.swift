@@ -22,7 +22,7 @@ struct ClippyIsleWidgetEntryView : View {
         VStack(spacing: 8) {
             Image(systemName: "c.circle.fill")
                 .font(.system(size: 50))
-                .foregroundColor(Color(red: 0.74, green: 0.74, blue: 0.74))
+                .foregroundColor(Color(red: 0.74, green: 0.74, blue: 0.74)) // Cement gray
             Text("\(entry.itemCount) items")
                 .font(.headline)
                 .foregroundColor(.secondary)
