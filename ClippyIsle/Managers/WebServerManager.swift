@@ -395,14 +395,14 @@ class WebServerManager: ObservableObject {
             }
         }
         
-        let bgHex = isDarkMode ? "#000000" : "#F2F2F7"
-        let cardBgHex = isDarkMode ? "#1C1C1E" : "#FFFFFF"
-        let textHex = isDarkMode ? "#FFFFFF" : "#000000"
-        let secondaryTextHex = isDarkMode ? "#8E8E93" : "#8E8E93"
-        let borderHex = isDarkMode ? "#38383A" : "#E5E5EA"
-        let btnSecBg = isDarkMode ? "rgba(142, 142, 147, 0.25)" : "rgba(142, 142, 147, 0.12)"
-        let btnDangerBg = isDarkMode ? "rgba(255, 59, 48, 0.25)" : "rgba(255, 59, 48, 0.12)"
-        let headerBg = isDarkMode ? "rgba(0,0,0,0.8)" : "rgba(242,242,247,0.8)"
+        let bgHex = isDarkMode ? "#000000" : "#BDBDBD"
+        let cardBgHex = isDarkMode ? "#1C1C1E" : "#D3D3D3"
+        let textHex = isDarkMode ? "#FFFFFF" : "#3A3A3A"
+        let secondaryTextHex = isDarkMode ? "#8E8E93" : "#6E6E6E"
+        let borderHex = isDarkMode ? "#38383A" : "#A0A0A0"
+        let btnSecBg = isDarkMode ? "rgba(142, 142, 147, 0.25)" : "rgba(110, 110, 110, 0.15)"
+        let btnDangerBg = isDarkMode ? "rgba(255, 59, 48, 0.25)" : "rgba(255, 59, 48, 0.15)"
+        let headerBg = isDarkMode ? "rgba(0,0,0,0.8)" : "rgba(189,189,189,0.8)"
         
         return """
         :root {
