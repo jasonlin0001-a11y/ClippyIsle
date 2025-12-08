@@ -1,0 +1,231 @@
+import SwiftUI
+import CloudKit
+import Combine
+
+// MARK: - CloudKit Manager
+class CloudKitManager: ObservableObject {
+    static let shared = CloudKitManager()
+    private let container = CKContainer.default()
+    private lazy var database = container.privateCloudDatabase
+    
+    @Published var iCloudStatus: String = "Checking..."
+    @Published var isSyncing: Bool = false
+    @Published var lastSyncDate: Date? = nil
+
+    private init() {
+        checkAccountStatus()
+    }
+    
+    func checkAccountStatus() {
+        container.accountStatus { [weak self] status, error in
+            DispatchQueue.main.async {
+                switch status {
+                case .available: self?.iCloudStatus = "Available"
+                case .noAccount: self?.iCloudStatus = "No Account"
+                case .restricted: self?.iCloudStatus = "Restricted"
+                case .couldNotDetermine: self?.iCloudStatus = "Unknown"
+                case .temporarilyUnavailable: self?.iCloudStatus = "Temporarily Unavailable"
+                @unknown default: self?.iCloudStatus = "Unknown"
+                }
+            }
+        }
+    }
+    
+    // MARK: - Conversion Methods
+    private func recordID(for item: ClipboardItem) -> CKRecord.ID {
+        return CKRecord.ID(recordName: item.id.uuidString)
+    }
+    
+    private func createRecord(from item: ClipboardItem) -> CKRecord {
+        let recordID = recordID(for: item)
+        let record = CKRecord(recordType: "ClipboardItem", recordID: recordID)
+        
+        record["content"] = item.content
+        record["type"] = item.type
+        record["timestamp"] = item.timestamp
+        record["isPinned"] = item.isPinned ? 1 : 0
+        record["isTrashed"] = item.isTrashed ? 1 : 0
+        if let name = item.displayName { record["displayName"] = name }
+        if let tags = item.tags { record["tags"] = tags }
+        
+        if let filename = item.filename,
+           let containerURL = ClipboardManager.shared.getSharedContainerURL() {
+            let fileURL = containerURL.appendingPathComponent(filename)
+            if FileManager.default.fileExists(atPath: fileURL.path) {
+                record["asset"] = CKAsset(fileURL: fileURL)
+                record["filename"] = filename
+            } else {
+                print("⚠️ Warning: Asset file \(filename) missing for item \(item.id)")
+            }
+        }
+        return record
+    }
+    
+    private func item(from record: CKRecord) -> ClipboardItem? {
+        guard let content = record["content"] as? String,
+              let type = record["type"] as? String,
+              let timestamp = record["timestamp"] as? Date else {
+            return nil
+        }
+        
+        let idString = record.recordID.recordName
+        guard let id = UUID(uuidString: idString) else { return nil }
+        
+        let isPinned = (record["isPinned"] as? Int == 1)
+        let isTrashed = (record["isTrashed"] as? Int == 1)
+        let displayName = record["displayName"] as? String
+        let tags = record["tags"] as? [String]
+        var filename = record["filename"] as? String
+        
+        if let asset = record["asset"] as? CKAsset, let fileURL = asset.fileURL {
+            if let savedFilename = ClipboardManager.shared.saveAssetToAppGroup(from: fileURL, originalFilename: filename) {
+                filename = savedFilename
+            }
+        }
+        
+        return ClipboardItem(id: id, content: content, type: type, filename: filename, timestamp: timestamp, isPinned: isPinned, displayName: displayName, isTrashed: isTrashed, tags: tags)
+    }
+    
+    // MARK: - CRUD Operations
+    func save(item: ClipboardItem) {
+        guard iCloudStatus == "Available" else { return }
+        let record = createRecord(from: item)
+        let modifyOp = CKModifyRecordsOperation(recordsToSave: [record], recordIDsToDelete: nil)
+        modifyOp.savePolicy = .changedKeys
+        modifyOp.modifyRecordsResultBlock = { result in
+            switch result {
+            case .success: print("☁️ Saved item \(item.id) to CloudKit.")
+            case .failure(let error): print("☁️ CloudKit Save Error: \(error.localizedDescription)")
+            }
+        }
+        database.add(modifyOp)
+    }
+    
+    func delete(itemID: UUID) {
+        guard iCloudStatus == "Available" else { return }
+        let id = CKRecord.ID(recordName: itemID.uuidString)
+        database.delete(withRecordID: id) { _, error in
+            if let error = error { print("☁️ CloudKit Delete Error: \(error.localizedDescription)") }
+            else { print("☁️ Deleted item \(itemID) from CloudKit.") }
+        }
+    }
+    
+    // MARK: - Helpers for Pagination
+    // 修正: 遞迴抓取所有頁面的資料
+    private func fetchAllRecords() async throws -> [CKRecord] {
+        var allRecords: [CKRecord] = []
+        let query = CKQuery(recordType: "ClipboardItem", predicate: NSPredicate(value: true))
+        query.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]
+        
+        var cursor: CKQueryOperation.Cursor? = nil
+        
+        repeat {
+            let (matchResults, nextCursor) = try await cursor == nil ?
+                database.records(matching: query) :
+                database.records(continuingMatchFrom: cursor!)
+            
+            cursor = nextCursor
+            
+            for result in matchResults {
+                if case .success(let record) = result.1 {
+                    allRecords.append(record)
+                }
+            }
+        } while cursor != nil
+        
+        return allRecords
+    }
+    
+    // MARK: - Synchronization
+    func sync(localItems: [ClipboardItem]) async -> [ClipboardItem] {
+        guard iCloudStatus == "Available" else { return localItems }
+        
+        await MainActor.run { isSyncing = true }
+        defer { Task { @MainActor in isSyncing = false; lastSyncDate = Date() } }
+        
+        do {
+            // 1. 獲取所有雲端資料 (使用修正後的 Helper)
+            let cloudRecords = try await fetchAllRecords()
+            
+            var cloudItems: [ClipboardItem] = []
+            for record in cloudRecords {
+                if let item = item(from: record) {
+                    cloudItems.append(item)
+                }
+            }
+            print("☁️ Fetched \(cloudItems.count) items from Cloud (Total).")
+            
+            var mergedItems = localItems
+            let cloudIDMap = Dictionary(uniqueKeysWithValues: cloudItems.map { ($0.id, $0) })
+            let localIDMap = Dictionary(uniqueKeysWithValues: localItems.map { ($0.id, $0) })
+            
+            // 收集需要批次更新到雲端的紀錄
+            var recordsToSave: [CKRecord] = []
+            
+            // 2. 比對雲端資料 -> 更新本地
+            for cloudItem in cloudItems {
+                if let localItem = localIDMap[cloudItem.id] {
+                    // 衝突解決：誰的時間戳記新，就聽誰的
+                    if cloudItem.timestamp > localItem.timestamp {
+                        if let index = mergedItems.firstIndex(where: { $0.id == cloudItem.id }) {
+                            mergedItems[index] = cloudItem
+                            // print("☁️ Updated local item \(cloudItem.id) from Cloud.")
+                        }
+                    } else if localItem.timestamp > cloudItem.timestamp {
+                        // 本地比較新，準備上傳
+                        recordsToSave.append(createRecord(from: localItem))
+                        // print("☁️ Local item \(localItem.id) is newer, queueing for upload.")
+                    }
+                } else {
+                    // 本地沒有，直接加入
+                    mergedItems.append(cloudItem)
+                    // print("☁️ Added new item \(cloudItem.id) from Cloud.")
+                }
+            }
+            
+            // 3. 比對本地資料 -> 上傳新資料
+            // 注意：這裡很容易產生「復活」問題。
+            // 如果雲端沒有，通常表示它是「新建立的」或者「雲端已刪除」。
+            // 在沒有 Soft Delete (軟刪除) 標記的情況下，我們只能假設本地存在但雲端沒有的是「新資料」。
+            // 為了避免無限復活，建議加上時間閾值，但目前先維持上傳邏輯。
+            for localItem in localItems {
+                if cloudIDMap[localItem.id] == nil {
+                    recordsToSave.append(createRecord(from: localItem))
+                    // print("☁️ Item \(localItem.id) missing in Cloud, queueing for upload.")
+                }
+            }
+            
+            // 4. 執行批次上傳 (如果有的話)
+            if !recordsToSave.isEmpty {
+                print("☁️ Batch uploading \(recordsToSave.count) records...")
+                let modifyOp = CKModifyRecordsOperation(recordsToSave: recordsToSave, recordIDsToDelete: nil)
+                modifyOp.savePolicy = .changedKeys
+                
+                // 確保上傳完成
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                    modifyOp.modifyRecordsResultBlock = { result in
+                        switch result {
+                        case .success:
+                            print("☁️ Batch upload successful.")
+                            continuation.resume()
+                        case .failure(let error):
+                            print("☁️ Batch upload failed: \(error)")
+                            continuation.resume(throwing: error)
+                        }
+                    }
+                    database.add(modifyOp)
+                }
+            }
+            
+            // 5. 回傳排序後的結果
+            return mergedItems.sorted {
+                if $0.isPinned != $1.isPinned { return $0.isPinned && !$1.isPinned }
+                return $0.timestamp > $1.timestamp
+            }
+            
+        } catch {
+            print("☁️ CloudKit Sync Failed: \(error)")
+            return localItems
+        }
+    }
+}

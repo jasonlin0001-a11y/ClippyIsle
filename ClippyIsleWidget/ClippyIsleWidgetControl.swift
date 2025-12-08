@@ -1,54 +1,36 @@
-//
-//  ClippyIsleWidgetControl.swift
-//  ClippyIsleWidget
-//
-//  Created by Jason Lin on 2025/10/25.
-//
-
-import AppIntents
-import SwiftUI
 import WidgetKit
+import SwiftUI
+import UniformTypeIdentifiers
 
-struct ClippyIsleWidgetControl: ControlWidget {
-    var body: some ControlWidgetConfiguration {
-        StaticControlConfiguration(
-            kind: "J894ABBU74.ClippyIsle.ClippyIsleWidget",
-            provider: Provider()
-        ) { value in
-            ControlWidgetToggle(
-                "Start Timer",
-                isOn: value,
-                action: StartTimerIntent()
-            ) { isRunning in
-                Label(isRunning ? "On" : "Off", systemImage: "timer")
-            }
-        }
-        .displayName("Timer")
-        .description("A an example control that runs a timer.")
+struct Provider: TimelineProvider {
+    // 修正：明確指定 Entry 的類型
+    typealias Entry = SimpleEntry
+
+    func placeholder(in context: Context) -> SimpleEntry {
+        SimpleEntry(date: Date(), itemCount: 0, themeColorName: "blue")
+    }
+
+    func getSnapshot(in context: Context, completion: @escaping (SimpleEntry) -> ()) {
+        let entry = SimpleEntry(date: Date(), itemCount: 10, themeColorName: "blue")
+        completion(entry)
+    }
+
+    // 修正：使用具體的 SimpleEntry 類型，而不是泛型的 Entry
+    func getTimeline(in context: Context, completion: @escaping (Timeline<SimpleEntry>) -> ()) {
+        let userDefaults = UserDefaults(suiteName: appGroupID)
+        let itemCount = userDefaults?.data(forKey: "clippedItems").flatMap {
+            try? JSONDecoder().decode([ClipboardItem].self, from: $0).count
+        } ?? 0
+        let themeColorName = userDefaults?.string(forKey: "themeColorName") ?? "blue"
+
+        let entry = SimpleEntry(date: Date(), itemCount: itemCount, themeColorName: themeColorName)
+        let timeline = Timeline(entries: [entry], policy: .atEnd)
+        completion(timeline)
     }
 }
 
-extension ClippyIsleWidgetControl {
-    struct Provider: ControlValueProvider {
-        var previewValue: Bool {
-            false
-        }
-
-        func currentValue() async throws -> Bool {
-            let isRunning = true // Check if the timer is running
-            return isRunning
-        }
-    }
-}
-
-struct StartTimerIntent: SetValueIntent {
-    static let title: LocalizedStringResource = "Start a timer"
-
-    @Parameter(title: "Timer is running")
-    var value: Bool
-
-    func perform() async throws -> some IntentResult {
-        // Start / stop the timer based on `value`.
-        return .result()
-    }
+struct SimpleEntry: TimelineEntry {
+    let date: Date
+    let itemCount: Int
+    let themeColorName: String
 }

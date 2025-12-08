@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		EA62494E2EB3959800B5E33D /* AVFAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EA62494C2EB3946900B5E33D /* AVFAudio.framework */; };
+		EA6249522EB3C07A00B5E33D /* UniformTypeIdentifiers.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EA6249512EB3C07A00B5E33D /* UniformTypeIdentifiers.framework */; };
 		EAF2527E2EAD209600BE2A3A /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EAF2527D2EAD209600BE2A3A /* WidgetKit.framework */; };
 		EAF252802EAD209600BE2A3A /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EAF2527F2EAD209600BE2A3A /* SwiftUI.framework */; };
 		EAF2528D2EAD209700BE2A3A /* ClippyIsleWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = EAF2527B2EAD209600BE2A3A /* ClippyIsleWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -46,6 +48,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		EA62494C2EB3946900B5E33D /* AVFAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFAudio.framework; path = System/Library/Frameworks/AVFAudio.framework; sourceTree = SDKROOT; };
+		EA6249512EB3C07A00B5E33D /* UniformTypeIdentifiers.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UniformTypeIdentifiers.framework; path = System/Library/Frameworks/UniformTypeIdentifiers.framework; sourceTree = SDKROOT; };
 		EAF252682EAD1F8600BE2A3A /* ClippyIsle.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ClippyIsle.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EAF2527B2EAD209600BE2A3A /* ClippyIsleWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ClippyIsleWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		EAF2527D2EAD209600BE2A3A /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -55,6 +59,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		EA7BB7D62ED2FFCD005DC974 /* Exceptions for "ClippyIsle" folder in "ClippyIsleWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Assets.xcassets,
+			);
+			target = EAF2527A2EAD209600BE2A3A /* ClippyIsleWidgetExtension */;
+		};
 		EAF2528E2EAD209700BE2A3A /* Exceptions for "ClippyIsleWidget" folder in "ClippyIsleWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -93,10 +104,16 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		EACC00012EBCEFCA008C064F /* SharedModels */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SharedModels;
+			sourceTree = "<group>";
+		};
 		EAF2526A2EAD1F8600BE2A3A /* ClippyIsle */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				EAF252A92EAD297100BE2A3A /* Exceptions for "ClippyIsle" folder in "ClippyIsle" target */,
+				EA7BB7D62ED2FFCD005DC974 /* Exceptions for "ClippyIsle" folder in "ClippyIsleWidgetExtension" target */,
 			);
 			path = ClippyIsle;
 			sourceTree = "<group>";
@@ -126,6 +143,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EA6249522EB3C07A00B5E33D /* UniformTypeIdentifiers.framework in Frameworks */,
+				EA62494E2EB3959800B5E33D /* AVFAudio.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -151,6 +170,7 @@
 		EAF2525F2EAD1F8600BE2A3A = {
 			isa = PBXGroup;
 			children = (
+				EACC00012EBCEFCA008C064F /* SharedModels */,
 				EAF252932EAD20B300BE2A3A /* ClippyIsleWidgetExtension.entitlements */,
 				EAF2526A2EAD1F8600BE2A3A /* ClippyIsle */,
 				EAF252812EAD209600BE2A3A /* ClippyIsleWidget */,
@@ -173,6 +193,8 @@
 		EAF2527C2EAD209600BE2A3A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				EA6249512EB3C07A00B5E33D /* UniformTypeIdentifiers.framework */,
+				EA62494C2EB3946900B5E33D /* AVFAudio.framework */,
 				EAF2527D2EAD209600BE2A3A /* WidgetKit.framework */,
 				EAF2527F2EAD209600BE2A3A /* SwiftUI.framework */,
 			);
@@ -198,6 +220,7 @@
 				EAF252A12EAD217600BE2A3A /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
+				EACC00012EBCEFCA008C064F /* SharedModels */,
 				EAF2526A2EAD1F8600BE2A3A /* ClippyIsle */,
 			);
 			name = ClippyIsle;
@@ -220,6 +243,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				EACC00012EBCEFCA008C064F /* SharedModels */,
 				EAF252812EAD209600BE2A3A /* ClippyIsleWidget */,
 			);
 			name = ClippyIsleWidgetExtension;
@@ -242,6 +266,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				EACC00012EBCEFCA008C064F /* SharedModels */,
 				EAF252992EAD217500BE2A3A /* ClippyIsleShare */,
 			);
 			name = ClippyIsleShare;
@@ -491,6 +516,10 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ClippyIsle/Info.plist;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "用於錄音以支援語音搜尋與語音控制。";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "用於將內容儲存到您的相簿。";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "用於選取圖片以儲存或建立剪貼項目。";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "用於將語音轉為文字以啟用語音搜尋功能。";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -527,6 +556,10 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ClippyIsle/Info.plist;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "用於錄音以支援語音搜尋與語音控制。";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "用於將內容儲存到您的相簿。";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "用於選取圖片以儲存或建立剪貼項目。";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "用於將語音轉為文字以啟用語音搜尋功能。";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

@@ -1,10 +1,3 @@
-//
-//  ClippyIsleWidgetBundle.swift
-//  ClippyIsleWidget
-//
-//  Created by Jason Lin on 2025/10/25.
-//
-
 import WidgetKit
 import SwiftUI
 
@@ -12,6 +5,8 @@ import SwiftUI
 struct ClippyIsleWidgetBundle: WidgetBundle {
     var body: some Widget {
         ClippyIsleWidget()
-        ClippyIsleWidgetControl()
+        if #available(iOS 16.1, *) {
+            ClippyIsleLiveActivity()
+        }
     }
 }
