@@ -12,6 +12,8 @@ struct SplashScreenView: View {
     @Binding var isPresented: Bool
     
     private let splashDuration: TimeInterval = 1.5
+    private let splashLogoSize: CGFloat = 120
+    private let appIconCornerRadius: CGFloat = 26.4
     
     var body: some View {
         ZStack {
@@ -24,8 +26,8 @@ struct SplashScreenView: View {
                 Image("SplashLogo")
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 120, height: 120)
-                    .cornerRadius(26.4) // iOS app icon corner radius
+                    .frame(width: splashLogoSize, height: splashLogoSize)
+                    .cornerRadius(appIconCornerRadius) // iOS app icon corner radius
                     .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
                 
                 // App Title

@@ -10,6 +10,9 @@ import SwiftUI
 struct AboutUsView: View {
     @Environment(\.dismiss) var dismiss
     
+    private let aboutLogoSize: CGFloat = 100
+    private let aboutLogoCornerRadius: CGFloat = 22
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 25) {
@@ -17,8 +20,8 @@ struct AboutUsView: View {
                 Image("SplashLogo")
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 100, height: 100)
-                    .cornerRadius(22)
+                    .frame(width: aboutLogoSize, height: aboutLogoSize)
+                    .cornerRadius(aboutLogoCornerRadius)
                     .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
                     .padding(.top, 30)
                 
