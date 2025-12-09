@@ -100,6 +100,7 @@ struct ContentView: View {
         NavigationView { mainContent }
         .navigationViewStyle(.stack).tint(themeColor).preferredColorScheme(preferredColorScheme)
         .onAppear {
+            configureNavigationBarAppearance()
             checkActivityStatus()
             NotificationCenter.default.addObserver(forName: .didRequestUndo, object: nil, queue: .main) { _ in undoManager?.undo() }
         }
@@ -365,6 +366,14 @@ struct ContentView: View {
         generator.impactOccurred()
     }
     
+    func configureNavigationBarAppearance() {
+        let roundedFont = UIFont.systemFont(ofSize: 34, weight: .bold).withRoundedDesign()
+        let appearance = UINavigationBarAppearance()
+        appearance.largeTitleTextAttributes = [.font: roundedFont]
+        UINavigationBar.appearance().standardAppearance = appearance
+        UINavigationBar.appearance().scrollEdgeAppearance = appearance
+    }
+    
     func checkActivityStatus() {
         Task {
             let enabled = await ActivityAuthorizationInfo().areActivitiesEnabled; self.areActivitiesEnabled = enabled
@@ -396,6 +405,13 @@ struct ContentView: View {
 }
 
 extension Notification.Name { static let didRequestUndo = Notification.Name("didRequestUndo") }
+
+extension UIFont {
+    func withRoundedDesign() -> UIFont {
+        guard let descriptor = fontDescriptor.withDesign(.rounded) else { return self }
+        return UIFont(descriptor: descriptor, size: pointSize)
+    }
+}
 
 extension NSItemProvider {
     func loadDataRepresentation(forTypeIdentifier typeIdentifier: String) async throws -> Data {

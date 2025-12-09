@@ -5,15 +5,9 @@ import AVFoundation
 import UIKit
 import StoreKit
 
-// MARK: - Extensions for Identifiable URL & Custom UTType
+// MARK: - Extensions for Identifiable URL
 extension URL: Identifiable {
     public var id: String { absoluteString }
-}
-
-extension UTType {
-    static var cio: UTType {
-        UTType(exportedAs: "com.jasonlin.ClippyIsle.cio")
-    }
 }
 
 // MARK: - Settings Components
@@ -36,7 +30,7 @@ struct SettingsModalPresenterView: View {
             .sheet(isPresented: $isShowingTrash) { TrashView(clipboardManager: clipboardManager) }
             .sheet(item: $exportURL) { url in ActivityView(activityItems: [url]) }
             .sheet(isPresented: $isShowingTagExport) { TagExportSelectionView(clipboardManager: clipboardManager, exportURL: $exportURL, isShowingImportAlert: $isShowingImportAlert, importAlertMessage: $importAlertMessage) }
-            .fileImporter(isPresented: $isImporting, allowedContentTypes: [.cio, .json, .data], allowsMultipleSelection: false) { result in handleImport(result: result) }
+            .fileImporter(isPresented: $isImporting, allowedContentTypes: [.json], allowsMultipleSelection: false) { result in handleImport(result: result) }
             .alert("Import Result", isPresented: $isShowingImportAlert, presenting: importAlertMessage) { msg in Button("OK") {} } message: { msg in Text(msg) }
             .alert("Clear Website Cache?", isPresented: $isShowingClearCacheAlert) {
                 Button("Clear", role: .destructive) { clearWebViewCache() }; Button("Cancel", role: .cancel) {}
@@ -53,7 +47,7 @@ struct SettingsModalPresenterView: View {
         switch result {
         case .success(let urls):
             guard let url = urls.first else { importAlertMessage = "No file selected."; isShowingImportAlert = true; return }
-            if url.pathExtension.lowercased() != "cio" && url.pathExtension.lowercased() != "json" { importAlertMessage = "Invalid file format.\nPlease select a .cio backup file."; isShowingImportAlert = true; return }
+            if url.pathExtension.lowercased() != "json" { importAlertMessage = "Invalid file format.\nPlease select a .json backup file."; isShowingImportAlert = true; return }
             do { let count = try clipboardManager.importData(from: url); importAlertMessage = "Import successful!\nAdded \(count) new items." }
             catch { importAlertMessage = "Import failed.\nError: \(error.localizedDescription)" }
         case .failure(let error): importAlertMessage = "Could not select file.\nError: \(error.localizedDescription)"

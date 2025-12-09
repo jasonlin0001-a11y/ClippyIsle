@@ -184,7 +184,7 @@ class ClipboardManager: ObservableObject {
     
     private func getTimestampedBackupURL(prefix: String) -> URL {
         let formatter = DateFormatter(); formatter.dateFormat = "yyyyMMdd-HHmmss"; let dateString = formatter.string(from: Date())
-        let filename = "\(prefix)-\(dateString).cio"; let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+        let filename = "\(prefix)-\(dateString).json"; let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
         if FileManager.default.fileExists(atPath: tempURL.path) { try? FileManager.default.removeItem(at: tempURL) }
         return tempURL
     }

@@ -74,7 +74,7 @@ struct AboutUsView: View {
                     Text("Developer")
                         .font(.headline)
                     
-                    Text("jasonlin0001-a11y")
+                    Text("Clippy Isle Studio")
                         .font(.body)
                         .foregroundColor(.secondary)
                 }
