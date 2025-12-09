@@ -90,7 +90,8 @@ struct ContentView: View {
     private var loadedItemBinding: Binding<ClipboardItem> {
         Binding(get: { if case .loaded(let item) = self.previewState { return item }; return ClipboardItem(content: "Error", type: "public.text") },
             set: { updatedItem in
-                if let index = self.clipboardManager.items.firstIndex(where: { $0.id == updatedItem.id }) { self.clipboardManager.items[index] = updatedItem }
+                // Don't directly modify items array here - let updateAndSync handle it
+                // Just update the preview state
                 if case .loaded = self.previewState { self.previewState = .loaded(updatedItem) }
             }
         )
