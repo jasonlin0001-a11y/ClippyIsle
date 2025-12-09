@@ -1,0 +1,44 @@
+//
+//  SplashScreenView.swift
+//  ClippyIsle
+//
+//  Created for splash screen implementation
+//
+
+import SwiftUI
+
+struct SplashScreenView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Binding var isPresented: Bool
+    
+    var body: some View {
+        ZStack {
+            // Background color based on appearance mode
+            (colorScheme == .dark ? Color.black : Color.white)
+                .ignoresSafeArea()
+            
+            VStack(spacing: 20) {
+                // App Icon/Logo
+                Image("SplashLogo")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 120, height: 120)
+                    .cornerRadius(26.4) // iOS app icon corner radius
+                    .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
+                
+                // App Title
+                Text("Clippy Isle")
+                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                    .foregroundColor(colorScheme == .dark ? .white : .black)
+            }
+        }
+        .onAppear {
+            // Dismiss splash screen after a short delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                withAnimation(.easeOut(duration: 0.3)) {
+                    isPresented = false
+                }
+            }
+        }
+    }
+}

@@ -173,7 +173,7 @@ struct SettingsView: View {
                 }
                 
                 Section(header: Text("General"), footer: Text("When enabled, the app will automatically detect and add new items from the clipboard. When disabled, you must add items manually from the '+' menu on the main screen.")) { Toggle("Auto Add from Clipboard", isOn: $askToAddFromClipboard) }
-                storagePolicySection; appearanceSection; previewSettingsSection; speechSettingsSection; iCloudSection; backupAndRestoreSection; dataManagementSection
+                storagePolicySection; appearanceSection; previewSettingsSection; speechSettingsSection; iCloudSection; backupAndRestoreSection; dataManagementSection; appInfoSection
             }
             .navigationTitle("Settings").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() } } }
@@ -325,6 +325,29 @@ struct SettingsView: View {
             Button("Clear Website Cache", role: .destructive) { isShowingClearCacheAlert = true }
             Button("Clear All Data", role: .destructive) { confirmationText = ""; isShowingHardResetAlert = true }
         }
+    }
+    
+    private var appInfoSection: some View {
+        Section("App Information") {
+            HStack {
+                Text("Version")
+                Spacer()
+                Text(appVersion)
+                    .foregroundColor(.secondary)
+            }
+            
+            NavigationLink {
+                AboutUsView()
+            } label: {
+                Text("About Us")
+            }
+        }
+    }
+    
+    private var appVersion: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        return "\(version) (\(build))"
     }
     
     private func exportAllData() {
