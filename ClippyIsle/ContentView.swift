@@ -109,6 +109,10 @@ struct ContentView: View {
                 checkActivityStatus()
                 clipboardManager.cloudKitManager.checkAccountStatus()
                 
+                // Reload items from UserDefaults to pick up items added via Share Extension
+                let oldIDs = Set(clipboardManager.items.map { $0.id })
+                clipboardManager.loadItems()
+                
                 if !isSheetPresented {
                     if (speechManager.isSpeaking || speechManager.isPaused),
                        let currentItemID = speechManager.currentItemID,
@@ -121,7 +125,6 @@ struct ContentView: View {
                     }
                 }
                 
-                let oldIDs = Set(clipboardManager.items.map { $0.id })
                 Task {
                     try? await Task.sleep(for: .milliseconds(500))
                     if previewState == .idle {
