@@ -68,3 +68,13 @@ extension Date {
         }
     }
 }
+
+// MARK: - App Version Utility
+
+struct AppVersion {
+    static var versionString: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        return "\(version) (\(build))"
+    }
+}

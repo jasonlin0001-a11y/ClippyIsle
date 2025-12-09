@@ -11,6 +11,8 @@ struct SplashScreenView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Binding var isPresented: Bool
     
+    private let splashDuration: TimeInterval = 1.5
+    
     var body: some View {
         ZStack {
             // Background color based on appearance mode
@@ -34,7 +36,7 @@ struct SplashScreenView: View {
         }
         .onAppear {
             // Dismiss splash screen after a short delay
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + splashDuration) {
                 withAnimation(.easeOut(duration: 0.3)) {
                     isPresented = false
                 }

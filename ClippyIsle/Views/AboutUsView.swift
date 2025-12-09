@@ -27,7 +27,7 @@ struct AboutUsView: View {
                     .font(.system(size: 32, weight: .bold, design: .rounded))
                 
                 // Version
-                Text("Version \(appVersion)")
+                Text("Version \(AppVersion.versionString)")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                 
@@ -80,12 +80,6 @@ struct AboutUsView: View {
         }
         .navigationTitle("About Us")
         .navigationBarTitleDisplayMode(.inline)
-    }
-    
-    private var appVersion: String {
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
-        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
-        return "\(version) (\(build))"
     }
 }
 
