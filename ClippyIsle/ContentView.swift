@@ -110,7 +110,7 @@ struct ContentView: View {
                 clipboardManager.cloudKitManager.checkAccountStatus()
                 
                 // Reload items from UserDefaults to pick up items added via Share Extension
-                let oldIDs = Set(clipboardManager.items.map { $0.id })
+                let oldIDs = Set(clipboardManager.items.lazy.map { $0.id })
                 clipboardManager.loadItems()
                 
                 if !isSheetPresented {
