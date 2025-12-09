@@ -409,7 +409,28 @@ class ClipboardManager: ObservableObject {
 
     var allTags: [String] {
         let allTagsSet = items.reduce(into: Set<String>()) { set, item in guard let tags = item.tags else { return }; set.formUnion(tags) }
-        return Array(allTagsSet).sorted()
+        let allTagsArray = Array(allTagsSet)
+        
+        // Load custom tag order from UserDefaults
+        if let customOrder = UserDefaults.standard.array(forKey: "customTagOrder") as? [String] {
+            // Create ordered list based on custom order, then append any new tags not in the custom order
+            var orderedTags: [String] = []
+            for tag in customOrder {
+                if allTagsArray.contains(tag) {
+                    orderedTags.append(tag)
+                }
+            }
+            // Add any tags that weren't in the custom order (sorted alphabetically)
+            let remainingTags = allTagsArray.filter { !orderedTags.contains($0) }.sorted()
+            orderedTags.append(contentsOf: remainingTags)
+            return orderedTags
+        }
+        
+        return allTagsArray.sorted()
+    }
+    
+    func saveTagOrder(_ tags: [String]) {
+        UserDefaults.standard.set(tags, forKey: "customTagOrder")
     }
     
     func updateTags(for item: inout ClipboardItem, newTags: [String]?) {
@@ -427,6 +448,14 @@ class ClipboardManager: ObservableObject {
                 if UserDefaults.standard.bool(forKey: "iCloudSyncEnabled") { cloudKitManager.save(item: items[i]) }
             }
         }
+        
+        // Update custom tag order
+        if var customOrder = UserDefaults.standard.array(forKey: "customTagOrder") as? [String],
+           let index = customOrder.firstIndex(of: oldName) {
+            customOrder[index] = newName
+            UserDefaults.standard.set(customOrder, forKey: "customTagOrder")
+        }
+        
         sortAndSave()
     }
 
@@ -435,6 +464,13 @@ class ClipboardManager: ObservableObject {
             items[i].tags?.removeAll { $0 == tag }; if items[i].tags?.isEmpty == true { items[i].tags = nil }
             if UserDefaults.standard.bool(forKey: "iCloudSyncEnabled") { cloudKitManager.save(item: items[i]) }
         }
+        
+        // Remove from custom tag order
+        if var customOrder = UserDefaults.standard.array(forKey: "customTagOrder") as? [String] {
+            customOrder.removeAll { $0 == tag }
+            UserDefaults.standard.set(customOrder, forKey: "customTagOrder")
+        }
+        
         sortAndSave()
     }
 }

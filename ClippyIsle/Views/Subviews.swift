@@ -211,13 +211,14 @@ struct TagEditView: View {
     private func addNewTag() { let name = newTag.trimmingCharacters(in: .whitespaces); if !name.isEmpty { addTag(name); newTag = "" } }
 }
 
-// **MODIFIED**: Restored original structure, only added .navigationBarTitleDisplayMode(.inline)
+// **MODIFIED**: Added drag-to-reorder functionality for tags
 struct TagFilterView: View {
     @ObservedObject var clipboardManager: ClipboardManager
     @Binding var selectedTag: String?
     @State private var tagToRename: String?
     @State private var newTagName = ""
     @State private var isShowingRenameAlert = false
+    @State private var tags: [String] = []
     @Environment(\.dismiss) var dismiss
 
     var body: some View {
@@ -225,23 +226,45 @@ struct TagFilterView: View {
             List {
                 Button { selectedTag = nil; dismiss() } label: { HStack { Image(systemName: selectedTag == nil ? "checkmark.circle.fill" : "circle"); Text("All Items") } }.foregroundColor(.primary)
                 Section("Tags") {
-                    ForEach(clipboardManager.allTags, id: \.self) { tag in
+                    ForEach(tags, id: \.self) { tag in
                         Button { selectedTag = tag; dismiss() } label: { HStack { Image(systemName: selectedTag == tag ? "checkmark.circle.fill" : "circle"); Text(tag) } }.foregroundColor(.primary)
                         .swipeActions {
-                            Button("Delete", role: .destructive) { clipboardManager.deleteTagFromAllItems(tag) }
+                            Button("Delete", role: .destructive) { 
+                                clipboardManager.deleteTagFromAllItems(tag)
+                                tags = clipboardManager.allTags
+                            }
                             Button("Rename") { tagToRename = tag; newTagName = tag; isShowingRenameAlert = true }.tint(.blue)
                         }
+                    }
+                    .onMove { from, to in
+                        tags.move(fromOffsets: from, toOffset: to)
+                        clipboardManager.saveTagOrder(tags)
                     }
                 }
             }
             .navigationTitle("Filter by Tag")
             // **修改處**: 設定為 inline 模式，標題字體會縮小為標準大小
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() } } }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    EditButton()
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
             .alert("Rename Tag", isPresented: $isShowingRenameAlert) {
                 TextField("New tag name", text: $newTagName)
-                Button("Save") { if let oldName = tagToRename { clipboardManager.renameTag(from: oldName, to: newTagName) } }
+                Button("Save") {
+                    if let oldName = tagToRename {
+                        clipboardManager.renameTag(from: oldName, to: newTagName)
+                        tags = clipboardManager.allTags
+                    }
+                }
                 Button("Cancel", role: .cancel) {}
+            }
+            .onAppear {
+                tags = clipboardManager.allTags
             }
         }
     }
