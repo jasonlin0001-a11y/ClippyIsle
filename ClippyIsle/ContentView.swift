@@ -109,7 +109,6 @@ struct ContentView: View {
     }
 
     var body: some View {
-        LaunchLogger.log("ContentView.body - START")
         NavigationView { mainContent }
         .navigationViewStyle(.stack).tint(themeColor).preferredColorScheme(preferredColorScheme)
         .onAppear {

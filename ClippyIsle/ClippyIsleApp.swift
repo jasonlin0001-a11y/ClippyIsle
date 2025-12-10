@@ -13,7 +13,6 @@ struct ClippyIsleApp: App {
     }
     
     var body: some Scene {
-        LaunchLogger.log("ClippyIsleApp.body - START")
         WindowGroup {
             ZStack {
                 ContentView()
@@ -25,6 +24,9 @@ struct ClippyIsleApp: App {
                         subscriptionManager.start()
                         LaunchLogger.log("SubscriptionManager.start() - Task END")
                     }
+                    .onAppear {
+                        LaunchLogger.log("ClippyIsleApp.body.WindowGroup - onAppear")
+                    }
                 
                 // Splash Screen Overlay
                 if showSplash {
@@ -33,9 +35,6 @@ struct ClippyIsleApp: App {
                         .zIndex(1)
                 }
             }
-        }
-        .onAppear {
-            LaunchLogger.log("ClippyIsleApp.body.WindowGroup - onAppear")
         }
     }
 }
