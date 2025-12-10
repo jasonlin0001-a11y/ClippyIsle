@@ -124,29 +124,18 @@ struct LinkPreviewCard: View {
                             .lineLimit(3)
                     }
                     
-                    // Description
-                    if let description = metadata.value(forKey: "summary") as? String ?? metadata.url?.absoluteString {
-                        Text(description)
+                    // URL as description (since there's no public summary property)
+                    if let url = metadata.url {
+                        Text(url.absoluteString)
                             .font(.body)
                             .foregroundColor(.secondary)
                             .lineLimit(5)
-                    }
-                    
-                    // Site Name
-                    if let siteName = metadata.value(forKey: "siteName") as? String {
-                        HStack {
-                            Image(systemName: "globe")
-                                .font(.caption)
-                            Text(siteName)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
                     }
                 }
                 .padding()
                 .background(
                     RoundedRectangle(cornerRadius: 16)
-                        .fill(colorScheme == .dark ? Color(.systemGray6) : Color(.systemGray6))
+                        .fill(Color(.systemGray6))
                         .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
                 )
                 .padding(.horizontal)

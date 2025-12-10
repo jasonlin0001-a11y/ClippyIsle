@@ -28,15 +28,11 @@ class LinkMetadataManager: ObservableObject {
         Task {
             do {
                 let fetchedMetadata = try await provider.startFetchingMetadata(for: url)
-                await MainActor.run {
-                    self.metadata = fetchedMetadata
-                    self.isLoading = false
-                }
+                self.metadata = fetchedMetadata
+                self.isLoading = false
             } catch {
-                await MainActor.run {
-                    self.error = error
-                    self.isLoading = false
-                }
+                self.error = error
+                self.isLoading = false
             }
         }
     }
