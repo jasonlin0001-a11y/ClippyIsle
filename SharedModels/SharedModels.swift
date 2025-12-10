@@ -72,6 +72,34 @@ public struct ClipboardItem: Identifiable, Codable, Equatable, Hashable {
     }
 }
 
+// MARK: - Exportable Clipboard Item (for import/export)
+public struct ExportableClipboardItem: Codable {
+    public var id: UUID
+    public var content: String
+    public var type: String
+    public var filename: String?
+    public var timestamp: Date
+    public var isPinned: Bool
+    public var displayName: String?
+    public var isTrashed: Bool
+    public var tags: [String]?
+    public var fileData: Data?
+    
+    public init(id: UUID, content: String, type: String, filename: String?, timestamp: Date, isPinned: Bool, displayName: String?, isTrashed: Bool, tags: [String]?, fileData: Data?) {
+        self.id = id
+        self.content = content
+        self.type = type
+        self.filename = filename
+        self.timestamp = timestamp
+        self.isPinned = isPinned
+        self.displayName = displayName
+        self.isTrashed = isTrashed
+        self.tags = tags
+        self.fileData = fileData
+    }
+}
+
+
 // MARK: - Live Activity Attributes
 public struct ClippyIsleAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {

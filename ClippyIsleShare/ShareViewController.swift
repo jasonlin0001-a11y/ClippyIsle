@@ -95,19 +95,19 @@ class ShareViewController: UIViewController {
         }
         
         do {
-            // Define ExportableClipboardItem structure (same as in ClipboardManager)
-            struct ExportableClipboardItem: Codable {
-                var id: UUID; var content: String; var type: String; var filename: String?; var timestamp: Date; var isPinned: Bool; var displayName: String?; var isTrashed: Bool; var tags: [String]?; var fileData: Data?
-            }
-            
-            // Decode imported items
+            // Decode imported items using shared ExportableClipboardItem
             let importedItems = try JSONDecoder().decode([ExportableClipboardItem].self, from: data)
             
             // Load existing items
             var existingItems: [ClipboardItem] = []
-            if let existingData = defaults.data(forKey: "clippedItems"),
-               let decodedItems = try? JSONDecoder().decode([ClipboardItem].self, from: existingData) {
-                existingItems = decodedItems
+            if let existingData = defaults.data(forKey: "clippedItems") {
+                do {
+                    let decodedItems = try JSONDecoder().decode([ClipboardItem].self, from: existingData)
+                    existingItems = decodedItems
+                } catch {
+                    print("⚠️ Share Extension: Failed to decode existing items, starting fresh: \(error.localizedDescription)")
+                    // Continue with empty array if existing data is corrupted
+                }
             }
             
             let existingIDs = Set(existingItems.map { $0.id })
@@ -134,6 +134,9 @@ class ShareViewController: UIViewController {
                 if let fileData = importedItem.fileData {
                     if let newFilename = saveFileDataToAppGroup(data: fileData, type: importedItem.type) {
                         newItem.filename = newFilename
+                    } else {
+                        print("⚠️ Share Extension: Failed to save file data for item \(importedItem.id), continuing without file")
+                        // Continue without file data rather than failing entire import
                     }
                 }
                 

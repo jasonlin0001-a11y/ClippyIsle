@@ -29,9 +29,7 @@ class ClipboardManager: ObservableObject {
     struct ClipboardItemV2: Codable {
         var id: UUID; var content: String; var type: String; var filename: String?; var timestamp: Date; var isPinned: Bool; var displayName: String?; var isTrashed: Bool
     }
-    struct ExportableClipboardItem: Codable {
-        var id: UUID; var content: String; var type: String; var filename: String?; var timestamp: Date; var isPinned: Bool; var displayName: String?; var isTrashed: Bool; var tags: [String]?; var fileData: Data?
-    }
+    // Note: ExportableClipboardItem is now defined in SharedModels.swift
 
     public init() {
         guard let defaults = UserDefaults(suiteName: appGroupID) else {
