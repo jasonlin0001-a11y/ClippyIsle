@@ -20,7 +20,7 @@ struct ClippyIsleWidgetEntryView : View {
     private var themeColor: Color {
         if entry.themeColorName == "custom" {
             // Try to read custom color from App Group UserDefaults
-            if let defaults = UserDefaults(suiteName: appGroupID) {
+            if let defaults = UserDefaults(suiteName: "group.com.shihchieh.clippyisle") {
                 let r = defaults.double(forKey: "customColorRed")
                 let g = defaults.double(forKey: "customColorGreen")
                 let b = defaults.double(forKey: "customColorBlue")
