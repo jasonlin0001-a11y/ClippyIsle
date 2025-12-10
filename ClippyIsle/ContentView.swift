@@ -112,7 +112,8 @@ struct ContentView: View {
         NavigationView { mainContent }
         .navigationViewStyle(.stack).tint(themeColor).preferredColorScheme(preferredColorScheme)
         .task(priority: .userInitiated) {
-            // ✅ PERFORMANCE FIX: Initialize data asynchronously on background thread
+            // ✅ PERFORMANCE FIX: Initialize data asynchronously after UI rendering
+            // Note: Runs on MainActor but doesn't block initial view rendering
             LaunchLogger.log("ContentView.task - ClipboardManager.initializeData() - START")
             clipboardManager.initializeData()
             LaunchLogger.log("ContentView.task - ClipboardManager.initializeData() - END")
