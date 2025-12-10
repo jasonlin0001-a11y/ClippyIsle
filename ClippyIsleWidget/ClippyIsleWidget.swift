@@ -1,6 +1,9 @@
 import WidgetKit
 import SwiftUI
 
+// App Group ID - must match exactly with the App Group identifier
+let widgetAppGroupID = "group.com.shihchieh.clippyisle"
+
 struct ClippyIsleWidget: Widget {
     let kind: String = "ClippyIsleWidget"
 
@@ -20,12 +23,13 @@ struct ClippyIsleWidgetEntryView : View {
     private var themeColor: Color {
         if entry.themeColorName == "custom" {
             // Try to read custom color from App Group UserDefaults
-            if let defaults = UserDefaults(suiteName: "group.com.shihchieh.clippyisle") {
+            if let defaults = UserDefaults(suiteName: widgetAppGroupID) {
                 let r = defaults.double(forKey: "customColorRed")
                 let g = defaults.double(forKey: "customColorGreen")
                 let b = defaults.double(forKey: "customColorBlue")
                 
-                // If all zeros, fall back to default color
+                // If all zeros, fall back to default color (more likely unset than intentional black)
+                // Note: This means pure black (0,0,0) cannot be set as a custom color
                 if r == 0 && g == 0 && b == 0 {
                     return ClippyIsleAttributes.ColorUtility.color(forName: entry.themeColorName)
                 }
