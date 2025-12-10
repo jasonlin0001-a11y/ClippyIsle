@@ -111,10 +111,11 @@ struct ClipboardItemRow: View {
             }
             .contentShape(Rectangle())
             .onTapGesture(perform: previewAction)
-            .onLongPressGesture(minimumDuration: 0.3) {
-                // Trigger inline preview for URL items
-                linkPreviewAction?()
-            }
+        }
+        .contentShape(Rectangle())
+        .onLongPressGesture(minimumDuration: 0.3) {
+            // Trigger inline preview for URL items
+            linkPreviewAction?()
         }
         .padding(.vertical, 8)
         .padding(.horizontal, isHighlighted ? 8 : 0)
