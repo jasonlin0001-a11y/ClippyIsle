@@ -8,6 +8,7 @@
 import Foundation
 import LinkPresentation
 import SwiftUI
+import Combine
 
 /// Manager class for fetching URL metadata asynchronously
 @MainActor
