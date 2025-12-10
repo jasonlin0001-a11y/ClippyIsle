@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import LinkPresentation
 
 // MARK: - Helper Components (Missing Shapes & Layouts)
 
@@ -83,6 +84,9 @@ struct ClipboardItemRow: View {
     var tagAction: () -> Void
     var shareAction: () -> Void
     @Environment(\.colorScheme) var colorScheme
+    
+    // State for link preview
+    @State private var showLinkPreview = false
 
     var body: some View {
         HStack(spacing: 15) {
@@ -109,6 +113,12 @@ struct ClipboardItemRow: View {
             }
             .contentShape(Rectangle())
             .onTapGesture(perform: previewAction)
+            .onLongPressGesture {
+                // Only show link preview for URL items
+                if item.type == UTType.url.identifier, URL(string: item.content) != nil {
+                    showLinkPreview = true
+                }
+            }
         }
         .padding(.vertical, 8)
         .padding(.horizontal, isHighlighted ? 8 : 0)
@@ -130,6 +140,11 @@ struct ClipboardItemRow: View {
                 .padding(2)
         )
         .animation(.easeInOut, value: isHighlighted)
+        .sheet(isPresented: $showLinkPreview) {
+            if let url = URL(string: item.content) {
+                LinkPreviewCard(url: url)
+            }
+        }
         .clipped()
     }
 }
