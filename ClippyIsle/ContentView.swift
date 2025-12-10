@@ -281,19 +281,8 @@ struct ContentView: View {
                             shareAction: { shareItem(item: item) }
                         )
                         
-                        // Always show inline preview based on item type
-                        if item.type == UTType.url.identifier, let url = URL(string: item.content) {
-                            InlineLinkPreview(url: url)
-                        } else if item.type == UTType.png.identifier || item.type == UTType.jpeg.identifier {
-                            // Pass filename and load function for async loading
-                            InlineImagePreview(
-                                imageData: item.fileData,
-                                filename: item.filename,
-                                loadFileData: { filename in clipboardManager.loadFileData(filename: filename) }
-                            )
-                        } else if item.type == UTType.plainText.identifier || item.type == UTType.text.identifier {
-                            InlineTextPreview(text: item.content)
-                        }
+                        // Always show lightweight compact preview
+                        CompactItemPreview(item: item, clipboardManager: clipboardManager)
                     }
                     .id(item.id)
                 }
