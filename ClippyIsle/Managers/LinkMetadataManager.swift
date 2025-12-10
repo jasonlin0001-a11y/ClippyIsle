@@ -22,6 +22,7 @@ class LinkMetadataManager: ObservableObject {
     /// Fetches metadata for a given URL
     /// - Parameter url: The URL to fetch metadata for
     func fetchMetadata(for url: URL) {
+        LaunchLogger.log("LinkMetadataManager.fetchMetadata() - START for URL: \(url)")
         isLoading = true
         error = nil
         metadata = nil
@@ -31,9 +32,11 @@ class LinkMetadataManager: ObservableObject {
                 let fetchedMetadata = try await provider.startFetchingMetadata(for: url)
                 self.metadata = fetchedMetadata
                 self.isLoading = false
+                LaunchLogger.log("LinkMetadataManager.fetchMetadata() - SUCCESS for URL: \(url)")
             } catch {
                 self.error = error
                 self.isLoading = false
+                LaunchLogger.log("LinkMetadataManager.fetchMetadata() - FAILED for URL: \(url)")
             }
         }
     }

@@ -32,10 +32,12 @@ class ClipboardManager: ObservableObject {
     // Note: ExportableClipboardItem is now defined in SharedModels.swift
 
     public init() {
+        LaunchLogger.log("ClipboardManager.init() - START")
         guard let defaults = UserDefaults(suiteName: appGroupID) else {
             print("❌ 致命警告: 無法初始化 App Group UserDefaults。")
             self.userDefaults = UserDefaults.standard; self.isLiveActivityOn = false; self.didInitializeSuccessfully = false
             self.dataLoadError = NSError(domain: "ClipboardManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "無法初始化 App Group"])
+            LaunchLogger.log("ClipboardManager.init() - FAILED (App Group error)")
             return
         }
         self.userDefaults = defaults
@@ -44,12 +46,26 @@ class ClipboardManager: ObservableObject {
         
         let standardDefaults = UserDefaults.standard
         standardDefaults.register(defaults: ["showSpeechSubtitles": true, "askToAddFromClipboard": true, "speechRate": 0.5, "iCloudSyncEnabled": true])
+        LaunchLogger.log("ClipboardManager.init() - END")
     }
     
     public func initializeData() {
-        guard didInitializeSuccessfully else { return }
-        loadItems(); cleanupItems()
-        if UserDefaults.standard.bool(forKey: "iCloudSyncEnabled") { Task { await performCloudSync() } }
+        LaunchLogger.log("ClipboardManager.initializeData() - START")
+        guard didInitializeSuccessfully else { 
+            LaunchLogger.log("ClipboardManager.initializeData() - SKIPPED (init failed)")
+            return 
+        }
+        loadItems()
+        LaunchLogger.log("ClipboardManager.initializeData() - loadItems() completed")
+        cleanupItems()
+        LaunchLogger.log("ClipboardManager.initializeData() - cleanupItems() completed")
+        if UserDefaults.standard.bool(forKey: "iCloudSyncEnabled") { 
+            Task { 
+                LaunchLogger.log("ClipboardManager.initializeData() - CloudSync Task spawned")
+                await performCloudSync() 
+            }
+        }
+        LaunchLogger.log("ClipboardManager.initializeData() - END")
     }
     
     func performCloudSync() async {

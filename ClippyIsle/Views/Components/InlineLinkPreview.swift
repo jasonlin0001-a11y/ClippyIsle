@@ -35,6 +35,7 @@ struct InlineLinkPreview: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .onAppear {
+            LaunchLogger.log("InlineLinkPreview.onAppear - START fetching metadata")
             metadataManager.fetchMetadata(for: url)
         }
     }

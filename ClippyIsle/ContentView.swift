@@ -67,7 +67,15 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.undoManager) private var undoManager
     
-    init() { let manager = ClipboardManager(); manager.initializeData(); _clipboardManager = StateObject(wrappedValue: manager) }
+    init() { 
+        LaunchLogger.log("ContentView.init() - START")
+        let manager = ClipboardManager()
+        LaunchLogger.log("ContentView.init() - ClipboardManager created")
+        manager.initializeData()
+        LaunchLogger.log("ContentView.init() - ClipboardManager.initializeData() completed")
+        _clipboardManager = StateObject(wrappedValue: manager)
+        LaunchLogger.log("ContentView.init() - END")
+    }
     
     var themeColor: Color {
         if themeColorName == "custom" {
@@ -101,12 +109,15 @@ struct ContentView: View {
     }
 
     var body: some View {
+        LaunchLogger.log("ContentView.body - START")
         NavigationView { mainContent }
         .navigationViewStyle(.stack).tint(themeColor).preferredColorScheme(preferredColorScheme)
         .onAppear {
+            LaunchLogger.log("ContentView.onAppear - START")
             configureNavigationBarAppearance()
             checkActivityStatus()
             NotificationCenter.default.addObserver(forName: .didRequestUndo, object: nil, queue: .main) { _ in undoManager?.undo() }
+            LaunchLogger.log("ContentView.onAppear - END")
         }
         .onChange(of: scenePhase) { oldPhase, newPhase in
             switch newPhase {

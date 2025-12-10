@@ -37,7 +37,11 @@ class SubscriptionManager: ObservableObject {
 
     // MARK: - Performance Rule: Empty Init
     // 這裡絕對不能放任何 fetch 邏輯，確保 App 啟動 0 延遲
-    private init() {}
+    private init() {
+        LaunchLogger.log("SubscriptionManager.init() - START")
+        // Init完成
+        LaunchLogger.log("SubscriptionManager.init() - END")
+    }
     
     deinit {
         updateListenerTask?.cancel()
@@ -45,6 +49,7 @@ class SubscriptionManager: ObservableObject {
 
     // MARK: - Lifecycle (Call from App.task)
     func start() {
+        LaunchLogger.log("SubscriptionManager.start() - BEGIN")
         // 在背景 Task.detached 啟動監聽，完全不佔用 Main Thread
         updateListenerTask = Task.detached(priority: .background) {
             // 明確指定 StoreKit.Transaction 避免與 SwiftUI.Transaction 衝突
@@ -57,6 +62,7 @@ class SubscriptionManager: ObservableObject {
         Task.detached(priority: .background) {
             await self.updateSubscriptionStatus()
         }
+        LaunchLogger.log("SubscriptionManager.start() - END (async tasks spawned)")
     }
 
     // MARK: - Purchase Logic

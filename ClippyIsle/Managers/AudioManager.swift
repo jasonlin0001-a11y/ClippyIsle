@@ -66,12 +66,20 @@ class SpeechRecognizer: ObservableObject {
     private let audioEngine = AVAudioEngine()
 
     init() {
+        LaunchLogger.log("SpeechRecognizer.init() - START requesting authorization")
         SFSpeechRecognizer.requestAuthorization { authStatus in
             DispatchQueue.main.async {
-                if authStatus != .authorized { print("❌ 語音辨識權限未授權。") }
-                else { print("✅ 語音辨識權限已授權。") }
+                if authStatus != .authorized { 
+                    print("❌ 語音辨識權限未授權。")
+                    LaunchLogger.log("SpeechRecognizer.init() - Authorization DENIED")
+                }
+                else { 
+                    print("✅ 語音辨識權限已授權。")
+                    LaunchLogger.log("SpeechRecognizer.init() - Authorization GRANTED")
+                }
             }
         }
+        LaunchLogger.log("SpeechRecognizer.init() - END (async authorization request sent)")
     }
     
     func startTranscribing() {
