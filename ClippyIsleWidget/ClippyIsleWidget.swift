@@ -8,7 +8,7 @@ struct ClippyIsleWidget: Widget {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
             ClippyIsleWidgetEntryView(entry: entry)
         }
-        .configurationDisplayName("Clippy Isle")
+        .configurationDisplayName("C Isle")
         .description("View your clipboard item count.")
         .supportedFamilies([.systemSmall])
     }

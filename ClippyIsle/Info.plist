@@ -23,6 +23,6 @@
 	<key>CFBundleIdentifier</key>
 	<string></string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>ClippyIsle needs access to your local network to host the web management interface.</string>
+	<string>C Isle needs access to your local network to host the web management interface.</string>
 </dict>
 </plist>

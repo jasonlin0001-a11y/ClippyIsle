@@ -27,7 +27,7 @@ struct AboutUsView: View {
             return """
             隱私權政策
             
-            Clippy Isle 尊重並保護所有使用者的隱私權。本隱私權政策說明我們如何處理您的資訊。
+            C Isle 尊重並保護所有使用者的隱私權。本隱私權政策說明我們如何處理您的資訊。
             
             資料收集
             本應用程式不會收集、傳輸或分享您的個人資料給第三方。所有的剪貼簿內容都儲存在您的裝置本地或您的個人 iCloud 帳戶中。
@@ -53,7 +53,7 @@ struct AboutUsView: View {
             return """
             Privacy Policy
             
-            Clippy Isle respects and protects the privacy of all users. This privacy policy explains how we handle your information.
+            C Isle respects and protects the privacy of all users. This privacy policy explains how we handle your information.
             
             Data Collection
             This application does not collect, transmit, or share your personal data with third parties. All clipboard content is stored locally on your device or in your personal iCloud account.
@@ -91,7 +91,7 @@ struct AboutUsView: View {
                     .padding(.top, 30)
                 
                 // App Name
-                Text("Clippy Isle")
+                Text("C Isle")
                     .font(.system(size: 32, weight: .bold, design: .rounded))
                 
                 // Version
@@ -104,10 +104,10 @@ struct AboutUsView: View {
                 
                 // Description
                 VStack(alignment: .leading, spacing: 15) {
-                    Text("About Clippy Isle")
+                    Text("About C Isle")
                         .font(.headline)
                     
-                    Text("Clippy Isle is a powerful clipboard management application that helps you organize, search, and manage your clipboard history efficiently. With features like iCloud sync, speech recognition, and web management, Clippy Isle makes managing your clipboard content easier than ever.")
+                    Text("C Isle is a powerful clipboard management application that helps you organize, search, and manage your clipboard history efficiently. With features like iCloud sync, speech recognition, and web management, C Isle makes managing your clipboard content easier than ever.")
                         .font(.body)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.leading)
@@ -140,7 +140,7 @@ struct AboutUsView: View {
                     Text("Developer")
                         .font(.headline)
                     
-                    Text("Clippy Isle Studio")
+                    Text("C Isle Studio")
                         .font(.body)
                         .foregroundColor(.secondary)
                 }

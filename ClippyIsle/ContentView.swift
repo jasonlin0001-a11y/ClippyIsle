@@ -248,7 +248,7 @@ struct ContentView: View {
         }
     }
     
-    private var navigationTitle: String { selectedTagFilter.map { "Tag: \($0)" } ?? "Clippy Isle" }
+    private var navigationTitle: String { selectedTagFilter.map { "Tag: \($0)" } ?? "C Isle" }
     private var dataErrorView: some View {
         VStack(spacing: 15) {
             Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 50)).foregroundColor(.orange)

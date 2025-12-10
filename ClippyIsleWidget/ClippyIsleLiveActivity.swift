@@ -95,7 +95,7 @@ struct ClippyIsleLiveActivity: Widget {
                         Image(systemName: "c.circle.fill")
                             .font(.system(size: 20))
                             .foregroundColor(ClippyIsleAttributes.ColorUtility.cementGray)
-                        Text("Clippy Isle")
+                        Text("C Isle")
                             .font(.headline)
                     }
                 }
@@ -136,7 +136,7 @@ struct LiveActivityView: View {
             HStack {
                 // 左側：App 名稱
                 Label {
-                    Text("Clippy Isle")
+                    Text("C Isle")
                 } icon: {
                     Image(systemName: "c.circle.fill")
                         .font(.system(size: 16))
