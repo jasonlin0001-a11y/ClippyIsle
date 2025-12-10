@@ -31,7 +31,7 @@ struct SplashScreenView: View {
                     .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
                 
                 // App Title
-                Text("C Isle")
+                Text("CC Isle")
                     .font(.system(size: 32, weight: .bold, design: .rounded))
                     .foregroundColor(colorScheme == .dark ? .white : .black)
             }

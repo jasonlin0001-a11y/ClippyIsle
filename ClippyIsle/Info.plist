@@ -23,6 +23,8 @@
 	<key>CFBundleIdentifier</key>
 	<string></string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>C Isle needs access to your local network to host the web management interface.</string>
+	<string>CC Isle needs access to your local network to host the web management interface.</string>
+	<key>CFBundleDisplayName</key>
+	<string>CC Isle</string>
 </dict>
 </plist>
