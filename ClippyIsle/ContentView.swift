@@ -71,10 +71,10 @@ struct ContentView: View {
         LaunchLogger.log("ContentView.init() - START")
         let manager = ClipboardManager()
         LaunchLogger.log("ContentView.init() - ClipboardManager created")
-        manager.initializeData()
-        LaunchLogger.log("ContentView.init() - ClipboardManager.initializeData() completed")
+        // ⚠️ PERFORMANCE FIX: Removed blocking initializeData() call from init
+        // Data initialization now happens asynchronously in .task modifier
         _clipboardManager = StateObject(wrappedValue: manager)
-        LaunchLogger.log("ContentView.init() - END")
+        LaunchLogger.log("ContentView.init() - END (data initialization deferred)")
     }
     
     var themeColor: Color {
@@ -111,6 +111,12 @@ struct ContentView: View {
     var body: some View {
         NavigationView { mainContent }
         .navigationViewStyle(.stack).tint(themeColor).preferredColorScheme(preferredColorScheme)
+        .task(priority: .userInitiated) {
+            // ✅ PERFORMANCE FIX: Initialize data asynchronously on background thread
+            LaunchLogger.log("ContentView.task - ClipboardManager.initializeData() - START")
+            clipboardManager.initializeData()
+            LaunchLogger.log("ContentView.task - ClipboardManager.initializeData() - END")
+        }
         .onAppear {
             LaunchLogger.log("ContentView.onAppear - START")
             configureNavigationBarAppearance()
