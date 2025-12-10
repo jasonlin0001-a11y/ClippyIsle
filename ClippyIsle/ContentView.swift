@@ -44,9 +44,6 @@ struct ContentView: View {
     // Track newly added item for highlighting
     @State private var newlyAddedItemID: UUID?
     
-    // Track expanded inline preview item
-    @State private var expandedPreviewItemID: UUID?
-    
     // Timer for auto-stopping speech search
     @State private var silenceTimer: Timer?
     
@@ -281,27 +278,18 @@ struct ContentView: View {
                                     showPaywall = true
                                 }
                             },
-                            shareAction: { shareItem(item: item) },
-                            linkPreviewAction: {
-                                // Toggle inline preview for URL items
-                                if item.type == UTType.url.identifier, URL(string: item.content) != nil {
-                                    withAnimation(.easeInOut(duration: 0.3)) {
-                                        if expandedPreviewItemID == item.id {
-                                            expandedPreviewItemID = nil
-                                        } else {
-                                            expandedPreviewItemID = item.id
-                                        }
-                                    }
-                                }
-                            }
+                            shareAction: { shareItem(item: item) }
                         )
                         
-                        // Show inline preview if this item is expanded
-                        if expandedPreviewItemID == item.id, 
-                           item.type == UTType.url.identifier,
-                           let url = URL(string: item.content) {
+                        // Always show inline preview based on item type
+                        if item.type == UTType.url.identifier, let url = URL(string: item.content) {
                             InlineLinkPreview(url: url)
-                                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                        } else if item.type == UTType.png.identifier || item.type == UTType.jpeg.identifier {
+                            // Load image data if needed
+                            let imageData = item.fileData ?? (item.filename.flatMap { clipboardManager.loadFileData(filename: $0) })
+                            InlineImagePreview(imageData: imageData)
+                        } else if item.type == UTType.plainText.identifier || item.type == UTType.text.identifier {
+                            InlineTextPreview(text: item.content)
                         }
                     }
                     .id(item.id)
