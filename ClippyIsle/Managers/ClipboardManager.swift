@@ -324,11 +324,18 @@ class ClipboardManager: ObservableObject {
             
             if pasteboard.hasStrings, let content = pasteboard.string, !content.isEmpty,
                !items.contains(where: { !$0.isTrashed && $0.content == content }) {
-                let isURL = URL(string: content) != nil && (content.starts(with: "http://") || content.starts(with: "https://"))
+                let isURL = isValidURL(content)
                 addNewItem(content: content, type: isURL ? UTType.url.identifier : UTType.text.identifier)
                 return
             }
         }
+    }
+    
+    // Helper function to validate if a string is a URL
+    private func isValidURL(_ string: String) -> Bool {
+        guard let url = URL(string: string) else { return false }
+        let lowercased = string.lowercased()
+        return (lowercased.hasPrefix("http://") || lowercased.hasPrefix("https://")) && url.host != nil
     }
 
     func extractTextFrom(data: Data, type: UTType) -> String? {

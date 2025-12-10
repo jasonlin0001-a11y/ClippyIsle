@@ -36,13 +36,23 @@ class ShareViewController: UIViewController {
                     }
                 }
             } else if itemProvider.hasItemConformingToTypeIdentifier(UTType.url.identifier) {
-                // Check for URL type before text type since URLs conform to both types
+                // Try to load as URL type first since URLs shared from apps often conform to this
                 if let url = try await itemProvider.loadItem(forTypeIdentifier: UTType.url.identifier, options: nil) as? URL {
                     await saveContent(url.absoluteString, type: UTType.url.identifier)
+                } else {
+                    // Fallback: if URL type exists but can't be loaded as URL, try text
+                    if itemProvider.hasItemConformingToTypeIdentifier(UTType.text.identifier),
+                       let text = try await itemProvider.loadItem(forTypeIdentifier: UTType.text.identifier, options: nil) as? String {
+                        // Detect if text is actually a URL
+                        let detectedType = isValidURL(text) ? UTType.url.identifier : UTType.text.identifier
+                        await saveContent(text, type: detectedType)
+                    }
                 }
             } else if itemProvider.hasItemConformingToTypeIdentifier(UTType.text.identifier) {
                 if let text = try await itemProvider.loadItem(forTypeIdentifier: UTType.text.identifier, options: nil) as? String {
-                    await saveContent(text, type: UTType.text.identifier)
+                    // Detect if text is actually a URL
+                    let detectedType = isValidURL(text) ? UTType.url.identifier : UTType.text.identifier
+                    await saveContent(text, type: detectedType)
                 }
             } else if itemProvider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
                 let data = try await itemProvider.loadDataRepresentation(forTypeIdentifier: UTType.image.identifier)
@@ -56,6 +66,12 @@ class ShareViewController: UIViewController {
         }
         
         finish()
+    }
+    
+    // Helper function to validate if a string is a URL
+    private func isValidURL(_ string: String) -> Bool {
+        guard let url = URL(string: string) else { return false }
+        return (string.lowercased().hasPrefix("http://") || string.lowercased().hasPrefix("https://")) && url.host != nil
     }
     
     @MainActor
