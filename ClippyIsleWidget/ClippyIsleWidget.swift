@@ -1,9 +1,6 @@
 import WidgetKit
 import SwiftUI
 
-// App Group ID - must match exactly with the App Group identifier
-let widgetAppGroupID = "group.com.shihchieh.clippyisle"
-
 struct ClippyIsleWidget: Widget {
     let kind: String = "ClippyIsleWidget"
 
