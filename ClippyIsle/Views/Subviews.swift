@@ -83,10 +83,8 @@ struct ClipboardItemRow: View {
     var renameAction: () -> Void
     var tagAction: () -> Void
     var shareAction: () -> Void
+    var linkPreviewAction: (() -> Void)? = nil
     @Environment(\.colorScheme) var colorScheme
-    
-    // State for link preview
-    @State private var showLinkPreview = false
 
     var body: some View {
         HStack(spacing: 15) {
@@ -113,11 +111,9 @@ struct ClipboardItemRow: View {
             }
             .contentShape(Rectangle())
             .onTapGesture(perform: previewAction)
-            .onLongPressGesture {
-                // Only show link preview for URL items
-                if item.type == UTType.url.identifier, URL(string: item.content) != nil {
-                    showLinkPreview = true
-                }
+            .onLongPressGesture(minimumDuration: 0.3) {
+                // Trigger inline preview for URL items
+                linkPreviewAction?()
             }
         }
         .padding(.vertical, 8)
@@ -140,11 +136,6 @@ struct ClipboardItemRow: View {
                 .padding(2)
         )
         .animation(.easeInOut, value: isHighlighted)
-        .sheet(isPresented: $showLinkPreview) {
-            if let url = URL(string: item.content) {
-                LinkPreviewCard(url: url)
-            }
-        }
         .clipped()
     }
 }

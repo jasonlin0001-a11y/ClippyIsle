@@ -44,6 +44,9 @@ struct ContentView: View {
     // Track newly added item for highlighting
     @State private var newlyAddedItemID: UUID?
     
+    // Track expanded inline preview item
+    @State private var expandedPreviewItemID: UUID?
+    
     // Timer for auto-stopping speech search
     @State private var silenceTimer: Timer?
     
@@ -258,25 +261,50 @@ struct ContentView: View {
         ScrollViewReader { proxy in
             List {
                 ForEach(filteredItems) { item in
-                    ClipboardItemRow(
-                        item: item,
-                        themeColor: themeColor,
-                        isHighlighted: item.id == newlyAddedItemID,
-                        copyAction: { copyItemToClipboard(item: item) }, previewAction: { previewState = .loading(item) },
-                        createDragItem: { createDragItem(for: item) }, togglePinAction: { clipboardManager.togglePin(for: item) },
-                        deleteAction: { itemToDelete = item; isShowingDeleteConfirm = true },
-                        renameAction: { itemToRename = item; newName = item.displayName ?? ""; isShowingRenameAlert = true },
-                        // **MODIFIED**: Tag Limit Logic
-                        tagAction: {
-                            // Check if user is Pro OR if total unique tags < 10
-                            if subscriptionManager.isPro || clipboardManager.allTags.count < 10 {
-                                itemToTag = item
-                            } else {
-                                showPaywall = true
+                    VStack(spacing: 0) {
+                        ClipboardItemRow(
+                            item: item,
+                            themeColor: themeColor,
+                            isHighlighted: item.id == newlyAddedItemID,
+                            copyAction: { copyItemToClipboard(item: item) }, 
+                            previewAction: { previewState = .loading(item) },
+                            createDragItem: { createDragItem(for: item) }, 
+                            togglePinAction: { clipboardManager.togglePin(for: item) },
+                            deleteAction: { itemToDelete = item; isShowingDeleteConfirm = true },
+                            renameAction: { itemToRename = item; newName = item.displayName ?? ""; isShowingRenameAlert = true },
+                            // **MODIFIED**: Tag Limit Logic
+                            tagAction: {
+                                // Check if user is Pro OR if total unique tags < 10
+                                if subscriptionManager.isPro || clipboardManager.allTags.count < 10 {
+                                    itemToTag = item
+                                } else {
+                                    showPaywall = true
+                                }
+                            },
+                            shareAction: { shareItem(item: item) },
+                            linkPreviewAction: {
+                                // Toggle inline preview for URL items
+                                if item.type == UTType.url.identifier, URL(string: item.content) != nil {
+                                    withAnimation(.easeInOut(duration: 0.3)) {
+                                        if expandedPreviewItemID == item.id {
+                                            expandedPreviewItemID = nil
+                                        } else {
+                                            expandedPreviewItemID = item.id
+                                        }
+                                    }
+                                }
                             }
-                        },
-                        shareAction: { shareItem(item: item) }
-                    ).id(item.id)
+                        )
+                        
+                        // Show inline preview if this item is expanded
+                        if expandedPreviewItemID == item.id, 
+                           item.type == UTType.url.identifier,
+                           let url = URL(string: item.content) {
+                            InlineLinkPreview(url: url)
+                                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                        }
+                    }
+                    .id(item.id)
                 }
                 .onDelete { indexSet in indexSet.map { filteredItems[$0] }.forEach { clipboardManager.moveItemToTrash(item: $0) } }
             }
