@@ -232,7 +232,6 @@ struct TagFilterView: View {
     @State private var isSelectMode = false
     @State private var selectedTags: Set<String> = []
     @State private var exportURL: URL?
-    @State private var isShowingShareSheet = false
     @Environment(\.dismiss) var dismiss
 
     var body: some View {
@@ -243,27 +242,23 @@ struct TagFilterView: View {
                 }
                 Section("Tags") {
                     ForEach(tags, id: \.self) { tag in
-                        HStack {
-                            if isSelectMode {
-                                Button {
-                                    if selectedTags.contains(tag) {
-                                        selectedTags.remove(tag)
-                                    } else {
-                                        selectedTags.insert(tag)
-                                    }
-                                } label: {
-                                    HStack {
-                                        Image(systemName: selectedTags.contains(tag) ? "checkmark.circle.fill" : "circle")
-                                        Text(tag)
-                                        Spacer()
-                                    }
-                                }.foregroundColor(.primary)
-                            } else {
-                                Button { selectedTag = tag; dismiss() } label: { HStack { Image(systemName: selectedTag == tag ? "checkmark.circle.fill" : "circle"); Text(tag) } }.foregroundColor(.primary)
-                            }
-                        }
-                        .swipeActions {
-                            if !isSelectMode {
+                        if isSelectMode {
+                            Button {
+                                if selectedTags.contains(tag) {
+                                    selectedTags.remove(tag)
+                                } else {
+                                    selectedTags.insert(tag)
+                                }
+                            } label: {
+                                HStack {
+                                    Image(systemName: selectedTags.contains(tag) ? "checkmark.circle.fill" : "circle")
+                                    Text(tag)
+                                    Spacer()
+                                }
+                            }.foregroundColor(.primary)
+                        } else {
+                            Button { selectedTag = tag; dismiss() } label: { HStack { Image(systemName: selectedTag == tag ? "checkmark.circle.fill" : "circle"); Text(tag) } }.foregroundColor(.primary)
+                            .swipeActions {
                                 Button("Delete", role: .destructive) { 
                                     clipboardManager.deleteTagFromAllItems(tag)
                                     tags = clipboardManager.allTags
@@ -273,14 +268,11 @@ struct TagFilterView: View {
                         }
                     }
                     .onMove { from, to in
-                        if !isSelectMode {
-                            tags.move(fromOffsets: from, toOffset: to)
-                            clipboardManager.saveTagOrder(tags)
-                        }
+                        tags.move(fromOffsets: from, toOffset: to)
+                        clipboardManager.saveTagOrder(tags)
                     }
                 }
             }
-            .environment(\.editMode, .constant(isSelectMode ? .active : .inactive))
             .navigationTitle("Filter by Tag")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -333,7 +325,6 @@ struct TagFilterView: View {
         do {
             if let url = try clipboardManager.exportData(forTags: selectedTags) {
                 exportURL = url
-                isShowingShareSheet = true
             }
         } catch {
             print("Export failed: \(error.localizedDescription)")
