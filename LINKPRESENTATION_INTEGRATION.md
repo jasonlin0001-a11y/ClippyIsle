@@ -4,7 +4,7 @@ This document describes the LinkPresentation feature integration that enables ri
 
 ## Overview
 
-The app now uses Apple's native LinkPresentation framework to fetch and display metadata for URL items stored in the clipboard history. **The preview expands inline between list items**, creating a card-like separation effect.
+The app now uses Apple's native LinkPresentation framework to fetch and display metadata for URL items stored in the clipboard history. **The preview is always displayed inline between list items**, creating a card-like separation effect for all clipboard items (URLs, images, and text).
 
 ## Features
 
@@ -25,7 +25,9 @@ let manager = LinkMetadataManager()
 manager.fetchMetadata(for: url)
 ```
 
-### 2. InlineLinkPreview
+### 2. Inline Preview Components
+
+#### InlineLinkPreview
 **Location:** `ClippyIsle/Views/Components/InlineLinkPreview.swift`
 
 A compact SwiftUI view that displays URL metadata inline between list items.
@@ -42,32 +44,47 @@ A compact SwiftUI view that displays URL metadata inline between list items.
 - **Success:** Displays the metadata in a compact card layout
 - **Error:** Shows error message inline
 
-### 3. Long Press Gesture with Inline Expansion
+#### InlineImagePreview
+**Location:** `ClippyIsle/Views/Components/InlineImagePreview.swift`
+
+A compact SwiftUI view that displays image previews inline between list items.
+
+**Key Features:**
+- Displays images in a compact format (max height 120pt)
+- Shows "Image preview unavailable" message if data is missing
+- Compact card design matching other preview types
+
+#### InlineTextPreview
+**Location:** `ClippyIsle/Views/Components/InlineTextPreview.swift`
+
+A compact SwiftUI view that displays text previews inline between list items.
+
+**Key Features:**
+- Displays text content with 3-line limit
+- Compact card design matching other preview types
+- Shows text in an easy-to-read format
+
+### 3. Always-On Inline Previews
 **Location:** Modified in `ClippyIsle/Views/Subviews.swift` and `ClippyIsle/ContentView.swift`
 
-The `ClipboardItemRow` has been enhanced with a long-press gesture handler that triggers inline preview expansion.
+All clipboard items now automatically display inline previews based on their type.
 
 **Behavior:**
-- When user long-presses on a URL item (0.3 second duration for better sensitivity)
-- The app automatically detects if the item is a URL
-- **The preview expands inline between the pressed item and the item below it**
-- Creates a visual card separation effect
-- Long-press the same item again to collapse the preview
+- **URL items:** Automatically show rich metadata preview (title, image, domain)
+- **Image items (PNG/JPEG):** Automatically show image thumbnail preview
+- **Text items:** Automatically show text preview (first 3 lines)
+- **No user interaction required** - previews are always visible
 - Regular tap still works as before (opens full-screen preview)
 
 ## User Experience
 
-1. **Add a URL** to clipboard (e.g., https://www.apple.com)
-2. The URL appears in the ClippyIsle main list
-3. **Long press** on the URL item (0.3 second hold)
-4. The list items separate and an inline preview card appears showing:
-   - Loading indicator (while fetching)
-   - Rich preview card with:
-     - Website image/icon (80x80)
-     - Page title (up to 2 lines)
-     - Domain/URL
-5. **Long press again** to collapse the preview
-6. Tap normally to open full-screen preview (existing behavior)
+1. **Add content** to clipboard (URL, image, or text)
+2. The item appears in the ClippyIsle main list
+3. **Preview is automatically displayed** below the item:
+   - **URLs:** Loading indicator → Rich preview card with website image/icon (80x80), page title (up to 2 lines), and domain/URL
+   - **Images:** Image thumbnail preview (max height 120pt)
+   - **Text:** Text content preview (first 3 lines)
+4. **Tap the item** to open full-screen preview (existing behavior)
 
 ## Technical Details
 
@@ -93,46 +110,64 @@ All are caught and displayed with user-friendly messages
 ## Implementation Details
 
 ### Files Created
-1. `ClippyIsle/Managers/LinkMetadataManager.swift` - Metadata fetching logic
-2. `ClippyIsle/Views/Components/LinkPreviewCard.swift` - Preview card UI
+1. `ClippyIsle/Managers/LinkMetadataManager.swift` - Metadata fetching logic for URLs
+2. `ClippyIsle/Views/Components/InlineLinkPreview.swift` - Preview component for URLs
+3. `ClippyIsle/Views/Components/InlineImagePreview.swift` - Preview component for images
+4. `ClippyIsle/Views/Components/InlineTextPreview.swift` - Preview component for text
+5. `ClippyIsle/Views/Components/LinkPreviewCard.swift` - Full-screen preview card UI (legacy)
 
 ### Files Modified
-1. `ClippyIsle/Views/Subviews.swift` - Added long-press gesture to ClipboardItemRow
+1. `ClippyIsle/Views/Subviews.swift` - Removed long-press gesture from ClipboardItemRow
+2. `ClippyIsle/ContentView.swift` - Added always-on inline previews for all item types
 
 ### Dependencies
 - No external dependencies required
-- Uses native iOS LinkPresentation framework (iOS 13+)
+- Uses native iOS LinkPresentation framework (iOS 13+) for URL metadata
 
 ## Future Enhancements
 
 Potential improvements:
 1. Cache fetched metadata to avoid repeated network calls
-2. Add animation when opening the preview
+2. Add smooth animations when displaying previews
 3. Support for custom URL schemes
 4. Share button in the preview card
 5. Copy individual metadata fields (title, description)
 6. Open URL in Safari button
+7. Support for more file types (PDFs, videos, etc.)
 
 ## Testing
 
 Since the iOS simulator and physical device are not available in this environment, manual testing should include:
 
-1. **Valid URLs:**
+1. **URL Items:**
    - Test with various websites (news, blogs, social media)
    - Verify image loading
    - Check title and description display
+   - Test loading states
+   - Test error handling for invalid/unreachable URLs
 
-2. **Invalid URLs:**
-   - Test error handling
-   - Verify retry button works
+2. **Image Items:**
+   - Test with PNG images
+   - Test with JPEG images
+   - Verify thumbnail display
+   - Check error handling for missing image data
 
-3. **Edge Cases:**
+3. **Text Items:**
+   - Test with short text (< 3 lines)
+   - Test with long text (> 3 lines to verify truncation)
+   - Verify text readability
+
+4. **Edge Cases:**
    - Very long URLs
    - URLs without images
    - URLs with special characters
    - Slow network conditions
+   - Missing image data
+   - Very long text content
 
-4. **User Interaction:**
-   - Long press gesture responsiveness
-   - Sheet presentation/dismissal
-   - Tap vs long press distinction
+5. **User Interaction:**
+   - Verify previews display automatically
+   - Test tap to open full-screen preview
+   - Verify scrolling performance with multiple previews
+   - Test on both iPhone and iPad
+   - Test in light and dark mode
