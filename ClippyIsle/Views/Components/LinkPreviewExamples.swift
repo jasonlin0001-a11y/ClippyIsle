@@ -32,7 +32,8 @@ struct LinkPreviewExamples {
                 timestamp: Date(),
                 isPinned: false,
                 displayName: nil,
-                isTrashed: false
+                isTrashed: false,
+                tags: nil
             )
         }
     }

@@ -92,19 +92,6 @@ struct LinkPreviewCard: View {
     private func contentView(metadata: LPLinkMetadata) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                // URL
-                HStack {
-                    Image(systemName: "link")
-                        .foregroundColor(.secondary)
-                    Text(url.absoluteString)
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                    Spacer()
-                }
-                .padding(.horizontal)
-                .padding(.top)
-                
                 // Card
                 VStack(alignment: .leading, spacing: 12) {
                     // Image
@@ -124,12 +111,17 @@ struct LinkPreviewCard: View {
                             .lineLimit(3)
                     }
                     
-                    // URL as description (since there's no public summary property)
+                    // URL as subtitle
                     if let url = metadata.url {
-                        Text(url.absoluteString)
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                            .lineLimit(5)
+                        HStack(spacing: 6) {
+                            Image(systemName: "link")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text(url.absoluteString)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .lineLimit(2)
+                        }
                     }
                 }
                 .padding()
