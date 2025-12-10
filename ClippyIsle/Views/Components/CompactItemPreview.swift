@@ -14,6 +14,9 @@ struct CompactItemPreview: View {
     let item: ClipboardItem
     let clipboardManager: ClipboardManager
     
+    // Constants
+    private static let textPreviewMaxLength = 50
+    
     var body: some View {
         Group {
             if item.type == UTType.url.identifier {
@@ -89,19 +92,19 @@ struct CompactItemPreview: View {
         .padding(.vertical, 4)
     }
     
-    // Text preview: Show first 50 characters
+    // Text preview: Show first N characters
     private var textPreview: some View {
         HStack(spacing: 8) {
-            Image(systemName: "text.alignleft")
+            Image(systemName: "doc.text")
                 .foregroundColor(.green)
                 .font(.caption)
             
-            Text(item.content.prefix(50))
+            Text(item.content.prefix(Self.textPreviewMaxLength))
                 .font(.caption2)
                 .foregroundColor(.secondary)
                 .lineLimit(2)
             
-            if item.content.count > 50 {
+            if item.content.count > Self.textPreviewMaxLength {
                 Text("...")
                     .font(.caption2)
                     .foregroundColor(.secondary)
