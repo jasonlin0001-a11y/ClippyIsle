@@ -35,13 +35,14 @@ class ShareViewController: UIViewController {
                         await saveContent(url.absoluteString, type: UTType.url.identifier)
                     }
                 }
+            } else if itemProvider.hasItemConformingToTypeIdentifier(UTType.url.identifier) {
+                // Check for URL type before text type since URLs conform to both types
+                if let url = try await itemProvider.loadItem(forTypeIdentifier: UTType.url.identifier, options: nil) as? URL {
+                    await saveContent(url.absoluteString, type: UTType.url.identifier)
+                }
             } else if itemProvider.hasItemConformingToTypeIdentifier(UTType.text.identifier) {
                 if let text = try await itemProvider.loadItem(forTypeIdentifier: UTType.text.identifier, options: nil) as? String {
                     await saveContent(text, type: UTType.text.identifier)
-                }
-            } else if itemProvider.hasItemConformingToTypeIdentifier(UTType.url.identifier) {
-                if let url = try await itemProvider.loadItem(forTypeIdentifier: UTType.url.identifier, options: nil) as? URL {
-                    await saveContent(url.absoluteString, type: UTType.url.identifier)
                 }
             } else if itemProvider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
                 let data = try await itemProvider.loadDataRepresentation(forTypeIdentifier: UTType.image.identifier)

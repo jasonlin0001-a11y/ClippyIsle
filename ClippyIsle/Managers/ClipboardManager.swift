@@ -324,7 +324,7 @@ class ClipboardManager: ObservableObject {
             
             if pasteboard.hasStrings, let content = pasteboard.string, !content.isEmpty,
                !items.contains(where: { !$0.isTrashed && $0.content == content }) {
-                let isURL = URL(string: content) != nil && (content.starts(with: "http") || content.starts(with: "https."))
+                let isURL = URL(string: content) != nil && (content.starts(with: "http://") || content.starts(with: "https://"))
                 addNewItem(content: content, type: isURL ? UTType.url.identifier : UTType.text.identifier)
                 return
             }
