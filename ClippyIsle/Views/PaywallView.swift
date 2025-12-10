@@ -9,13 +9,13 @@ import SwiftUI
 import StoreKit
 
 struct FeatureRow: View {
-    let icon: String
     let text: String
     
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: icon)
+            Image(systemName: "circle.fill")
                 .foregroundStyle(.blue)
+                .font(.system(size: 6))
                 .frame(width: 24)
             Text(text)
                 .font(.subheadline)
@@ -53,12 +53,12 @@ struct PaywallView: View {
                     .font(.headline)
                     .padding(.top, 10)
                 
-                FeatureRow(icon: "tag.fill", text: "無限制標籤數量")
-                FeatureRow(icon: "arrow.down.circle.fill", text: "文字轉語音下載功能")
-                FeatureRow(icon: "paintbrush.fill", text: "自訂主題顏色")
-                FeatureRow(icon: "icloud.fill", text: "iCloud 自動同步")
-                FeatureRow(icon: "network", text: "網頁管理功能")
-                FeatureRow(icon: "crown.fill", text: "所有未來新功能")
+                FeatureRow(text: "標籤想加就加（隨心所欲歸類內容）")
+                FeatureRow(text: "語音帶著走（沒網路也能暢聽無阻）")
+                FeatureRow(text: "介面由你定義（隨心情切換愛用色）")
+                FeatureRow(text: "iCloud 雲端備份（換手機也能無痛銜接）")
+                FeatureRow(text: "網頁版小幫手（鍵盤打字整理更神速）")
+                FeatureRow(text: "未來功能全包辦（一次購買，終身享受）")
             }
             .padding(.horizontal)
             
