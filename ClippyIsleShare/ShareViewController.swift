@@ -150,10 +150,9 @@ class ShareViewController: UIViewController {
                 return item1.timestamp > item2.timestamp
             }
             
-            if let encodedData = try JSONEncoder().encode(existingItems) {
-                defaults.set(encodedData, forKey: "clippedItems")
-                print("✅ Share Extension: Imported \(newItemsCount) new items from JSON.")
-            }
+            let encodedData = try JSONEncoder().encode(existingItems)
+            defaults.set(encodedData, forKey: "clippedItems")
+            print("✅ Share Extension: Imported \(newItemsCount) new items from JSON.")
         } catch {
             print("❌ Share Extension: Failed to import JSON data: \(error.localizedDescription)")
         }
