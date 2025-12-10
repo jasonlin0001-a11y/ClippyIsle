@@ -8,6 +8,21 @@
 import SwiftUI
 import StoreKit
 
+struct FeatureRow: View {
+    let icon: String
+    let text: String
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .foregroundStyle(.blue)
+                .frame(width: 24)
+            Text(text)
+                .font(.subheadline)
+        }
+    }
+}
+
 struct PaywallView: View {
     // 使用 Singleton 或 EnvironmentObject
     @StateObject var manager = SubscriptionManager.shared
@@ -25,12 +40,26 @@ struct PaywallView: View {
                 Text("Unlock ClippyIsle Pro")
                     .font(.largeTitle.bold())
                 
-                Text("Remove limits, customize themes, and enable sync.")
+                Text("解鎖完整功能，享受更強大的體驗")
                     .font(.body)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
                     .padding(.horizontal)
             }
+            
+            // PRO Features List
+            VStack(alignment: .leading, spacing: 12) {
+                Text("PRO 功能包含：")
+                    .font(.headline)
+                    .padding(.top, 10)
+                
+                FeatureRow(icon: "infinity", text: "無限制項目數量")
+                FeatureRow(icon: "paintbrush.fill", text: "自訂主題顏色")
+                FeatureRow(icon: "icloud.fill", text: "iCloud 自動同步")
+                FeatureRow(icon: "network", text: "網頁管理功能")
+                FeatureRow(icon: "crown.fill", text: "所有未來新功能")
+            }
+            .padding(.horizontal)
             
             Spacer()
             
@@ -87,12 +116,41 @@ struct ProductRow: View {
         product.id == ProductIDs.lifetime || product.id == ProductIDs.yearly
     }
     
+    var subscriptionTypeLabel: String {
+        if product.id == ProductIDs.monthly {
+            return "月訂閱"
+        } else if product.id == ProductIDs.yearly {
+            return "年訂閱"
+        } else if product.id == ProductIDs.lifetime {
+            return "終身訂閱"
+        }
+        return ""
+    }
+    
+    var subscriptionDescription: String {
+        if product.id == ProductIDs.monthly {
+            return "每月自動續訂，可隨時取消"
+        } else if product.id == ProductIDs.yearly {
+            return "每年自動續訂，平均每月更划算"
+        } else if product.id == ProductIDs.lifetime {
+            return "一次付費，永久使用"
+        }
+        return product.description
+    }
+    
     var body: some View {
         HStack {
-            VStack(alignment: .leading) {
-                Text(product.displayName)
-                    .font(.headline)
-                Text(product.description)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(product.displayName)
+                        .font(.headline)
+                    if !subscriptionTypeLabel.isEmpty {
+                        Text("(\(subscriptionTypeLabel))")
+                            .font(.subheadline)
+                            .foregroundStyle(.blue)
+                    }
+                }
+                Text(subscriptionDescription)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -104,7 +162,7 @@ struct ProductRow: View {
                     .font(.title3.bold())
                 
                 if isBestValue {
-                    Text("BEST VALUE")
+                    Text("最超值")
                         .font(.caption2.bold())
                         .foregroundStyle(.white)
                         .padding(.horizontal, 6)
