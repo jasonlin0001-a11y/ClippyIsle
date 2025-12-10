@@ -117,25 +117,29 @@ struct ProductRow: View {
     }
     
     var subscriptionTypeLabel: String {
-        if product.id == ProductIDs.monthly {
+        switch product.id {
+        case ProductIDs.monthly:
             return "月訂閱"
-        } else if product.id == ProductIDs.yearly {
+        case ProductIDs.yearly:
             return "年訂閱"
-        } else if product.id == ProductIDs.lifetime {
+        case ProductIDs.lifetime:
             return "終身訂閱"
+        default:
+            return ""
         }
-        return ""
     }
     
     var subscriptionDescription: String {
-        if product.id == ProductIDs.monthly {
+        switch product.id {
+        case ProductIDs.monthly:
             return "每月自動續訂，可隨時取消"
-        } else if product.id == ProductIDs.yearly {
+        case ProductIDs.yearly:
             return "每年自動續訂，平均每月更划算"
-        } else if product.id == ProductIDs.lifetime {
+        case ProductIDs.lifetime:
             return "一次付費，永久使用"
+        default:
+            return product.description
         }
-        return product.description
     }
     
     var body: some View {
