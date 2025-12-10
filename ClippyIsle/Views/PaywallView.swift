@@ -37,7 +37,7 @@ struct PaywallView: View {
                     .foregroundStyle(.yellow)
                     .padding(.top, 40)
                 
-                Text("Unlock ClippyIsle Pro")
+                Text("解鎖CC Isle Pro")
                     .font(.largeTitle.bold())
                 
                 Text("解鎖完整功能，享受更強大的體驗")

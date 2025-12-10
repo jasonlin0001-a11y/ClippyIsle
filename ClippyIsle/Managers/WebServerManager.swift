@@ -325,7 +325,7 @@ class WebServerManager: ObservableObject {
     private func getLocalizedStrings() -> [String: String] {
         let isCN = isChineseLanguage()
         return [
-            "appName": "ClippyIsle",
+            "appName": "CC Isle Pro",
             "stop": isCN ? "停止" : "Stop",
             "newItem": isCN ? "新項目" : "New Item",
             "clipboard": isCN ? "剪貼簿" : "Clipboard",
