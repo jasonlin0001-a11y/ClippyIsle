@@ -68,9 +68,16 @@ struct InlineImagePreview: View {
         .task {
             if imageData == nil, let filename = filename, let loadFileData = loadFileData {
                 isLoading = true
-                loadedImageData = await Task.detached(priority: .userInitiated) {
-                    loadFileData(filename)
-                }.value
+                do {
+                    loadedImageData = try await Task.detached(priority: .userInitiated) {
+                        // Check for cancellation before doing work
+                        try Task.checkCancellation()
+                        return loadFileData(filename)
+                    }.value
+                } catch {
+                    // Task was cancelled or failed
+                    loadedImageData = nil
+                }
                 isLoading = false
             }
         }
