@@ -221,7 +221,7 @@ struct TagEditView: View {
     private func addNewTag() { let name = newTag.trimmingCharacters(in: .whitespaces); if !name.isEmpty { addTag(name); newTag = "" } }
 }
 
-// **MODIFIED**: Added drag-to-reorder functionality for tags
+// **MODIFIED**: Added tag sharing functionality, replaced Edit button with Share button
 struct TagFilterView: View {
     @ObservedObject var clipboardManager: ClipboardManager
     @Binding var selectedTag: String?
@@ -229,38 +229,85 @@ struct TagFilterView: View {
     @State private var newTagName = ""
     @State private var isShowingRenameAlert = false
     @State private var tags: [String] = []
+    @State private var isSelectMode = false
+    @State private var selectedTags: Set<String> = []
+    @State private var exportURL: URL?
+    @State private var isShowingShareSheet = false
     @Environment(\.dismiss) var dismiss
 
     var body: some View {
         NavigationView {
             List {
-                Button { selectedTag = nil; dismiss() } label: { HStack { Image(systemName: selectedTag == nil ? "checkmark.circle.fill" : "circle"); Text("All Items") } }.foregroundColor(.primary)
+                if !isSelectMode {
+                    Button { selectedTag = nil; dismiss() } label: { HStack { Image(systemName: selectedTag == nil ? "checkmark.circle.fill" : "circle"); Text("All Items") } }.foregroundColor(.primary)
+                }
                 Section("Tags") {
                     ForEach(tags, id: \.self) { tag in
-                        Button { selectedTag = tag; dismiss() } label: { HStack { Image(systemName: selectedTag == tag ? "checkmark.circle.fill" : "circle"); Text(tag) } }.foregroundColor(.primary)
-                        .swipeActions {
-                            Button("Delete", role: .destructive) { 
-                                clipboardManager.deleteTagFromAllItems(tag)
-                                tags = clipboardManager.allTags
+                        HStack {
+                            if isSelectMode {
+                                Button {
+                                    if selectedTags.contains(tag) {
+                                        selectedTags.remove(tag)
+                                    } else {
+                                        selectedTags.insert(tag)
+                                    }
+                                } label: {
+                                    HStack {
+                                        Image(systemName: selectedTags.contains(tag) ? "checkmark.circle.fill" : "circle")
+                                        Text(tag)
+                                        Spacer()
+                                    }
+                                }.foregroundColor(.primary)
+                            } else {
+                                Button { selectedTag = tag; dismiss() } label: { HStack { Image(systemName: selectedTag == tag ? "checkmark.circle.fill" : "circle"); Text(tag) } }.foregroundColor(.primary)
                             }
-                            Button("Rename") { tagToRename = tag; newTagName = tag; isShowingRenameAlert = true }.tint(.blue)
+                        }
+                        .swipeActions {
+                            if !isSelectMode {
+                                Button("Delete", role: .destructive) { 
+                                    clipboardManager.deleteTagFromAllItems(tag)
+                                    tags = clipboardManager.allTags
+                                }
+                                Button("Rename") { tagToRename = tag; newTagName = tag; isShowingRenameAlert = true }.tint(.blue)
+                            }
                         }
                     }
                     .onMove { from, to in
-                        tags.move(fromOffsets: from, toOffset: to)
-                        clipboardManager.saveTagOrder(tags)
+                        if !isSelectMode {
+                            tags.move(fromOffsets: from, toOffset: to)
+                            clipboardManager.saveTagOrder(tags)
+                        }
                     }
                 }
             }
+            .environment(\.editMode, .constant(isSelectMode ? .active : .inactive))
             .navigationTitle("Filter by Tag")
-            // **修改處**: 設定為 inline 模式，標題字體會縮小為標準大小
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    EditButton()
+                    Button {
+                        if isSelectMode {
+                            // Cancel selection mode
+                            isSelectMode = false
+                            selectedTags.removeAll()
+                        } else {
+                            // Enter selection mode
+                            isSelectMode = true
+                            selectedTags.removeAll()
+                        }
+                    } label: {
+                        Text(isSelectMode ? "Cancel" : "Share")
+                    }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") { dismiss() }
+                    if isSelectMode {
+                        Button("Export") {
+                            exportSelectedTags()
+                        }
+                        .disabled(selectedTags.isEmpty)
+                    } else {
+                        Button("Done") { dismiss() }
+                    }
                 }
             }
             .alert("Rename Tag", isPresented: $isShowingRenameAlert) {
@@ -276,6 +323,20 @@ struct TagFilterView: View {
             .onAppear {
                 tags = clipboardManager.allTags
             }
+            .sheet(item: $exportURL) { url in
+                ActivityView(activityItems: [url])
+            }
+        }
+    }
+    
+    private func exportSelectedTags() {
+        do {
+            if let url = try clipboardManager.exportData(forTags: selectedTags) {
+                exportURL = url
+                isShowingShareSheet = true
+            }
+        } catch {
+            print("Export failed: \(error.localizedDescription)")
         }
     }
 }
