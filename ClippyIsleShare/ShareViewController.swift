@@ -71,7 +71,8 @@ class ShareViewController: UIViewController {
     // Helper function to validate if a string is a URL
     private func isValidURL(_ string: String) -> Bool {
         guard let url = URL(string: string) else { return false }
-        return (string.lowercased().hasPrefix("http://") || string.lowercased().hasPrefix("https://")) && url.host != nil
+        let lowercased = string.lowercased()
+        return (lowercased.hasPrefix("http://") || lowercased.hasPrefix("https://")) && url.host != nil
     }
     
     @MainActor
