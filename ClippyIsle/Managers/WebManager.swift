@@ -13,18 +13,21 @@ class WebManager: ObservableObject {
     // ✅ PERFORMANCE FIX: Lazy initialization - WKWebView only created when accessed
     private var _webView: WKWebView?
     var webView: WKWebView {
-        if _webView == nil {
-            LaunchLogger.log("WebManager.webView - LAZY INIT START")
-            let config = WKWebViewConfiguration()
-            config.allowsInlineMediaPlayback = true
-            config.allowsPictureInPictureMediaPlayback = true
-            // Important: Allow background audio
-            try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
-            
-            _webView = WKWebView(frame: .zero, configuration: config)
-            LaunchLogger.log("WebManager.webView - LAZY INIT END")
+        if let existingWebView = _webView {
+            return existingWebView
         }
-        return _webView!
+        
+        LaunchLogger.log("WebManager.webView - LAZY INIT START")
+        let config = WKWebViewConfiguration()
+        config.allowsInlineMediaPlayback = true
+        config.allowsPictureInPictureMediaPlayback = true
+        // Important: Allow background audio
+        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
+        
+        let newWebView = WKWebView(frame: .zero, configuration: config)
+        _webView = newWebView
+        LaunchLogger.log("WebManager.webView - LAZY INIT END")
+        return newWebView
     }
     
     private init() {
@@ -47,15 +50,15 @@ class WebManager: ObservableObject {
     func stopAndClear() {
         LaunchLogger.log("WebManager.stopAndClear() - START")
         // Only access webView if it was already created
-        guard _webView != nil else {
+        guard let existingWebView = _webView else {
             LaunchLogger.log("WebManager.stopAndClear() - SKIPPED (webView never created)")
             currentItemID = nil
             isPlaying = false
             return
         }
         
-        webView.stopLoading()
-        webView.load(URLRequest(url: URL(string: "about:blank")!))
+        existingWebView.stopLoading()
+        existingWebView.load(URLRequest(url: URL(string: "about:blank")!))
         currentItemID = nil
         isPlaying = false
         AudioManager.shared.deactivate()
