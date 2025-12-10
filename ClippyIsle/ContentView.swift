@@ -285,9 +285,12 @@ struct ContentView: View {
                         if item.type == UTType.url.identifier, let url = URL(string: item.content) {
                             InlineLinkPreview(url: url)
                         } else if item.type == UTType.png.identifier || item.type == UTType.jpeg.identifier {
-                            // Load image data if needed
-                            let imageData = item.fileData ?? (item.filename.flatMap { clipboardManager.loadFileData(filename: $0) })
-                            InlineImagePreview(imageData: imageData)
+                            // Pass filename and load function for async loading
+                            InlineImagePreview(
+                                imageData: item.fileData,
+                                filename: item.filename,
+                                loadFileData: { filename in clipboardManager.loadFileData(filename: filename) }
+                            )
                         } else if item.type == UTType.plainText.identifier || item.type == UTType.text.identifier {
                             InlineTextPreview(text: item.content)
                         }

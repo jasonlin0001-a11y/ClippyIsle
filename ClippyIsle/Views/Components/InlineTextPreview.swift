@@ -10,7 +10,6 @@ import SwiftUI
 /// A compact inline view that displays text preview between list items
 struct InlineTextPreview: View {
     let text: String
-    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -24,7 +23,7 @@ struct InlineTextPreview: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(colorScheme == .dark ? Color(.systemGray6) : Color(.systemGray6))
+                .fill(Color(.systemGray6))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12)
