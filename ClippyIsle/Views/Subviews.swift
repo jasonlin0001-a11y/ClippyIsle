@@ -83,7 +83,6 @@ struct ClipboardItemRow: View {
     var renameAction: () -> Void
     var tagAction: () -> Void
     var shareAction: () -> Void
-    var linkPreviewAction: (() -> Void)? = nil
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
@@ -113,13 +112,6 @@ struct ClipboardItemRow: View {
             .onTapGesture(perform: previewAction)
         }
         .contentShape(Rectangle())
-        .simultaneousGesture(
-            LongPressGesture(minimumDuration: 0.3)
-                .onEnded { _ in
-                    // Trigger inline preview for URL items
-                    linkPreviewAction?()
-                }
-        )
         .padding(.vertical, 8)
         .padding(.horizontal, isHighlighted ? 8 : 0)
         .onDrag(createDragItem)
