@@ -4,7 +4,7 @@ This document describes the LinkPresentation feature integration that enables ri
 
 ## Overview
 
-The app now uses Apple's native LinkPresentation framework to fetch and display metadata for URL items stored in the clipboard history.
+The app now uses Apple's native LinkPresentation framework to fetch and display metadata for URL items stored in the clipboard history. **The preview expands inline between list items**, creating a card-like separation effect.
 
 ## Features
 
@@ -25,49 +25,49 @@ let manager = LinkMetadataManager()
 manager.fetchMetadata(for: url)
 ```
 
-### 2. LinkPreviewCard
-**Location:** `ClippyIsle/Views/Components/LinkPreviewCard.swift`
+### 2. InlineLinkPreview
+**Location:** `ClippyIsle/Views/Components/InlineLinkPreview.swift`
 
-A SwiftUI view that displays URL metadata in a card format, similar to Apple's native `LPLinkView`.
+A compact SwiftUI view that displays URL metadata inline between list items.
 
 **Key Features:**
-- Displays URL with link icon
-- Shows fetched image (if available)
-- Displays title, description, and site name
+- Displays URL metadata in a compact format (80x80 image)
+- Shows title (2 lines max), image, and domain
 - Includes loading indicator during fetch
-- Error view with retry button
-- Responsive card design with shadows
+- Error view with error message
+- Compact card design that fits between list items
 
 **States:**
-- **Loading:** Shows a progress indicator while fetching metadata
-- **Success:** Displays the metadata in a beautiful card layout
-- **Error:** Shows error message with a retry button
+- **Loading:** Shows a compact progress indicator with "Loading preview..." message
+- **Success:** Displays the metadata in a compact card layout
+- **Error:** Shows error message inline
 
-### 3. Long Press Gesture
-**Location:** Modified in `ClippyIsle/Views/Subviews.swift`
+### 3. Long Press Gesture with Inline Expansion
+**Location:** Modified in `ClippyIsle/Views/Subviews.swift` and `ClippyIsle/ContentView.swift`
 
-The `ClipboardItemRow` has been enhanced with a long-press gesture handler.
+The `ClipboardItemRow` has been enhanced with a long-press gesture handler that triggers inline preview expansion.
 
 **Behavior:**
-- When user long-presses on a URL item in the main list
+- When user long-presses on a URL item (0.3 second duration for better sensitivity)
 - The app automatically detects if the item is a URL
-- Opens a modal sheet displaying the `LinkPreviewCard`
-- Regular tap still works as before (opens preview)
+- **The preview expands inline between the pressed item and the item below it**
+- Creates a visual card separation effect
+- Long-press the same item again to collapse the preview
+- Regular tap still works as before (opens full-screen preview)
 
 ## User Experience
 
 1. **Add a URL** to clipboard (e.g., https://www.apple.com)
 2. The URL appears in the ClippyIsle main list
-3. **Long press** on the URL item
-4. A modal sheet opens showing:
+3. **Long press** on the URL item (0.3 second hold)
+4. The list items separate and an inline preview card appears showing:
    - Loading indicator (while fetching)
    - Rich preview card with:
-     - URL link
-     - Website image/icon
-     - Page title
-     - Description/summary
-     - Site name
-5. Tap "Done" to dismiss the preview
+     - Website image/icon (80x80)
+     - Page title (up to 2 lines)
+     - Domain/URL
+5. **Long press again** to collapse the preview
+6. Tap normally to open full-screen preview (existing behavior)
 
 ## Technical Details
 
