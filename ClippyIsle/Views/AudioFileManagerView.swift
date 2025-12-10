@@ -20,12 +20,6 @@ struct AudioFileManagerView: View {
     @State private var isShowingSingleDeleteAlert = false
     @State private var itemToDelete: AudioFileItem?
     
-    // Preview State for Long Press
-    @State private var itemToPreview: ClipboardItem?
-    @State private var isShowingPreview = false
-    // Loading state for preview
-    @State private var isPreviewLoading = false
-    
     @AppStorage("previewFontSize") private var previewFontSize: Double = 17.0
 
     // Theme Color Support
@@ -118,11 +112,6 @@ struct AudioFileManagerView: View {
                             }
                             // **修正 3**: 移除整行的 onTapGesture，避免與 List 手勢衝突
                             .contentShape(Rectangle())
-                            .onLongPressGesture {
-                                let generator = UIImpactFeedbackGenerator(style: .heavy)
-                                generator.impactOccurred()
-                                preparePreview(for: file)
-                            }
                             .swipeActions(edge: .leading, allowsFullSwipe: true) {
                                 Button { shareFile(file.url) } label: { Text("Share") }.tint(.blue)
                             }
@@ -136,17 +125,6 @@ struct AudioFileManagerView: View {
                     }
                 }
             }
-            
-            if isPreviewLoading {
-                Color.black.opacity(0.4)
-                    .ignoresSafeArea()
-                    .overlay(
-                        ProgressView("Loading...")
-                            .padding()
-                            .background(Material.regular)
-                            .cornerRadius(10)
-                    )
-            }
         }
         .navigationTitle("Manage Audio Files")
         .navigationBarTitleDisplayMode(.inline)
@@ -154,21 +132,6 @@ struct AudioFileManagerView: View {
         
         .sheet(isPresented: $isSharing, onDismiss: { shareItems = nil }) {
             if let items = shareItems { ActivityView(activityItems: items) }
-        }
-        
-        .fullScreenCover(isPresented: $isShowingPreview) {
-            if let item = itemToPreview {
-                NavigationView {
-                    PreviewView(
-                        item: Binding(get: { item }, set: { _ in }),
-                        clipboardManager: clipboardManager,
-                        speechManager: speechManager,
-                        fontSize: $previewFontSize
-                    )
-                }
-                .navigationViewStyle(.stack)
-                .tint(themeColor)
-            }
         }
         
         .alert("Permanently Delete All Files?", isPresented: $isShowingDeleteAllAlert) {
@@ -192,25 +155,6 @@ struct AudioFileManagerView: View {
         }
         
         .tint(themeColor)
-    }
-    
-    private func preparePreview(for file: AudioFileItem) {
-        guard let uuid = file.originalItemID,
-              let item = clipboardManager.items.first(where: { $0.id == uuid }) else {
-            return
-        }
-        isPreviewLoading = true
-        Task {
-            var loadedItem = item
-            if loadedItem.fileData == nil, let filename = item.filename {
-                loadedItem.fileData = clipboardManager.loadFileData(filename: filename)
-            }
-            await MainActor.run {
-                itemToPreview = loadedItem
-                isPreviewLoading = false
-                isShowingPreview = true
-            }
-        }
     }
     
     private func isPlaying(_ file: AudioFileItem) -> Bool {

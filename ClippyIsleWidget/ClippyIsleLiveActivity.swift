@@ -94,7 +94,7 @@ struct ClippyIsleLiveActivity: Widget {
                     HStack {
                         Image(systemName: "c.circle.fill")
                             .font(.system(size: 20))
-                            .foregroundColor(ClippyIsleAttributes.ColorUtility.cementGray)
+                            .foregroundColor(Color.resolveThemeColor(name: context.state.themeColorName))
                         Text("CC Isle")
                             .font(.headline)
                     }
@@ -110,14 +110,14 @@ struct ClippyIsleLiveActivity: Widget {
             } compactLeading: {
                 Image(systemName: "c.circle.fill")
                     .font(.system(size: 16))
-                    .foregroundColor(ClippyIsleAttributes.ColorUtility.cementGray)
+                    .foregroundColor(Color.resolveThemeColor(name: context.state.themeColorName))
             } compactTrailing: {
                 Text("\(context.state.itemCount)")
                     .foregroundColor(.secondary)
             } minimal: {
                 Image(systemName: "c.circle.fill")
                     .font(.system(size: 14))
-                    .foregroundColor(ClippyIsleAttributes.ColorUtility.cementGray)
+                    .foregroundColor(Color.resolveThemeColor(name: context.state.themeColorName))
             }
         }
     }
@@ -140,7 +140,7 @@ struct LiveActivityView: View {
                 } icon: {
                     Image(systemName: "c.circle.fill")
                         .font(.system(size: 16))
-                        .foregroundColor(ClippyIsleAttributes.ColorUtility.cementGray)
+                        .foregroundColor(themeColor)
                 }
                 
                 Spacer()

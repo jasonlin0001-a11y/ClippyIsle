@@ -53,7 +53,8 @@ struct PaywallView: View {
                     .font(.headline)
                     .padding(.top, 10)
                 
-                FeatureRow(icon: "infinity", text: "無限制項目數量")
+                FeatureRow(icon: "tag.fill", text: "無限制標籤數量")
+                FeatureRow(icon: "arrow.down.circle.fill", text: "文字轉語音下載功能")
                 FeatureRow(icon: "paintbrush.fill", text: "自訂主題顏色")
                 FeatureRow(icon: "icloud.fill", text: "iCloud 自動同步")
                 FeatureRow(icon: "network", text: "網頁管理功能")

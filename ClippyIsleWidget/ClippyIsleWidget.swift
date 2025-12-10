@@ -16,13 +16,31 @@ struct ClippyIsleWidget: Widget {
 
 struct ClippyIsleWidgetEntryView : View {
     var entry: Provider.Entry
-    var themeColor: Color { ClippyIsleAttributes.ColorUtility.color(forName: entry.themeColorName) }
+    
+    private var themeColor: Color {
+        if entry.themeColorName == "custom" {
+            // Try to read custom color from App Group UserDefaults
+            if let defaults = UserDefaults(suiteName: appGroupID) {
+                let r = defaults.double(forKey: "customColorRed")
+                let g = defaults.double(forKey: "customColorGreen")
+                let b = defaults.double(forKey: "customColorBlue")
+                
+                // If all zeros, fall back to default color
+                if r == 0 && g == 0 && b == 0 {
+                    return ClippyIsleAttributes.ColorUtility.color(forName: entry.themeColorName)
+                }
+                
+                return Color(red: r, green: g, blue: b)
+            }
+        }
+        return ClippyIsleAttributes.ColorUtility.color(forName: entry.themeColorName)
+    }
 
     var body: some View {
         VStack(spacing: 8) {
             Image(systemName: "c.circle.fill")
                 .font(.system(size: 50))
-                .foregroundColor(ClippyIsleAttributes.ColorUtility.cementGray)
+                .foregroundColor(themeColor)
             Text("\(entry.itemCount) items")
                 .font(.headline)
                 .foregroundColor(.secondary)
