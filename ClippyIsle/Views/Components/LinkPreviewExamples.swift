@@ -99,7 +99,5 @@ struct LinkPreviewTestView: View {
 }
 
 #Preview("Single Link Preview") {
-    if let url = URL(string: "https://www.apple.com") {
-        LinkPreviewCard(url: url)
-    }
+    LinkPreviewCard(url: URL(string: "https://www.apple.com") ?? URL(string: "https://example.com")!)
 }

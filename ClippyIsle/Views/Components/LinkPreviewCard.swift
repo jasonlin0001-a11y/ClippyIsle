@@ -166,7 +166,9 @@ struct LinkImageView: View {
     private func loadImage() {
         imageProvider.loadObject(ofClass: UIImage.self) { (object, error) in
             DispatchQueue.main.async {
-                if let image = object as? UIImage {
+                if let error = error {
+                    print("⚠️ Failed to load link preview image: \(error.localizedDescription)")
+                } else if let image = object as? UIImage {
                     self.image = image
                 }
                 self.isLoading = false
@@ -176,6 +178,6 @@ struct LinkImageView: View {
 }
 
 // MARK: - Preview Provider
-#Preview {
-    LinkPreviewCard(url: URL(string: "https://www.apple.com")!)
+#Preview("Link Preview with Apple URL") {
+    LinkPreviewCard(url: URL(string: "https://www.apple.com") ?? URL(string: "https://example.com")!)
 }
