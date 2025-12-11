@@ -20,10 +20,10 @@ struct TagChipView: View {
             .cornerRadius(8)
             .contentShape(Rectangle())
             .gesture(
-                DragGesture(minimumDistance: 20)
+                DragGesture(minimumDistance: 10)
                     .onEnded { value in
-                        // Detect horizontal swipe (left or right)
-                        if abs(value.translation.width) > abs(value.translation.height) {
+                        // Detect horizontal swipe (left or right) with lower threshold
+                        if abs(value.translation.width) > abs(value.translation.height) * 1.5 {
                             onFilter()
                         }
                     }
@@ -402,13 +402,16 @@ struct TagFilterView: View {
                                 }
                                 Button("Color") { 
                                     if subscriptionManager.isPro {
+                                        // Set tag first, then show picker on next run loop
                                         tagToColor = tag
-                                        showColorPicker = true
+                                        DispatchQueue.main.async {
+                                            showColorPicker = true
+                                        }
                                     } else {
                                         showPaywall = true
                                     }
-                                }.tint(Color(UIColor.systemPurple))
-                                Button("Rename") { tagToRename = tag; newTagName = tag; isShowingRenameAlert = true }.tint(.blue)
+                                }.tint(Color(UIColor.systemGray3))
+                                Button("Rename") { tagToRename = tag; newTagName = tag; isShowingRenameAlert = true }.tint(Color(UIColor.systemGray4))
                             }
                         }
                     }
