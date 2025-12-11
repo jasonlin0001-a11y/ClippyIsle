@@ -22,7 +22,8 @@ struct TagChipView: View {
             .gesture(
                 DragGesture(minimumDistance: 10)
                     .onEnded { value in
-                        // Detect horizontal swipe (left or right) with lower threshold
+                        // Detect horizontal swipe: horizontal movement must be 1.5x greater than vertical
+                        // to distinguish intentional horizontal swipes from diagonal gestures
                         if abs(value.translation.width) > abs(value.translation.height) * 1.5 {
                             onFilter()
                         }
@@ -402,7 +403,8 @@ struct TagFilterView: View {
                                 }
                                 Button("Color") { 
                                     if subscriptionManager.isPro {
-                                        // Set tag first, then show picker on next run loop
+                                        // Set tagToColor before triggering sheet to avoid race condition
+                                        // Async ensures tagToColor is set before sheet content evaluates
                                         tagToColor = tag
                                         DispatchQueue.main.async {
                                             showColorPicker = true
