@@ -74,6 +74,7 @@ struct ClipboardItemRow: View {
     let item: ClipboardItem
     let themeColor: Color
     var isHighlighted: Bool = false
+    var clipboardManager: ClipboardManager? = nil
     
     var copyAction: () -> Void
     var previewAction: () -> Void
@@ -101,7 +102,21 @@ struct ClipboardItemRow: View {
                     Text(item.displayName ?? item.content).lineLimit(1).font(.body).foregroundColor(colorScheme == .light ? Color(.darkGray) : .primary)
                     HStack(spacing: 8) {
                         if let tags = item.tags, !tags.isEmpty {
-                            ScrollView(.horizontal, showsIndicators: false) { HStack { ForEach(tags, id: \.self) { tag in Text(tag).font(.caption2).padding(.horizontal, 6).padding(.vertical, 2).background(Color.gray.opacity(0.2)).cornerRadius(8) } } }
+                            ScrollView(.horizontal, showsIndicators: false) { 
+                                HStack { 
+                                    ForEach(tags, id: \.self) { tag in 
+                                        let tagColor = clipboardManager?.getTagColor(tag) ?? Color.gray.opacity(0.2)
+                                        let textColor = clipboardManager?.getTagColor(tag) != nil ? Color.white : Color.primary
+                                        Text(tag)
+                                            .font(.caption2)
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(tagColor)
+                                            .foregroundColor(textColor)
+                                            .cornerRadius(8)
+                                    } 
+                                } 
+                            }
                         }
                         Spacer()
                         Text(item.timestamp.timeAgoDisplay()).font(.caption).foregroundColor(.secondary).lineLimit(1)
@@ -321,6 +336,140 @@ struct TagFilterView: View {
             }
         } catch {
             print("Export failed: \(error.localizedDescription)")
+        }
+    }
+}
+
+// MARK: - Tag Color Management View (Pro Feature)
+struct TagColorManagementView: View {
+    @ObservedObject var clipboardManager: ClipboardManager
+    @EnvironmentObject var subscriptionManager: SubscriptionManager
+    @State private var tags: [String] = []
+    @State private var selectedTag: String?
+    @State private var showColorPicker = false
+    @State private var showPaywall = false
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        List {
+            Section {
+                if !subscriptionManager.isPro {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: "crown.fill").foregroundColor(.yellow)
+                            Text("Pro Feature").fontWeight(.semibold)
+                        }
+                        Text("Upgrade to Pro to customize tag colors")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Button("Upgrade to Pro") {
+                            showPaywall = true
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .padding(.top, 4)
+                    }
+                    .padding(.vertical, 8)
+                }
+            }
+            
+            if subscriptionManager.isPro {
+                Section("Tag Colors") {
+                    ForEach(tags, id: \.self) { tag in
+                        HStack {
+                            if let customColor = clipboardManager.getTagColor(tag) {
+                                Circle()
+                                    .fill(customColor)
+                                    .frame(width: 24, height: 24)
+                            } else {
+                                Circle()
+                                    .fill(Color.gray.opacity(0.2))
+                                    .frame(width: 24, height: 24)
+                            }
+                            
+                            Text(tag)
+                            
+                            Spacer()
+                            
+                            Button(action: { selectedTag = tag; showColorPicker = true }) {
+                                Text(clipboardManager.getTagColor(tag) == nil ? "Set Color" : "Change")
+                                    .font(.caption)
+                                    .foregroundColor(.blue)
+                            }
+                            
+                            if clipboardManager.getTagColor(tag) != nil {
+                                Button(action: { clipboardManager.setTagColor(tag, color: nil) }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle("Tag Colors")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            tags = clipboardManager.allTags
+        }
+        .sheet(isPresented: $showColorPicker) {
+            if let tag = selectedTag {
+                TagColorPickerView(tag: tag, clipboardManager: clipboardManager, isPresented: $showColorPicker)
+            }
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+        }
+    }
+}
+
+// MARK: - Tag Color Picker View
+struct TagColorPickerView: View {
+    let tag: String
+    @ObservedObject var clipboardManager: ClipboardManager
+    @Binding var isPresented: Bool
+    @State private var selectedColor: Color
+    
+    init(tag: String, clipboardManager: ClipboardManager, isPresented: Binding<Bool>) {
+        self.tag = tag
+        self.clipboardManager = clipboardManager
+        self._isPresented = isPresented
+        self._selectedColor = State(initialValue: clipboardManager.getTagColor(tag) ?? Color.blue)
+    }
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section("Preview") {
+                    HStack {
+                        Text(tag)
+                            .font(.caption2)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(selectedColor)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                    }
+                }
+                
+                Section("Choose Color") {
+                    ColorPicker("Color", selection: $selectedColor, supportsOpacity: false)
+                }
+            }
+            .navigationTitle("Tag Color")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { isPresented = false }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        clipboardManager.setTagColor(tag, color: selectedColor)
+                        isPresented = false
+                    }
+                }
+            }
         }
     }
 }

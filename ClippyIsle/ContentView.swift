@@ -247,7 +247,7 @@ struct ContentView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 if selectedTagFilter != nil { Button { selectedTagFilter = nil } label: { Image(systemName: "xmark.circle.fill") } }
-                else { Button { clipboardManager.isLiveActivityOn.toggle() } label: { Image(systemName: "circle.fill").font(.system(size: 14)).foregroundColor(clipboardManager.isLiveActivityOn ? .green : .red) }.disabled(!areActivitiesEnabled) }
+                else { Button { clipboardManager.isLiveActivityOn.toggle() } label: { Image(systemName: "c.circle.fill").font(.system(size: 20)).foregroundColor(clipboardManager.isLiveActivityOn ? themeColor : Color.gray) }.disabled(!areActivitiesEnabled) }
             }
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 Button { isShowingTagSheet = true } label: { Image(systemName: "tag").frame(width: 44, height: 44).contentShape(Rectangle()) }
@@ -283,6 +283,7 @@ struct ContentView: View {
                             item: item,
                             themeColor: themeColor,
                             isHighlighted: item.id == newlyAddedItemID,
+                            clipboardManager: clipboardManager,
                             copyAction: { copyItemToClipboard(item: item) }, 
                             previewAction: { previewState = .loading(item) },
                             createDragItem: { createDragItem(for: item) }, 

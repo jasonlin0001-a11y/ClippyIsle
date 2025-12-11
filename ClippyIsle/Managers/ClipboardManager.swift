@@ -492,6 +492,31 @@ class ClipboardManager: ObservableObject {
             UserDefaults.standard.set(customOrder, forKey: "customTagOrder")
         }
         
+        // Remove custom color for this tag
+        UserDefaults.standard.removeObject(forKey: "tagColor_\(tag)")
+        
         sortAndSave()
+    }
+    
+    // MARK: - Tag Color Management (Pro Feature)
+    func getTagColor(_ tag: String) -> Color? {
+        guard let colorData = UserDefaults.standard.data(forKey: "tagColor_\(tag)") else { return nil }
+        guard let components = try? JSONDecoder().decode([Double].self, from: colorData) else { return nil }
+        guard components.count == 3 else { return nil }
+        return Color(red: components[0], green: components[1], blue: components[2])
+    }
+    
+    func setTagColor(_ tag: String, color: Color?) {
+        if let color = color {
+            let uiColor = UIColor(color)
+            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+            uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+            let components = [Double(r), Double(g), Double(b)]
+            if let data = try? JSONEncoder().encode(components) {
+                UserDefaults.standard.set(data, forKey: "tagColor_\(tag)")
+            }
+        } else {
+            UserDefaults.standard.removeObject(forKey: "tagColor_\(tag)")
+        }
     }
 }

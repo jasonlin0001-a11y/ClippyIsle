@@ -316,6 +316,15 @@ struct SettingsView: View {
         Section("Data Management") {
             Button { isShowingTrash = true } label: { Label("Trash", systemImage: "trash") }
             NavigationLink { AudioFileManagerView(clipboardManager: clipboardManager, speechManager: speechManager) } label: { Label("Manage Audio Files", systemImage: "waveform") }
+            NavigationLink { TagColorManagementView(clipboardManager: clipboardManager) } label: { 
+                HStack {
+                    Label("Customize Tag Colors", systemImage: "paintpalette")
+                    if !subscriptionManager.isPro {
+                        Spacer()
+                        Image(systemName: "lock.fill").font(.caption).foregroundColor(.orange)
+                    }
+                }
+            }
             Button("Clear Website Cache", role: .destructive) { isShowingClearCacheAlert = true }
             Button("Clear All Data", role: .destructive) { confirmationText = ""; isShowingHardResetAlert = true }
         }

@@ -345,10 +345,12 @@ class WebServerManager: ObservableObject {
             "confirmBatchBody": isCN ? "您確定要刪除" : "Are you sure you want to delete",
             "items": isCN ? "個項目？" : "items?",
             "deleteAll": isCN ? "全部刪除" : "Delete All",
-            // Removed "Paste Images" text from placeholder
             "editPlaceholder": isCN ? "在此輸入或貼上內容... (拖放 .txt / .epub 檔案)" : "Type or paste content here... (Drag & Drop .txt / .epub files)",
             "editTitle": isCN ? "編輯項目" : "Edit Item",
-            "newTitle": isCN ? "新項目" : "New Item"
+            "newTitle": isCN ? "新項目" : "New Item",
+            "search": isCN ? "搜尋..." : "Search...",
+            "voiceSearch": isCN ? "語音搜尋" : "Voice Search",
+            "listening": isCN ? "聆聽中..." : "Listening..."
         ]
     }
     
@@ -461,6 +463,15 @@ class WebServerManager: ObservableObject {
         input[type="checkbox"] { appearance: none; width: 20px; height: 20px; border: 2px solid var(--border); border-radius: 50%; outline: none; cursor: pointer; transition: all 0.2s; }
         input[type="checkbox"]:checked { background-color: var(--primary); border-color: var(--primary); }
         input[type="checkbox"]:checked::after { content: ''; position: absolute; top: 4px; left: 7px; width: 4px; height: 8px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+        .search-container { background: var(--card-bg); border-radius: 12px; padding: 12px; margin-bottom: 20px; display: flex; gap: 8px; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .search-input { flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 16px; background: transparent; color: var(--text); outline: none; }
+        .search-input:focus { border-color: var(--primary); }
+        .search-input::placeholder { color: var(--secondary-text); }
+        .voice-btn { background: none; border: none; cursor: pointer; padding: 8px; color: var(--secondary-text); transition: all 0.2s; }
+        .voice-btn:hover { color: var(--primary); }
+        .voice-btn.listening { color: #FF3B30; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .item.hidden { display: none; }
         """
     }
     
@@ -479,6 +490,19 @@ class WebServerManager: ObservableObject {
                     <button onclick="stopSpeaking()" class="btn btn-warning">\(loc["stop"]!)</button>
                     <a href="/new" class="btn btn-primary">\(loc["newItem"]!)</a>
                 </div>
+            </div>
+            
+            <!-- Search Bar -->
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="\(loc["search"]!)" oninput="performSearch()">
+                <button id="voiceBtn" class="voice-btn" onclick="toggleVoiceSearch()" title="\(loc["voiceSearch"]!)">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="23"></line>
+                        <line x1="8" y1="23" x2="16" y2="23"></line>
+                    </svg>
+                </button>
             </div>
         """
         
@@ -657,6 +681,90 @@ class WebServerManager: ObservableObject {
                 document.getElementById('batchType').value = currentBatchType;
                 document.getElementById('batchIds').value = ids;
                 document.getElementById('batchForm').submit();
+            }
+            
+            // Search Logic
+            function performSearch() {
+                const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+                const items = document.querySelectorAll('#list-clipboard .item');
+                
+                items.forEach(item => {
+                    const textContent = item.querySelector('.text-preview')?.textContent.toLowerCase() || '';
+                    const metaContent = item.querySelector('.meta')?.textContent.toLowerCase() || '';
+                    const fullText = textContent + ' ' + metaContent;
+                    
+                    if (fullText.includes(searchTerm)) {
+                        item.classList.remove('hidden');
+                    } else {
+                        item.classList.add('hidden');
+                    }
+                });
+            }
+            
+            // Voice Search Logic
+            let recognition = null;
+            let isListening = false;
+            
+            function toggleVoiceSearch() {
+                if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                    alert('Voice search is not supported in this browser.');
+                    return;
+                }
+                
+                if (isListening) {
+                    stopVoiceSearch();
+                } else {
+                    startVoiceSearch();
+                }
+            }
+            
+            function startVoiceSearch() {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                
+                // Detect language
+                const lang = navigator.language || 'en-US';
+                recognition.lang = lang;
+                
+                recognition.onstart = function() {
+                    isListening = true;
+                    document.getElementById('voiceBtn').classList.add('listening');
+                    document.getElementById('searchInput').placeholder = '\(loc["listening"]!)';
+                };
+                
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    document.getElementById('searchInput').value = transcript;
+                    performSearch();
+                };
+                
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error:', event.error);
+                    stopVoiceSearch();
+                };
+                
+                recognition.onend = function() {
+                    stopVoiceSearch();
+                };
+                
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.error('Failed to start recognition:', e);
+                    stopVoiceSearch();
+                }
+            }
+            
+            function stopVoiceSearch() {
+                if (recognition) {
+                    recognition.stop();
+                    recognition = null;
+                }
+                isListening = false;
+                document.getElementById('voiceBtn').classList.remove('listening');
+                document.getElementById('searchInput').placeholder = '\(loc["search"]!)';
             }
         </script>
         </body></html>
