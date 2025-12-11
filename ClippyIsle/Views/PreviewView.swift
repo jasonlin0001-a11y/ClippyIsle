@@ -559,8 +559,13 @@ struct PreviewView: View {
         }
         sourceView.window?.rootViewController?.present(activityVC, animated: true)
         #elseif os(macOS)
-        let sharingPicker = NSSharingServicePicker(items: itemsToShare)
-        sharingPicker.show(relativeTo: .zero, of: NSView(), preferredEdge: .minY)
+        // On macOS, use NSSharingService directly to share items
+        // This avoids the view hierarchy requirement of NSSharingServicePicker
+        if let service = NSSharingService(named: .sendViaAirDrop) {
+            if service.canPerform(withItems: itemsToShare) {
+                service.perform(withItems: itemsToShare)
+            }
+        }
         #endif
     }
 }

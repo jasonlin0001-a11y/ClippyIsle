@@ -458,16 +458,9 @@ struct ContentView: View {
         }
         sourceView.window?.rootViewController?.present(activityVC, animated: true)
         #elseif os(macOS)
-        var itemsToShare: [Any] = []; var itemToUse = item
-        if itemToUse.fileData == nil, let filename = item.filename { itemToUse.fileData = clipboardManager.loadFileData(filename: filename) }
-        if let data = itemToUse.fileData, item.type == UTType.png.identifier {
-            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(item.filename ?? "SharedFile.png")
-            do { try data.write(to: tempURL, options: [.atomic]); itemsToShare.append(tempURL) } catch { itemsToShare.append(data) }
-        } else if let url = URL(string: item.content), (item.type == UTType.url.identifier || item.content.starts(with: "http")) { itemsToShare.append(url) }
-        else { itemsToShare.append(item.content) }
-        guard !itemsToShare.isEmpty else { return }
-        let sharingPicker = NSSharingServicePicker(items: itemsToShare)
-        sharingPicker.show(relativeTo: .zero, of: NSView(), preferredEdge: .minY)
+        // On macOS, copy to pasteboard instead of showing share sheet
+        // Share sheet requires proper view hierarchy which is complex in SwiftUI
+        copyItemToClipboard(item: item)
         #endif
     }
     func createDragItem(for item: ClipboardItem) -> NSItemProvider {
