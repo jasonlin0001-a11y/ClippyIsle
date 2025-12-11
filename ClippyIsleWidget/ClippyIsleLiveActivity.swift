@@ -1,5 +1,6 @@
 import SwiftUI
 import WidgetKit
+#if os(iOS)
 import ActivityKit
 
 // 【⚠️ 重要修正 ⚠️】
@@ -154,3 +155,4 @@ struct LiveActivityView: View {
         .foregroundColor(.white)
     }
 }
+#endif
