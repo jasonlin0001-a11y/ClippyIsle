@@ -576,11 +576,11 @@ class ClipboardManager: ObservableObject {
         var tagColors: [TagColor] = []
         let tags = allTags
         for tag in tags {
-            if let color = getTagColor(tag) {
-                let uiColor = UIColor(color)
-                var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0
-                uiColor.getRed(&r, green: &g, blue: &b, alpha: nil)
-                tagColors.append(TagColor(tag: tag, red: Double(r), green: Double(g), blue: Double(b)))
+            // Directly decode components from UserDefaults without conversion
+            if let colorData = UserDefaults.standard.data(forKey: "tagColor_\(tag)"),
+               let components = try? JSONDecoder().decode([Double].self, from: colorData),
+               components.count == 3 {
+                tagColors.append(TagColor(tag: tag, red: components[0], green: components[1], blue: components[2]))
             }
         }
         return tagColors
@@ -588,11 +588,8 @@ class ClipboardManager: ObservableObject {
     
     func setAllTagColors(_ tagColors: [TagColor], skipCloudSync: Bool = false) {
         for tagColor in tagColors {
-            let color = Color(red: tagColor.red, green: tagColor.green, blue: tagColor.blue)
-            let uiColor = UIColor(color)
-            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0
-            uiColor.getRed(&r, green: &g, blue: &b, alpha: nil)
-            let components = [Double(r), Double(g), Double(b)]
+            // Directly use the RGB components from TagColor without conversion
+            let components = [tagColor.red, tagColor.green, tagColor.blue]
             if let data = try? JSONEncoder().encode(components) {
                 UserDefaults.standard.set(data, forKey: "tagColor_\(tagColor.tag)")
             }
