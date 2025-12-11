@@ -3,12 +3,17 @@ import SwiftUI
 
 @main
 struct ClippyIsleWidgetBundle: WidgetBundle {
+    #if os(iOS)
+    @WidgetBundleBuilder
     var body: some Widget {
         ClippyIsleWidget()
-        #if os(iOS)
         if #available(iOS 16.1, *) {
             ClippyIsleLiveActivity()
         }
-        #endif
     }
+    #else
+    var body: some Widget {
+        ClippyIsleWidget()
+    }
+    #endif
 }

@@ -1,11 +1,12 @@
 import SwiftUI
 import WidgetKit
-#if os(iOS)
-import ActivityKit
 
 // 【⚠️ 重要修正 ⚠️】
 // 已根據您的截圖修正為全小寫，必須完全一致才能讀取資料
-let widgetAppGroupID = "group.com.shihchieh.clippyisle" 
+let widgetAppGroupID = "group.com.shihchieh.clippyisle"
+
+#if os(iOS)
+import ActivityKit 
 
 // 【新增】一個可重用的、支持高亮和滾動的文字視圖
 struct ScrollingHighlightTextView: View {
