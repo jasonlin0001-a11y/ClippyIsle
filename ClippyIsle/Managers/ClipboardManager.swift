@@ -492,7 +492,7 @@ class ClipboardManager: ObservableObject {
             UserDefaults.standard.set(customOrder, forKey: "customTagOrder")
         }
         
-        // Remove custom color for this tag
+        // Remove custom color when deleting a tag
         UserDefaults.standard.removeObject(forKey: "tagColor_\(tag)")
         
         sortAndSave()
