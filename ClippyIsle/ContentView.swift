@@ -312,13 +312,6 @@ struct ContentView: View {
                                     }
                                 }
                             },
-                            colorAction: {
-                                if subscriptionManager.isPro {
-                                    itemToTag = item
-                                } else {
-                                    showPaywall = true
-                                }
-                            },
                             onTagLongPress: { tag in
                                 selectedTagFilter = tag
                             }

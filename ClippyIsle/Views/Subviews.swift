@@ -85,7 +85,6 @@ struct ClipboardItemRow: View {
     var tagAction: () -> Void
     var shareAction: () -> Void
     var linkPreviewAction: (() -> Void)? = nil
-    var colorAction: (() -> Void)? = nil
     var onTagLongPress: ((String) -> Void)? = nil
     @Environment(\.colorScheme) var colorScheme
 
@@ -117,10 +116,14 @@ struct ClipboardItemRow: View {
                                             .background(tagColor)
                                             .foregroundColor(textColor)
                                             .cornerRadius(8)
-                                            .onLongPressGesture {
+                                            .contentShape(Rectangle())
+                                            .onLongPressGesture(minimumDuration: 0.5) {
                                                 // Filter by this tag
                                                 if let onTagLongPress = self.onTagLongPress {
                                                     onTagLongPress(tag)
+                                                    // Add haptic feedback
+                                                    let generator = UIImpactFeedbackGenerator(style: .medium)
+                                                    generator.impactOccurred()
                                                 }
                                             }
                                     } 
@@ -143,9 +146,6 @@ struct ClipboardItemRow: View {
         .swipeActions(edge: .leading) {
             Button("Share", action: shareAction).tint(.blue)
             Button(item.isPinned ? "Unpin" : "Pin", action: togglePinAction).tint(Color(UIColor.systemGray4))
-            if let colorAction = colorAction {
-                Button("Color") { colorAction() }.tint(Color(UIColor.systemPurple))
-            }
         }
         .swipeActions(edge: .trailing) {
             Button("Delete", action: deleteAction).tint(Color(UIColor.systemGray3))
@@ -439,7 +439,13 @@ struct TagFilterView: View {
             }
             .sheet(isPresented: $showColorPicker) {
                 if let tag = tagToColor {
-                    TagColorPickerView(tag: tag, clipboardManager: clipboardManager, isPresented: $showColorPicker)
+                    NavigationView {
+                        TagColorPickerView(tag: tag, clipboardManager: clipboardManager, isPresented: $showColorPicker)
+                            .onDisappear {
+                                // Refresh tags list to show updated colors
+                                tags = clipboardManager.allTags
+                            }
+                    }
                 }
             }
             .sheet(isPresented: $showPaywall) {
@@ -559,35 +565,33 @@ struct TagColorPickerView: View {
     }
     
     var body: some View {
-        NavigationView {
-            Form {
-                Section("Preview") {
-                    HStack {
-                        Text(tag)
-                            .font(.caption2)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(selectedColor)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                    }
-                }
-                
-                Section("Choose Color") {
-                    ColorPicker("Color", selection: $selectedColor, supportsOpacity: false)
+        Form {
+            Section("Preview") {
+                HStack {
+                    Text(tag)
+                        .font(.caption2)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(selectedColor)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
                 }
             }
-            .navigationTitle("Tag Color")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { isPresented = false }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        clipboardManager.setTagColor(tag, color: selectedColor)
-                        isPresented = false
-                    }
+            
+            Section("Choose Color") {
+                ColorPicker("Color", selection: $selectedColor, supportsOpacity: false)
+            }
+        }
+        .navigationTitle("Tag Color")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button("Cancel") { isPresented = false }
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Save") {
+                    clipboardManager.setTagColor(tag, color: selectedColor)
+                    isPresented = false
                 }
             }
         }
