@@ -410,8 +410,8 @@ struct TagFilterView: View {
                                     } else {
                                         showPaywall = true
                                     }
-                                }.tint(Color(UIColor.systemGray3))
-                                Button("Rename") { tagToRename = tag; newTagName = tag; isShowingRenameAlert = true }.tint(Color(UIColor.systemGray4))
+                                }.tint(Color(UIColor.systemBlue).opacity(0.55))
+                                Button("Rename") { tagToRename = tag; newTagName = tag; isShowingRenameAlert = true }.tint(Color(UIColor.systemBlue).opacity(0.55))
                             }
                         }
                     }
