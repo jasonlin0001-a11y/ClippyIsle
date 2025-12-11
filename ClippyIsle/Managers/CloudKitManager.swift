@@ -228,4 +228,139 @@ class CloudKitManager: ObservableObject {
             return localItems
         }
     }
+    
+    // MARK: - Tag Color Synchronization
+    private func createTagColorRecord(from tagColor: TagColor) -> CKRecord {
+        let recordID = CKRecord.ID(recordName: "tagColor_\(tagColor.tag)")
+        let record = CKRecord(recordType: "TagColor", recordID: recordID)
+        record["tag"] = tagColor.tag
+        record["red"] = tagColor.red
+        record["green"] = tagColor.green
+        record["blue"] = tagColor.blue
+        return record
+    }
+    
+    private func tagColor(from record: CKRecord) -> TagColor? {
+        guard let tag = record["tag"] as? String,
+              let red = record["red"] as? Double,
+              let green = record["green"] as? Double,
+              let blue = record["blue"] as? Double else {
+            return nil
+        }
+        return TagColor(tag: tag, red: red, green: green, blue: blue)
+    }
+    
+    private func fetchAllTagColorRecords() async throws -> [CKRecord] {
+        var allRecords: [CKRecord] = []
+        let query = CKQuery(recordType: "TagColor", predicate: NSPredicate(value: true))
+        
+        var cursor: CKQueryOperation.Cursor? = nil
+        
+        repeat {
+            let (matchResults, nextCursor) = try await cursor == nil ?
+                database.records(matching: query) :
+                database.records(continuingMatchFrom: cursor!)
+            
+            cursor = nextCursor
+            
+            for result in matchResults {
+                if case .success(let record) = result.1 {
+                    allRecords.append(record)
+                }
+            }
+        } while cursor != nil
+        
+        return allRecords
+    }
+    
+    func syncTagColors(localTagColors: [TagColor]) async -> [TagColor] {
+        guard iCloudStatus == "Available" else { return localTagColors }
+        
+        do {
+            // 1. Fetch all tag color records from cloud
+            let cloudRecords = try await fetchAllTagColorRecords()
+            var cloudTagColors: [TagColor] = []
+            for record in cloudRecords {
+                if let tagColor = tagColor(from: record) {
+                    cloudTagColors.append(tagColor)
+                }
+            }
+            print("☁️ Fetched \(cloudTagColors.count) tag colors from Cloud.")
+            
+            // 2. Build maps for comparison
+            let cloudTagMap = Dictionary(uniqueKeysWithValues: cloudTagColors.map { ($0.tag, $0) })
+            let localTagMap = Dictionary(uniqueKeysWithValues: localTagColors.map { ($0.tag, $0) })
+            
+            var recordsToSave: [CKRecord] = []
+            var mergedTagColors = localTagColors
+            
+            // 3. Process cloud tag colors
+            for cloudTagColor in cloudTagColors {
+                if localTagMap[cloudTagColor.tag] == nil {
+                    // Cloud has a color that local doesn't have - add it
+                    mergedTagColors.append(cloudTagColor)
+                }
+                // Note: We don't update existing local colors from cloud because 
+                // local changes should take precedence (user may have just customized)
+            }
+            
+            // 4. Upload local tag colors that aren't in the cloud
+            for localTagColor in localTagColors {
+                if cloudTagMap[localTagColor.tag] == nil || cloudTagMap[localTagColor.tag] != localTagColor {
+                    // Local has a new or different color - upload it
+                    recordsToSave.append(createTagColorRecord(from: localTagColor))
+                }
+            }
+            
+            // 5. Batch upload if needed
+            if !recordsToSave.isEmpty {
+                print("☁️ Uploading \(recordsToSave.count) tag color records...")
+                let modifyOp = CKModifyRecordsOperation(recordsToSave: recordsToSave, recordIDsToDelete: nil)
+                modifyOp.savePolicy = .allKeys
+                
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                    modifyOp.modifyRecordsResultBlock = { result in
+                        switch result {
+                        case .success:
+                            print("☁️ Tag color batch upload successful.")
+                            continuation.resume()
+                        case .failure(let error):
+                            print("☁️ Tag color batch upload failed: \(error)")
+                            continuation.resume(throwing: error)
+                        }
+                    }
+                    database.add(modifyOp)
+                }
+            }
+            
+            return mergedTagColors
+            
+        } catch {
+            print("☁️ CloudKit Tag Color Sync Failed: \(error)")
+            return localTagColors
+        }
+    }
+    
+    func saveTagColor(_ tagColor: TagColor) {
+        guard iCloudStatus == "Available" else { return }
+        let record = createTagColorRecord(from: tagColor)
+        let modifyOp = CKModifyRecordsOperation(recordsToSave: [record], recordIDsToDelete: nil)
+        modifyOp.savePolicy = .allKeys
+        modifyOp.modifyRecordsResultBlock = { result in
+            switch result {
+            case .success: print("☁️ Saved tag color for '\(tagColor.tag)' to CloudKit.")
+            case .failure(let error): print("☁️ CloudKit Tag Color Save Error: \(error.localizedDescription)")
+            }
+        }
+        database.add(modifyOp)
+    }
+    
+    func deleteTagColor(tag: String) {
+        guard iCloudStatus == "Available" else { return }
+        let id = CKRecord.ID(recordName: "tagColor_\(tag)")
+        database.delete(withRecordID: id) { _, error in
+            if let error = error { print("☁️ CloudKit Tag Color Delete Error: \(error.localizedDescription)") }
+            else { print("☁️ Deleted tag color for '\(tag)' from CloudKit.") }
+        }
+    }
 }

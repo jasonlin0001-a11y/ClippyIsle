@@ -71,6 +71,11 @@ class ClipboardManager: ObservableObject {
     func performCloudSync() async {
         let syncedItems = await cloudKitManager.sync(localItems: self.items)
         await MainActor.run { self.items = syncedItems; self.sortAndSave(skipCloud: true) }
+        
+        // Also sync tag colors
+        let localTagColors = getAllTagColors()
+        let syncedTagColors = await cloudKitManager.syncTagColors(localTagColors: localTagColors)
+        await MainActor.run { setAllTagColors(syncedTagColors) }
     }
     
     func hardResetData() {
@@ -205,7 +210,9 @@ class ClipboardManager: ObservableObject {
 
     func exportData() throws -> URL {
         let itemsToExport = createExportableItems(from: self.items)
-        let encoder = JSONEncoder(); encoder.outputFormatting = .prettyPrinted; let data = try encoder.encode(itemsToExport)
+        let tagColors = getAllTagColors()
+        let exportData = ExportableData(items: itemsToExport, tagColors: tagColors.isEmpty ? nil : tagColors)
+        let encoder = JSONEncoder(); encoder.outputFormatting = .prettyPrinted; let data = try encoder.encode(exportData)
         let tempURL = getTimestampedBackupURL(prefix: "ClippyIsle-Backup"); try data.write(to: tempURL); return tempURL
     }
 
@@ -214,7 +221,11 @@ class ClipboardManager: ObservableObject {
         let filteredItems = self.items.filter { item in guard let itemTags = item.tags else { return false }; return !tags.isDisjoint(with: itemTags) }
         guard !filteredItems.isEmpty else { return nil }
         let itemsToExport = createExportableItems(from: filteredItems)
-        let encoder = JSONEncoder(); encoder.outputFormatting = .prettyPrinted; let data = try encoder.encode(itemsToExport)
+        // Only export tag colors for the tags that are used in the filtered items
+        let allTagColors = getAllTagColors()
+        let filteredTagColors = allTagColors.filter { tags.contains($0.tag) }
+        let exportData = ExportableData(items: itemsToExport, tagColors: filteredTagColors.isEmpty ? nil : filteredTagColors)
+        let encoder = JSONEncoder(); encoder.outputFormatting = .prettyPrinted; let data = try encoder.encode(exportData)
         let tempURL = getTimestampedBackupURL(prefix: "ClippyIsle-Tagged-Backup"); try data.write(to: tempURL); return tempURL
     }
 
@@ -222,7 +233,20 @@ class ClipboardManager: ObservableObject {
         guard url.startAccessingSecurityScopedResource() else { throw NSError(domain: "ClipboardManager", code: -2, userInfo: [NSLocalizedDescriptionKey: "無法存取檔案。"]) }
         defer { url.stopAccessingSecurityScopedResource() }
         let data = try Data(contentsOf: url); var newItemsCount = 0
-        let importedItems = try JSONDecoder().decode([ExportableClipboardItem].self, from: data)
+        
+        // Try to decode as new format (ExportableData) first, then fall back to old format (array of items)
+        var importedItems: [ExportableClipboardItem]
+        var importedTagColors: [TagColor]?
+        
+        if let exportableData = try? JSONDecoder().decode(ExportableData.self, from: data) {
+            // New format with tag colors
+            importedItems = exportableData.items
+            importedTagColors = exportableData.tagColors
+        } else {
+            // Old format - just array of items
+            importedItems = try JSONDecoder().decode([ExportableClipboardItem].self, from: data)
+        }
+        
         let existingIDs = Set(self.items.map { $0.id })
         
         for importedItem in importedItems {
@@ -233,6 +257,12 @@ class ClipboardManager: ObservableObject {
             }
             self.items.append(newItem); newItemsCount += 1
         }
+        
+        // Import tag colors if available
+        if let tagColors = importedTagColors {
+            setAllTagColors(tagColors)
+        }
+        
         if newItemsCount > 0 { sortAndSave(); if UserDefaults.standard.bool(forKey: "iCloudSyncEnabled") { Task { await performCloudSync() } } }
         return newItemsCount
     }
@@ -477,6 +507,12 @@ class ClipboardManager: ObservableObject {
             UserDefaults.standard.set(customOrder, forKey: "customTagOrder")
         }
         
+        // Copy tag color to new name and delete old one
+        if let oldColor = getTagColor(oldName) {
+            setTagColor(newName, color: oldColor)
+            setTagColor(oldName, color: nil)  // This will also delete from CloudKit
+        }
+        
         sortAndSave()
     }
 
@@ -494,6 +530,11 @@ class ClipboardManager: ObservableObject {
         
         // Remove custom color when deleting a tag
         UserDefaults.standard.removeObject(forKey: "tagColor_\(tag)")
+        
+        // Delete from CloudKit if enabled
+        if UserDefaults.standard.bool(forKey: "iCloudSyncEnabled") {
+            cloudKitManager.deleteTagColor(tag: tag)
+        }
         
         sortAndSave()
     }
@@ -515,8 +556,40 @@ class ClipboardManager: ObservableObject {
             if let data = try? JSONEncoder().encode(components) {
                 UserDefaults.standard.set(data, forKey: "tagColor_\(tag)")
             }
+            
+            // Sync to CloudKit if enabled
+            if UserDefaults.standard.bool(forKey: "iCloudSyncEnabled") {
+                let tagColor = TagColor(tag: tag, red: Double(r), green: Double(g), blue: Double(b))
+                cloudKitManager.saveTagColor(tagColor)
+            }
         } else {
             UserDefaults.standard.removeObject(forKey: "tagColor_\(tag)")
+            
+            // Delete from CloudKit if enabled
+            if UserDefaults.standard.bool(forKey: "iCloudSyncEnabled") {
+                cloudKitManager.deleteTagColor(tag: tag)
+            }
+        }
+    }
+    
+    func getAllTagColors() -> [TagColor] {
+        var tagColors: [TagColor] = []
+        let tags = allTags
+        for tag in tags {
+            if let color = getTagColor(tag) {
+                let uiColor = UIColor(color)
+                var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0
+                uiColor.getRed(&r, green: &g, blue: &b, alpha: nil)
+                tagColors.append(TagColor(tag: tag, red: Double(r), green: Double(g), blue: Double(b)))
+            }
+        }
+        return tagColors
+    }
+    
+    func setAllTagColors(_ tagColors: [TagColor]) {
+        for tagColor in tagColors {
+            let color = Color(red: tagColor.red, green: tagColor.green, blue: tagColor.blue)
+            setTagColor(tagColor.tag, color: color)
         }
     }
 }

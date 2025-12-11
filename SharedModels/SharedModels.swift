@@ -72,6 +72,32 @@ public struct ClipboardItem: Identifiable, Codable, Equatable, Hashable {
     }
 }
 
+// MARK: - Tag Color
+public struct TagColor: Codable, Equatable {
+    public var tag: String
+    public var red: Double
+    public var green: Double
+    public var blue: Double
+    
+    public init(tag: String, red: Double, green: Double, blue: Double) {
+        self.tag = tag
+        self.red = red
+        self.green = green
+        self.blue = blue
+    }
+}
+
+// MARK: - Exportable Data (for import/export)
+public struct ExportableData: Codable {
+    public var items: [ExportableClipboardItem]
+    public var tagColors: [TagColor]?
+    
+    public init(items: [ExportableClipboardItem], tagColors: [TagColor]? = nil) {
+        self.items = items
+        self.tagColors = tagColors
+    }
+}
+
 // MARK: - Exportable Clipboard Item (for import/export)
 public struct ExportableClipboardItem: Codable {
     public var id: UUID
