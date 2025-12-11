@@ -75,7 +75,7 @@ class ClipboardManager: ObservableObject {
         // Also sync tag colors
         let localTagColors = getAllTagColors()
         let syncedTagColors = await cloudKitManager.syncTagColors(localTagColors: localTagColors)
-        await MainActor.run { setAllTagColors(syncedTagColors) }
+        await MainActor.run { setAllTagColors(syncedTagColors, skipCloudSync: true) }
     }
     
     func hardResetData() {
@@ -258,9 +258,9 @@ class ClipboardManager: ObservableObject {
             self.items.append(newItem); newItemsCount += 1
         }
         
-        // Import tag colors if available
+        // Import tag colors if available (skip CloudKit sync since performCloudSync will handle it)
         if let tagColors = importedTagColors {
-            setAllTagColors(tagColors)
+            setAllTagColors(tagColors, skipCloudSync: true)
         }
         
         if newItemsCount > 0 { sortAndSave(); if UserDefaults.standard.bool(forKey: "iCloudSyncEnabled") { Task { await performCloudSync() } } }
@@ -586,10 +586,23 @@ class ClipboardManager: ObservableObject {
         return tagColors
     }
     
-    func setAllTagColors(_ tagColors: [TagColor]) {
+    func setAllTagColors(_ tagColors: [TagColor], skipCloudSync: Bool = false) {
         for tagColor in tagColors {
             let color = Color(red: tagColor.red, green: tagColor.green, blue: tagColor.blue)
-            setTagColor(tagColor.tag, color: color)
+            let uiColor = UIColor(color)
+            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0
+            uiColor.getRed(&r, green: &g, blue: &b, alpha: nil)
+            let components = [Double(r), Double(g), Double(b)]
+            if let data = try? JSONEncoder().encode(components) {
+                UserDefaults.standard.set(data, forKey: "tagColor_\(tagColor.tag)")
+            }
+        }
+        
+        // If CloudKit sync is enabled and not skipped, sync all tag colors in bulk
+        if !skipCloudSync && UserDefaults.standard.bool(forKey: "iCloudSyncEnabled") {
+            Task {
+                _ = await cloudKitManager.syncTagColors(localTagColors: tagColors)
+            }
         }
     }
 }

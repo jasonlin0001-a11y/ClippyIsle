@@ -316,7 +316,7 @@ class CloudKitManager: ObservableObject {
             if !recordsToSave.isEmpty {
                 print("☁️ Uploading \(recordsToSave.count) tag color records...")
                 let modifyOp = CKModifyRecordsOperation(recordsToSave: recordsToSave, recordIDsToDelete: nil)
-                modifyOp.savePolicy = .allKeys
+                modifyOp.savePolicy = .changedKeys
                 
                 try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                     modifyOp.modifyRecordsResultBlock = { result in
@@ -345,7 +345,7 @@ class CloudKitManager: ObservableObject {
         guard iCloudStatus == "Available" else { return }
         let record = createTagColorRecord(from: tagColor)
         let modifyOp = CKModifyRecordsOperation(recordsToSave: [record], recordIDsToDelete: nil)
-        modifyOp.savePolicy = .allKeys
+        modifyOp.savePolicy = .changedKeys
         modifyOp.modifyRecordsResultBlock = { result in
             switch result {
             case .success: print("☁️ Saved tag color for '\(tagColor.tag)' to CloudKit.")
