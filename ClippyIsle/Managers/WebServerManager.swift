@@ -533,7 +533,7 @@ class WebServerManager: ObservableObject {
             let id = item.id.uuidString
             
             html += """
-            <div class="item \(pinnedClass)">
+            <div class="item \(pinnedClass)" data-full-content="\(encodedContent)">
                 <div class="content">
                     <div class="checkbox-wrapper">
                         <input type="checkbox" class="cb-clipboard" value="\(id)">
@@ -689,11 +689,12 @@ class WebServerManager: ObservableObject {
                 const items = document.querySelectorAll('#list-clipboard .item');
                 
                 items.forEach(item => {
-                    const textContent = item.querySelector('.text-preview')?.textContent.toLowerCase() || '';
+                    const textPreview = item.querySelector('.text-preview')?.textContent.toLowerCase() || '';
                     const metaContent = item.querySelector('.meta')?.textContent.toLowerCase() || '';
-                    const fullText = textContent + ' ' + metaContent;
+                    const fullContent = item.getAttribute('data-full-content')?.toLowerCase() || '';
+                    const searchableText = textPreview + ' ' + metaContent + ' ' + fullContent;
                     
-                    if (fullText.includes(searchTerm)) {
+                    if (searchableText.includes(searchTerm)) {
                         item.classList.remove('hidden');
                     } else {
                         item.classList.add('hidden');
