@@ -4,6 +4,33 @@ import LinkPresentation
 
 // MARK: - Helper Components (Missing Shapes & Layouts)
 
+struct TagChipView: View {
+    let tag: String
+    let tagColor: Color
+    let textColor: Color
+    let onFilter: () -> Void
+    
+    var body: some View {
+        Text(tag)
+            .font(.caption2)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(tagColor)
+            .foregroundColor(textColor)
+            .cornerRadius(8)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 20)
+                    .onEnded { value in
+                        // Detect horizontal swipe (left or right)
+                        if abs(value.translation.width) > abs(value.translation.height) {
+                            onFilter()
+                        }
+                    }
+            )
+    }
+}
+
 struct CornerTriangleShape: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
@@ -109,16 +136,11 @@ struct ClipboardItemRow: View {
                                         let customColor = clipboardManager?.getTagColor(tag)
                                         let tagColor = customColor ?? Color.gray.opacity(0.2)
                                         let textColor = customColor != nil ? Color.white : Color.primary
-                                        Text(tag)
-                                            .font(.caption2)
-                                            .padding(.horizontal, 6)
-                                            .padding(.vertical, 2)
-                                            .background(tagColor)
-                                            .foregroundColor(textColor)
-                                            .cornerRadius(8)
-                                            .contentShape(Rectangle())
-                                            .onLongPressGesture(minimumDuration: 0.5) {
-                                                // Filter by this tag
+                                        TagChipView(
+                                            tag: tag,
+                                            tagColor: tagColor,
+                                            textColor: textColor,
+                                            onFilter: {
                                                 if let onTagLongPress = self.onTagLongPress {
                                                     onTagLongPress(tag)
                                                     // Add haptic feedback
@@ -126,6 +148,7 @@ struct ClipboardItemRow: View {
                                                     generator.impactOccurred()
                                                 }
                                             }
+                                        )
                                     } 
                                 } 
                             }
@@ -333,6 +356,7 @@ struct TagFilterView: View {
     @State private var tagToColor: String?
     @State private var showColorPicker = false
     @State private var showPaywall = false
+    @State private var refreshTrigger = false
     @Environment(\.dismiss) var dismiss
 
     var body: some View {
@@ -368,7 +392,9 @@ struct TagFilterView: View {
                                     }
                                     Text(tag)
                                 } 
-                            }.foregroundColor(.primary)
+                            }
+                            .foregroundColor(.primary)
+                            .id("\(tag)-\(refreshTrigger)")
                             .swipeActions {
                                 Button("Delete", role: .destructive) { 
                                     clipboardManager.deleteTagFromAllItems(tag)
@@ -440,11 +466,10 @@ struct TagFilterView: View {
             .sheet(isPresented: $showColorPicker) {
                 if let tag = tagToColor {
                     NavigationView {
-                        TagColorPickerView(tag: tag, clipboardManager: clipboardManager, isPresented: $showColorPicker)
-                            .onDisappear {
-                                // Refresh tags list to show updated colors
-                                tags = clipboardManager.allTags
-                            }
+                        TagColorPickerView(tag: tag, clipboardManager: clipboardManager, isPresented: $showColorPicker, onSave: {
+                            // Force refresh of the view by toggling state
+                            refreshTrigger.toggle()
+                        })
                     }
                 }
             }
@@ -555,12 +580,14 @@ struct TagColorPickerView: View {
     let tag: String
     @ObservedObject var clipboardManager: ClipboardManager
     @Binding var isPresented: Bool
+    var onSave: (() -> Void)?
     @State private var selectedColor: Color
     
-    init(tag: String, clipboardManager: ClipboardManager, isPresented: Binding<Bool>) {
+    init(tag: String, clipboardManager: ClipboardManager, isPresented: Binding<Bool>, onSave: (() -> Void)? = nil) {
         self.tag = tag
         self.clipboardManager = clipboardManager
         self._isPresented = isPresented
+        self.onSave = onSave
         self._selectedColor = State(initialValue: clipboardManager.getTagColor(tag) ?? Color.blue)
     }
     
@@ -591,6 +618,7 @@ struct TagColorPickerView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button("Save") {
                     clipboardManager.setTagColor(tag, color: selectedColor)
+                    onSave?()
                     isPresented = false
                 }
             }
