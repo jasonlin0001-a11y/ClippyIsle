@@ -401,23 +401,35 @@ struct ContentView: View {
         else { ProgressView("Loading...") }
     }
     
-    private func hideKeyboard() { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) }
+    private func hideKeyboard() {
+        #if os(iOS)
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        #endif
+    }
     
     func copyItemToClipboard(item: ClipboardItem) {
+        #if os(iOS)
         if item.type == UTType.png.identifier, let filename = item.filename, let data = clipboardManager.loadFileData(filename: filename), let img = UIImage(data: data) { UIPasteboard.general.image = img }
         else if item.type == UTType.url.identifier, let url = URL(string: item.content) { UIPasteboard.general.url = url }
         else { UIPasteboard.general.string = item.content }
         
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
+        #elseif os(macOS)
+        if item.type == UTType.png.identifier, let filename = item.filename, let data = clipboardManager.loadFileData(filename: filename), let img = NSImage(data: data) { NSPasteboard.general.clearContents(); NSPasteboard.general.writeObjects([img]) }
+        else if item.type == UTType.url.identifier, let url = URL(string: item.content) { NSPasteboard.general.clearContents(); NSPasteboard.general.writeObjects([url as NSURL]) }
+        else { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(item.content, forType: .string) }
+        #endif
     }
     
     func configureNavigationBarAppearance() {
+        #if os(iOS)
         let roundedFont = UIFont.systemFont(ofSize: 34, weight: .bold).withRoundedDesign()
         let appearance = UINavigationBarAppearance()
         appearance.largeTitleTextAttributes = [.font: roundedFont]
         UINavigationBar.appearance().standardAppearance = appearance
         UINavigationBar.appearance().scrollEdgeAppearance = appearance
+        #endif
     }
     
     func checkActivityStatus() {
@@ -427,6 +439,7 @@ struct ContentView: View {
         }
     }
     func shareItem(item: ClipboardItem) {
+        #if os(iOS)
         var itemsToShare: [Any] = []; var itemToUse = item
         if itemToUse.fileData == nil, let filename = item.filename { itemToUse.fileData = clipboardManager.loadFileData(filename: filename) }
         if let data = itemToUse.fileData, item.type == UTType.png.identifier {
@@ -440,24 +453,46 @@ struct ContentView: View {
             popover.sourceView = sourceView; popover.sourceRect = CGRect(x: sourceView.bounds.midX, y: sourceView.bounds.midY, width: 0, height: 0); popover.permittedArrowDirections = []
         }
         sourceView.window?.rootViewController?.present(activityVC, animated: true)
+        #elseif os(macOS)
+        var itemsToShare: [Any] = []; var itemToUse = item
+        if itemToUse.fileData == nil, let filename = item.filename { itemToUse.fileData = clipboardManager.loadFileData(filename: filename) }
+        if let data = itemToUse.fileData, item.type == UTType.png.identifier {
+            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(item.filename ?? "SharedFile.png")
+            do { try data.write(to: tempURL, options: [.atomic]); itemsToShare.append(tempURL) } catch { itemsToShare.append(data) }
+        } else if let url = URL(string: item.content), (item.type == UTType.url.identifier || item.content.starts(with: "http")) { itemsToShare.append(url) }
+        else { itemsToShare.append(item.content) }
+        guard !itemsToShare.isEmpty else { return }
+        let sharingPicker = NSSharingServicePicker(items: itemsToShare)
+        sharingPicker.show(relativeTo: .zero, of: NSView(), preferredEdge: .minY)
+        #endif
     }
     func createDragItem(for item: ClipboardItem) -> NSItemProvider {
+        #if os(iOS)
         if item.type == UTType.png.identifier, let filename = item.filename, let data = clipboardManager.loadFileData(filename: filename), let uiImage = UIImage(data: data) {
             let provider = NSItemProvider(); provider.registerObject(uiImage, visibility: .all)
             provider.registerDataRepresentation(forTypeIdentifier: UTType.png.identifier, visibility: .all) { completion in completion(data, nil); return nil }; return provider
         } else if item.type == UTType.url.identifier, let url = URL(string: item.content) { return NSItemProvider(object: url as NSURL) }
         else { return NSItemProvider(object: item.content as NSString) }
+        #elseif os(macOS)
+        if item.type == UTType.png.identifier, let filename = item.filename, let data = clipboardManager.loadFileData(filename: filename), let nsImage = NSImage(data: data) {
+            let provider = NSItemProvider(); provider.registerObject(nsImage, visibility: .all)
+            provider.registerDataRepresentation(forTypeIdentifier: UTType.png.identifier, visibility: .all) { completion in completion(data, nil); return nil }; return provider
+        } else if item.type == UTType.url.identifier, let url = URL(string: item.content) { return NSItemProvider(object: url as NSURL) }
+        else { return NSItemProvider(object: item.content as NSString) }
+        #endif
     }
 }
 
 extension Notification.Name { static let didRequestUndo = Notification.Name("didRequestUndo") }
 
+#if os(iOS)
 extension UIFont {
     func withRoundedDesign() -> UIFont {
         guard let descriptor = fontDescriptor.withDesign(.rounded) else { return self }
         return UIFont(descriptor: descriptor, size: pointSize)
     }
 }
+#endif
 
 extension NSItemProvider {
     func loadDataRepresentation(forTypeIdentifier typeIdentifier: String) async throws -> Data {

@@ -71,7 +71,11 @@ struct PreviewView: View {
         .animation(.default, value: isImageTextFieldFocused)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
-        .onTapGesture { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) }
+        .onTapGesture {
+            #if os(iOS)
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            #endif
+        }
         .onAppear {
             self.draftItem = item
             if let url = URL(string: item.content), currentWebURL == nil { currentWebURL = url }
@@ -82,7 +86,9 @@ struct PreviewView: View {
         .onDisappear {
             // Removed problematic saveProgress call to fix compiler error
             if let draft = draftItem, hasContentChanged(draft: draft, original: item) { item = draft; clipboardManager.updateAndSync(item: item) }
+            #if os(iOS)
             UIApplication.shared.isIdleTimerDisabled = false
+            #endif
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
@@ -93,7 +99,15 @@ struct PreviewView: View {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 if isYouTubeItem || isFacebookItem || isTwitterItem || isWebItem {
                     let urlToOpen = currentWebURL ?? URL(string: item.content)
-                    if let url = urlToOpen { Button(action: { UIApplication.shared.open(url) }) { Image(systemName: "safari") } }
+                    if let url = urlToOpen {
+                        Button(action: {
+                            #if os(iOS)
+                            UIApplication.shared.open(url)
+                            #elseif os(macOS)
+                            NSWorkspace.shared.open(url)
+                            #endif
+                        }) { Image(systemName: "safari") }
+                    }
                 }
                 Button("Done") {
                     stopMediaAndCleanup()
@@ -124,7 +138,11 @@ struct PreviewView: View {
         .navigationBarBackButtonHidden(true)
         .navigationTitle(Text(navigationTitle))
         .navigationBarTitleDisplayMode(.inline)
-        .onChange(of: keepScreenOn) { _, newValue in UIApplication.shared.isIdleTimerDisabled = newValue }
+        .onChange(of: keepScreenOn) { _, newValue in
+            #if os(iOS)
+            UIApplication.shared.isIdleTimerDisabled = newValue
+            #endif
+        }
         .onChange(of: webDisplayMode) { _, newValue in
             if newValue == .web { loadWebView() }
             else if newValue == .text {
@@ -532,11 +550,17 @@ struct PreviewView: View {
             do { try data.write(to: tempURL, options: .atomic); itemsToShare.append(tempURL) } catch { itemsToShare.append(data) }
         } else if isWebItem || isYouTubeItem || isFacebookItem || isTwitterItem, let url = URL(string: item.content) { itemsToShare.append(url) } else { itemsToShare.append(item.content) }
         
-        guard !itemsToShare.isEmpty, let sourceView = UIApplication.shared.windows.first?.rootViewController?.view else { return }
+        guard !itemsToShare.isEmpty else { return }
+        #if os(iOS)
+        guard let sourceView = UIApplication.shared.windows.first?.rootViewController?.view else { return }
         let activityVC = UIActivityViewController(activityItems: itemsToShare, applicationActivities: nil)
         if let popover = activityVC.popoverPresentationController {
             popover.sourceView = sourceView; popover.sourceRect = CGRect(x: sourceView.bounds.midX, y: sourceView.bounds.midY, width: 0, height: 0); popover.permittedArrowDirections = []
         }
         sourceView.window?.rootViewController?.present(activityVC, animated: true)
+        #elseif os(macOS)
+        let sharingPicker = NSSharingServicePicker(items: itemsToShare)
+        sharingPicker.show(relativeTo: .zero, of: NSView(), preferredEdge: .minY)
+        #endif
     }
 }

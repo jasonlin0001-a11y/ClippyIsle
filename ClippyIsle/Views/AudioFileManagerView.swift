@@ -1,6 +1,8 @@
 import SwiftUI
 import AVFoundation
+#if os(iOS)
 import UIKit
+#endif
 
 struct AudioFileManagerView: View {
     @ObservedObject var clipboardManager: ClipboardManager
@@ -75,8 +77,10 @@ struct AudioFileManagerView: View {
                             HStack(spacing: 12) {
                                 // **修正 1**: 使用 Button 取代單純的 Image，增加點擊靈敏度
                                 Button(action: {
+                                    #if os(iOS)
                                     let generator = UIImpactFeedbackGenerator(style: .medium)
                                     generator.impactOccurred()
+                                    #endif
                                     togglePlayback(for: file)
                                 }) {
                                     Image(systemName: isPlaying(file) ? "stop.circle.fill" : "play.circle")

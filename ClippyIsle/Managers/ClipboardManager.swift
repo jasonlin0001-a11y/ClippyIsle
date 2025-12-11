@@ -3,7 +3,11 @@ import ActivityKit
 import UniformTypeIdentifiers
 import Combine
 import PDFKit
+#if os(iOS)
 import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
 
 // MARK: - Clipboard Manager
 @MainActor
@@ -285,6 +289,8 @@ class ClipboardManager: ObservableObject {
     func checkClipboard(isManual: Bool = false) {
         let askToPaste = UserDefaults.standard.bool(forKey: "askToAddFromClipboard")
         if !isManual && !askToPaste { return }
+        
+        #if os(iOS)
         let pasteboard = UIPasteboard.general
         guard let providers = pasteboard.itemProviders.first else { return }
 
@@ -293,6 +299,15 @@ class ClipboardManager: ObservableObject {
                 if let image = pasteboard.image, let imageData = image.pngData(),
                    !items.contains(where: { !$0.isTrashed && $0.type == UTType.png.identifier && $0.filename.flatMap(loadFileData) == imageData }) {
                     addNewItem(content: "圖片", type: UTType.png.identifier, fileData: imageData)
+        #elseif os(macOS)
+        let pasteboard = NSPasteboard.general
+        guard let items = pasteboard.pasteboardItems, !items.isEmpty else { return }
+
+        Task {
+            if let image = NSImage(pasteboard: pasteboard), let imageData = image.tiffRepresentation,
+               !self.items.contains(where: { !$0.isTrashed && $0.type == UTType.png.identifier && $0.filename.flatMap(loadFileData) == imageData }) {
+                addNewItem(content: "圖片", type: UTType.png.identifier, fileData: imageData)
+        #endif
                     return
                 }
             }
