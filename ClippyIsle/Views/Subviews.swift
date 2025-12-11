@@ -85,6 +85,8 @@ struct ClipboardItemRow: View {
     var tagAction: () -> Void
     var shareAction: () -> Void
     var linkPreviewAction: (() -> Void)? = nil
+    var colorAction: (() -> Void)? = nil
+    var onTagLongPress: ((String) -> Void)? = nil
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
@@ -115,6 +117,12 @@ struct ClipboardItemRow: View {
                                             .background(tagColor)
                                             .foregroundColor(textColor)
                                             .cornerRadius(8)
+                                            .onLongPressGesture {
+                                                // Filter by this tag
+                                                if let onTagLongPress = self.onTagLongPress {
+                                                    onTagLongPress(tag)
+                                                }
+                                            }
                                     } 
                                 } 
                             }
@@ -135,6 +143,9 @@ struct ClipboardItemRow: View {
         .swipeActions(edge: .leading) {
             Button("Share", action: shareAction).tint(.blue)
             Button(item.isPinned ? "Unpin" : "Pin", action: togglePinAction).tint(Color(UIColor.systemGray4))
+            if let colorAction = colorAction {
+                Button("Color") { colorAction() }.tint(Color(UIColor.systemPurple))
+            }
         }
         .swipeActions(edge: .trailing) {
             Button("Delete", action: deleteAction).tint(Color(UIColor.systemGray3))
@@ -188,7 +199,11 @@ struct TagExportSelectionView: View {
 struct TagEditView: View {
     @Binding var item: ClipboardItem
     @ObservedObject var clipboardManager: ClipboardManager
+    @EnvironmentObject var subscriptionManager: SubscriptionManager
     @State private var newTag = ""
+    @State private var newTagColor: Color?
+    @State private var showColorPicker = false
+    @State private var showPaywall = false
     @Environment(\.dismiss) var dismiss
 
     var body: some View {
@@ -218,21 +233,95 @@ struct TagEditView: View {
                     }
                 }
                 Section("Add New Tag") {
-                    TextField("Enter new tag...", text: $newTag).onSubmit(addNewTag)
+                    HStack {
+                        TextField("Enter new tag...", text: $newTag).onSubmit(addNewTag)
+                        
+                        if subscriptionManager.isPro {
+                            Button(action: { showColorPicker = true }) {
+                                if let color = newTagColor {
+                                    Circle()
+                                        .fill(color)
+                                        .frame(width: 24, height: 24)
+                                } else {
+                                    Image(systemName: "paintpalette")
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                     Button("Add", action: addNewTag).disabled(newTag.trimmingCharacters(in: .whitespaces).isEmpty)
+                    if !subscriptionManager.isPro {
+                        Text("Upgrade to Pro to set tag colors").font(.caption).foregroundColor(.secondary)
+                    }
                 }
             }
             .navigationTitle("Edit Tags").navigationBarTitleDisplayMode(.inline).toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() } } }
+            .sheet(isPresented: $showColorPicker) {
+                NavigationView {
+                    Form {
+                        Section("Preview") {
+                            if !newTag.isEmpty {
+                                HStack {
+                                    Text(newTag)
+                                        .font(.caption2)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(newTagColor ?? Color.blue)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(8)
+                                }
+                            }
+                        }
+                        
+                        Section("Choose Color") {
+                            ColorPicker("Color", selection: Binding(
+                                get: { newTagColor ?? Color.blue },
+                                set: { newTagColor = $0 }
+                            ), supportsOpacity: false)
+                        }
+                        
+                        Section {
+                            Button("Clear Color") {
+                                newTagColor = nil
+                                showColorPicker = false
+                            }
+                        }
+                    }
+                    .navigationTitle("Tag Color")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            Button("Cancel") { showColorPicker = false }
+                        }
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Done") { showColorPicker = false }
+                        }
+                    }
+                }
+            }
         }
     }
     private func addTag(_ tag: String) { var tags = item.tags ?? []; if !tags.contains(tag) { tags.append(tag); clipboardManager.updateTags(for: &item, newTags: tags) } }
     private func removeTag(_ tag: String) { var tags = item.tags ?? []; tags.removeAll { $0 == tag }; clipboardManager.updateTags(for: &item, newTags: tags) }
-    private func addNewTag() { let name = newTag.trimmingCharacters(in: .whitespaces); if !name.isEmpty { addTag(name); newTag = "" } }
+    private func addNewTag() { 
+        let name = newTag.trimmingCharacters(in: .whitespaces)
+        if !name.isEmpty { 
+            addTag(name)
+            // Set color if selected
+            if let color = newTagColor {
+                clipboardManager.setTagColor(name, color: color)
+            }
+            newTag = ""
+            newTagColor = nil
+        }
+    }
 }
 
 // **MODIFIED**: Added tag sharing functionality, replaced Edit button with Share button
 struct TagFilterView: View {
     @ObservedObject var clipboardManager: ClipboardManager
+    @EnvironmentObject var subscriptionManager: SubscriptionManager
     @Binding var selectedTag: String?
     @State private var tagToRename: String?
     @State private var newTagName = ""
@@ -241,6 +330,9 @@ struct TagFilterView: View {
     @State private var isSelectMode = false
     @State private var selectedTags: Set<String> = []
     @State private var exportURL: URL?
+    @State private var tagToColor: String?
+    @State private var showColorPicker = false
+    @State private var showPaywall = false
     @Environment(\.dismiss) var dismiss
 
     var body: some View {
@@ -266,12 +358,30 @@ struct TagFilterView: View {
                                 }
                             }.foregroundColor(.primary)
                         } else {
-                            Button { selectedTag = tag; dismiss() } label: { HStack { Image(systemName: selectedTag == tag ? "checkmark.circle.fill" : "circle"); Text(tag) } }.foregroundColor(.primary)
+                            Button { selectedTag = tag; dismiss() } label: { 
+                                HStack { 
+                                    Image(systemName: selectedTag == tag ? "checkmark.circle.fill" : "circle")
+                                    if let customColor = clipboardManager.getTagColor(tag) {
+                                        Circle()
+                                            .fill(customColor)
+                                            .frame(width: 12, height: 12)
+                                    }
+                                    Text(tag)
+                                } 
+                            }.foregroundColor(.primary)
                             .swipeActions {
                                 Button("Delete", role: .destructive) { 
                                     clipboardManager.deleteTagFromAllItems(tag)
                                     tags = clipboardManager.allTags
                                 }
+                                Button("Color") { 
+                                    if subscriptionManager.isPro {
+                                        tagToColor = tag
+                                        showColorPicker = true
+                                    } else {
+                                        showPaywall = true
+                                    }
+                                }.tint(Color(UIColor.systemPurple))
                                 Button("Rename") { tagToRename = tag; newTagName = tag; isShowingRenameAlert = true }.tint(.blue)
                             }
                         }
@@ -282,7 +392,7 @@ struct TagFilterView: View {
                     }
                 }
             }
-            .navigationTitle("Filter by Tag")
+            .navigationTitle("Tag Management")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -326,6 +436,14 @@ struct TagFilterView: View {
             }
             .sheet(item: $exportURL) { url in
                 ActivityView(activityItems: [url])
+            }
+            .sheet(isPresented: $showColorPicker) {
+                if let tag = tagToColor {
+                    TagColorPickerView(tag: tag, clipboardManager: clipboardManager, isPresented: $showColorPicker)
+                }
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
             }
         }
     }
