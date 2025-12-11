@@ -303,15 +303,6 @@ class ClipboardManager: ObservableObject {
                 if let image = pasteboard.image, let imageData = image.pngData(),
                    !items.contains(where: { !$0.isTrashed && $0.type == UTType.png.identifier && $0.filename.flatMap(loadFileData) == imageData }) {
                     addNewItem(content: "圖片", type: UTType.png.identifier, fileData: imageData)
-        #elseif os(macOS)
-        let pasteboard = NSPasteboard.general
-        guard let items = pasteboard.pasteboardItems, !items.isEmpty else { return }
-
-        Task {
-            if let image = NSImage(pasteboard: pasteboard), let imageData = image.tiffRepresentation,
-               !self.items.contains(where: { !$0.isTrashed && $0.type == UTType.png.identifier && $0.filename.flatMap(loadFileData) == imageData }) {
-                addNewItem(content: "圖片", type: UTType.png.identifier, fileData: imageData)
-        #endif
                     return
                 }
             }
@@ -348,6 +339,25 @@ class ClipboardManager: ObservableObject {
                 return
             }
         }
+        #elseif os(macOS)
+        let pasteboard = NSPasteboard.general
+        guard let pasteboardItems = pasteboard.pasteboardItems, !pasteboardItems.isEmpty else { return }
+
+        Task {
+            if let image = NSImage(pasteboard: pasteboard), let imageData = image.tiffRepresentation,
+               !self.items.contains(where: { !$0.isTrashed && $0.type == UTType.png.identifier && $0.filename.flatMap(loadFileData) == imageData }) {
+                addNewItem(content: "圖片", type: UTType.png.identifier, fileData: imageData)
+                return
+            }
+            
+            if pasteboard.string(forType: .string) != nil, let content = pasteboard.string(forType: .string), !content.isEmpty,
+               !items.contains(where: { !$0.isTrashed && $0.content == content }) {
+                let isURL = isValidURL(content)
+                addNewItem(content: content, type: isURL ? UTType.url.identifier : UTType.text.identifier)
+                return
+            }
+        }
+        #endif
     }
     
     // Helper function to validate if a string is a URL
