@@ -1,8 +1,16 @@
+#if os(iOS)
 import UIKit
 import Social
+#elseif os(macOS)
+import AppKit
+#endif
 import UniformTypeIdentifiers
 
+#if os(iOS)
 class ShareViewController: UIViewController {
+#elseif os(macOS)
+class ShareViewController: NSViewController {
+#endif
 
     override func viewDidLoad() {
         super.viewDidLoad()

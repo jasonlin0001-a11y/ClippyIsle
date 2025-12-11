@@ -1,5 +1,7 @@
 import SwiftUI
+#if os(iOS)
 import ActivityKit
+#endif
 import UniformTypeIdentifiers
 import Combine
 import PDFKit
@@ -15,7 +17,9 @@ class ClipboardManager: ObservableObject {
     static let shared = ClipboardManager()
 
     @Published var items: [ClipboardItem] = []
+    #if os(iOS)
     @Published var activity: Activity<ClippyIsleAttributes>? = nil
+    #endif
     @Published var isLiveActivityOn: Bool
     
     let userDefaults: UserDefaults
@@ -389,8 +393,13 @@ class ClipboardManager: ObservableObject {
         } catch { print("❌ Copy Asset Failed: \(error)"); return nil }
     }
 
-    func syncActivityState() { Task { await ensureLiveActivityIsRunningIfNeeded() } }
+    func syncActivityState() {
+        #if os(iOS)
+        Task { await ensureLiveActivityIsRunningIfNeeded() }
+        #endif
+    }
     
+    #if os(iOS)
     @MainActor
     func ensureLiveActivityIsRunningIfNeeded() async {
         guard await ActivityAuthorizationInfo().areActivitiesEnabled else {
@@ -442,6 +451,13 @@ class ClipboardManager: ObservableObject {
         for activity in activitiesToEnd { await activity.end(nil, dismissalPolicy: .immediate) }
         activity = nil; isLiveActivityOn = false; UserDefaults.standard.set(false, forKey: "isLiveActivityOn")
     }
+    #else
+    // macOS stubs for Activity methods
+    func ensureLiveActivityIsRunningIfNeeded() async { }
+    func startActivity() async { }
+    func updateActivity(newColorName: String? = nil) { }
+    func endActivity() async { }
+    #endif
 
     var allTags: [String] {
         let allTagsSet = items.reduce(into: Set<String>()) { set, item in guard let tags = item.tags else { return }; set.formUnion(tags) }

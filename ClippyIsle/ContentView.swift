@@ -7,10 +7,12 @@
 //
 
 import SwiftUI
+#if os(iOS)
 import ActivityKit
+import AudioToolbox
+#endif
 import UniformTypeIdentifiers
 import Combine
-import AudioToolbox
 
 // MARK: - Main ContentView
 struct ContentView: View {
@@ -433,10 +435,12 @@ struct ContentView: View {
     }
     
     func checkActivityStatus() {
+        #if os(iOS)
         Task {
             let enabled = await ActivityAuthorizationInfo().areActivitiesEnabled; self.areActivitiesEnabled = enabled
             if enabled { await clipboardManager.ensureLiveActivityIsRunningIfNeeded() } else { await clipboardManager.endActivity() }
         }
+        #endif
     }
     func shareItem(item: ClipboardItem) {
         #if os(iOS)
