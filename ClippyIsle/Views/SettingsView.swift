@@ -2,7 +2,9 @@ import SwiftUI
 import WebKit
 import UniformTypeIdentifiers
 import AVFoundation
+#if os(iOS)
 import UIKit
+#endif
 import StoreKit
 
 // MARK: - Extensions for Identifiable URL
@@ -216,8 +218,10 @@ struct SettingsView: View {
         guard !nicknameInput.isEmpty else { return }
         userNickname = nicknameInput
         isNicknameSaved = true
+        #if os(iOS)
         let generator = UINotificationFeedbackGenerator(); generator.notificationOccurred(.success)
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        #endif
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { if self.nicknameInput == self.userNickname { self.isNicknameSaved = false } }
     }
 

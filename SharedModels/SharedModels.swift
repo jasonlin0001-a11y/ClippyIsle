@@ -1,6 +1,8 @@
 import Foundation
 import SwiftUI
+#if os(iOS)
 import ActivityKit
+#endif
 import UniformTypeIdentifiers
 
 // MARK: - Global Constants & Functions
@@ -101,6 +103,7 @@ public struct ExportableClipboardItem: Codable {
 
 
 // MARK: - Live Activity Attributes
+#if os(iOS)
 public struct ClippyIsleAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
         public var itemCount: Int
@@ -108,6 +111,16 @@ public struct ClippyIsleAttributes: ActivityAttributes {
         public var itemsLabel: String
     }
 }
+#else
+// macOS stub for ClippyIsleAttributes
+public struct ClippyIsleAttributes {
+    public struct ContentState: Codable, Hashable {
+        public var itemCount: Int
+        public var themeColorName: String
+        public var itemsLabel: String
+    }
+}
+#endif
 
 // MARK: - Color Utility
 public extension ClippyIsleAttributes {

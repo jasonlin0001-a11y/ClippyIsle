@@ -1,6 +1,10 @@
 import Foundation
 import Network
+#if os(iOS)
 import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
 import Combine
 import UniformTypeIdentifiers
 
@@ -21,7 +25,9 @@ class WebServerManager: ObservableObject {
         guard !isRunning else { return }
         
         DispatchQueue.main.async {
+            #if os(iOS)
             UIApplication.shared.isIdleTimerDisabled = true
+            #endif
         }
         
         queue.async { [weak self] in
@@ -60,7 +66,9 @@ class WebServerManager: ObservableObject {
         listener = nil
         
         DispatchQueue.main.async {
+            #if os(iOS)
             UIApplication.shared.isIdleTimerDisabled = false
+            #endif
             self.isRunning = false
             self.serverURL = nil
         }
@@ -389,10 +397,15 @@ class WebServerManager: ObservableObject {
         if appearanceRaw == "dark" { isDarkMode = true }
         else if appearanceRaw == "light" { isDarkMode = false }
         else {
+            #if os(iOS)
             if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                let window = windowScene.windows.first {
                 isDarkMode = (window.traitCollection.userInterfaceStyle == .dark)
             }
+            #elseif os(macOS)
+            let appearance = NSApp.effectiveAppearance
+            isDarkMode = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            #endif
         }
         
         let bgHex = isDarkMode ? "#000000" : "#BDBDBD"

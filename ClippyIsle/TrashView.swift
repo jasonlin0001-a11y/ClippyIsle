@@ -37,8 +37,11 @@ struct TrashView: View {
                 }
             }
             .navigationTitle("Trash")
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
+                #if os(iOS)
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Done") { dismiss() }
                 }
@@ -48,6 +51,17 @@ struct TrashView: View {
                     }
                     .disabled(clipboardManager.items.filter({ $0.isTrashed }).isEmpty)
                 }
+                #else
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                }
+                ToolbarItem(placement: .destructiveAction) {
+                    Button("Empty Trash") {
+                        clipboardManager.emptyTrash()
+                    }
+                    .disabled(clipboardManager.items.filter({ $0.isTrashed }).isEmpty)
+                }
+                #endif
             }
         }
     }

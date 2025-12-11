@@ -1,16 +1,23 @@
 import SwiftUI
+#if os(iOS)
 import UIKit
 import PencilKit
 import Vision
 import VisionKit
+#elseif os(macOS)
+import AppKit
+#endif
 import UniformTypeIdentifiers
 import AVFoundation // 修正 AVMakeRect 錯誤
 
+#if os(iOS)
 // MARK: - Custom TextView for EditableTextView
 class CustomTextView: UITextView {
     override func paste(_ sender: Any?) { super.paste(sender) }
 }
+#endif
 
+#if os(iOS)
 struct EditableTextView: UIViewRepresentable {
     @Binding var item: ClipboardItem
     var highlightedRange: NSRange?
@@ -319,7 +326,11 @@ struct FullScreenImageEditor: View {
                 ZStack {
                     ZoomableMarkupView(image: img, canvasView: $canvasView, undoManager: $undoManager, textAnnotations: $textAnnotations)
                         .background(Color.black)
-                        .onTapGesture { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) }
+                        .onTapGesture {
+                            #if os(iOS)
+                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                            #endif
+                        }
                 }
             } else { Spacer(); ProgressView(); Spacer() }
             HStack(spacing: 40) {
@@ -390,3 +401,100 @@ struct ImagePreviewEditor: View {
         }
     }
 }
+
+#elseif os(macOS)
+
+// MARK: - macOS Stub Implementations
+struct EditableTextView: View {
+    @Binding var item: ClipboardItem
+    var highlightedRange: NSRange?
+    var fontSize: Double
+    @ObservedObject var clipboardManager: ClipboardManager
+    @Binding var isEditing: Bool
+    
+    var body: some View {
+        TextEditor(text: $item.content)
+            .font(.system(size: fontSize))
+    }
+}
+
+struct PlainTextEditorView: View {
+    @Binding var text: String
+    @FocusState.Binding var isFocused: Bool
+    var fontSize: Double
+    
+    var body: some View {
+        TextEditor(text: $text)
+            .font(.system(size: fontSize))
+            .focused($isFocused)
+    }
+}
+
+struct ZoomableLiveTextScrollView: View {
+    let image: NSImage
+    
+    var body: some View {
+        Image(nsImage: image)
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+    }
+}
+
+struct TextAnnotation: Identifiable {
+    let id = UUID()
+    var text: String
+    var location: CGPoint
+    var color: NSColor
+}
+
+struct ZoomableMarkupView: View {
+    var image: NSImage
+    @Binding var canvasView: Any?
+    @Binding var undoManager: UndoManager?
+    @Binding var textAnnotations: [TextAnnotation]
+    
+    var body: some View {
+        Image(nsImage: image)
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+    }
+}
+
+struct ImageMerger {
+    static func mergeImageWithDrawing(baseImage: NSImage, canvasView: Any?, textAnnotations: [TextAnnotation]) -> NSImage? {
+        return baseImage
+    }
+}
+
+struct FullScreenImageEditor: View {
+    @Binding var image: NSImage?
+    var onSave: (NSImage) -> Void
+    var onCancel: () -> Void
+    
+    var body: some View {
+        VStack {
+            if let img = image {
+                Image(nsImage: img)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+            }
+            HStack {
+                Button("Cancel", action: onCancel)
+                Button("Save", action: { if let img = image { onSave(img) } })
+            }
+        }
+    }
+}
+
+struct ImagePreviewEditor: View {
+    @Binding var draftItem: ClipboardItem
+    @ObservedObject var clipboardManager: ClipboardManager
+    var onUpdate: (ClipboardItem) -> Void
+    
+    var body: some View {
+        Text("Image editing not yet supported on macOS")
+            .foregroundColor(.secondary)
+    }
+}
+
+#endif
