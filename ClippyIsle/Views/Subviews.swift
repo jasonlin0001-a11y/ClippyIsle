@@ -105,8 +105,9 @@ struct ClipboardItemRow: View {
                             ScrollView(.horizontal, showsIndicators: false) { 
                                 HStack { 
                                     ForEach(tags, id: \.self) { tag in 
-                                        let tagColor = clipboardManager?.getTagColor(tag) ?? Color.gray.opacity(0.2)
-                                        let textColor = clipboardManager?.getTagColor(tag) != nil ? Color.white : Color.primary
+                                        let customColor = clipboardManager?.getTagColor(tag)
+                                        let tagColor = customColor ?? Color.gray.opacity(0.2)
+                                        let textColor = customColor != nil ? Color.white : Color.primary
                                         Text(tag)
                                             .font(.caption2)
                                             .padding(.horizontal, 6)
@@ -375,10 +376,11 @@ struct TagColorManagementView: View {
             if subscriptionManager.isPro {
                 Section("Tag Colors") {
                     ForEach(tags, id: \.self) { tag in
+                        let customColor = clipboardManager.getTagColor(tag)
                         HStack {
-                            if let customColor = clipboardManager.getTagColor(tag) {
+                            if let color = customColor {
                                 Circle()
-                                    .fill(customColor)
+                                    .fill(color)
                                     .frame(width: 24, height: 24)
                             } else {
                                 Circle()
@@ -391,12 +393,12 @@ struct TagColorManagementView: View {
                             Spacer()
                             
                             Button(action: { selectedTag = tag; showColorPicker = true }) {
-                                Text(clipboardManager.getTagColor(tag) == nil ? "Set Color" : "Change")
+                                Text(customColor == nil ? "Set Color" : "Change")
                                     .font(.caption)
                                     .foregroundColor(.blue)
                             }
                             
-                            if clipboardManager.getTagColor(tag) != nil {
+                            if customColor != nil {
                                 Button(action: { clipboardManager.setTagColor(tag, color: nil) }) {
                                     Image(systemName: "xmark.circle.fill")
                                         .foregroundColor(.secondary)

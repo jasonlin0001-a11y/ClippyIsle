@@ -509,8 +509,8 @@ class ClipboardManager: ObservableObject {
     func setTagColor(_ tag: String, color: Color?) {
         if let color = color {
             let uiColor = UIColor(color)
-            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-            uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0
+            uiColor.getRed(&r, green: &g, blue: &b, alpha: nil)
             let components = [Double(r), Double(g), Double(b)]
             if let data = try? JSONEncoder().encode(components) {
                 UserDefaults.standard.set(data, forKey: "tagColor_\(tag)")
