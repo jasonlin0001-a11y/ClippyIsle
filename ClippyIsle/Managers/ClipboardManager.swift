@@ -90,6 +90,18 @@ class ClipboardManager: ObservableObject {
     func hardResetData() {
         items = []
         userDefaults.removeObject(forKey: "clippedItems"); userDefaults.removeObject(forKey: "clippedItems_corrupted_backup"); userDefaults.removeObject(forKey: "dataModelVersion"); userDefaults.removeObject(forKey: "widgetItems"); userDefaults.synchronize()
+        
+        // Clear all tag colors from UserDefaults.standard
+        // We need to iterate through all keys and remove those starting with "tagColor_"
+        let allKeys = UserDefaults.standard.dictionaryRepresentation().keys
+        let tagColorKeys = allKeys.filter { $0.hasPrefix("tagColor_") }
+        for key in tagColorKeys {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
+        // Also clear custom tag order
+        UserDefaults.standard.removeObject(forKey: "customTagOrder")
+        print("✅ 已清除 \(tagColorKeys.count) 個標籤顏色。")
+        
         if let containerURL = getSharedContainerURL() {
             do {
                 let fileURLs = try fileManager.contentsOfDirectory(at: containerURL, includingPropertiesForKeys: nil)
