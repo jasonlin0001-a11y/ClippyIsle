@@ -5,6 +5,7 @@ import UIKit
 struct AudioFileManagerView: View {
     @ObservedObject var clipboardManager: ClipboardManager
     @ObservedObject var speechManager: SpeechManager
+    var onOpenItem: ((ClipboardItem) -> Void)? = nil
     
     @State private var audioFiles: [AudioFileItem] = []
     @State private var totalSize: Int64 = 0
@@ -19,6 +20,8 @@ struct AudioFileManagerView: View {
     
     @State private var isShowingSingleDeleteAlert = false
     @State private var itemToDelete: AudioFileItem?
+    
+    @Environment(\.dismiss) var dismiss
     
     @AppStorage("previewFontSize") private var previewFontSize: Double = 17.0
 
@@ -107,6 +110,14 @@ struct AudioFileManagerView: View {
                                 .onTapGesture {
                                     togglePlayback(for: file)
                                 }
+                                .onLongPressGesture {
+                                    // Open the corresponding clipboard item
+                                    if let itemID = file.originalItemID,
+                                       let item = clipboardManager.items.first(where: { $0.id == itemID }) {
+                                        onOpenItem?(item)
+                                        dismiss()
+                                    }
+                                }
                                 
                                 Spacer()
                             }
@@ -126,7 +137,7 @@ struct AudioFileManagerView: View {
                 }
             }
         }
-        .navigationTitle("管理音訊")
+        .navigationTitle("音訊管理")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear(perform: loadFiles)
         

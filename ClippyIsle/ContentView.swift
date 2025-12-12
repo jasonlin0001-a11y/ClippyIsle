@@ -202,13 +202,21 @@ struct ContentView: View {
         }
         .sheet(isPresented: $isShowingAudioManager) {
             NavigationView {
-                AudioFileManagerView(clipboardManager: clipboardManager, speechManager: speechManager)
+                AudioFileManagerView(clipboardManager: clipboardManager, speechManager: speechManager, onOpenItem: { item in
+                    // Open the item in preview
+                    isShowingAudioManager = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        previewState = .loading(item)
+                    }
+                })
                     .toolbar {
                         ToolbarItem(placement: .navigationBarTrailing) {
                             Button("Done") { isShowingAudioManager = false }
+                                .foregroundColor(themeColor)
                         }
                     }
             }
+            .tint(themeColor)
         }
         
         .sheet(item: $itemToTag) { item in TagEditView(item: Binding(get: { item }, set: { itemToTag = $0 }), clipboardManager: clipboardManager) }

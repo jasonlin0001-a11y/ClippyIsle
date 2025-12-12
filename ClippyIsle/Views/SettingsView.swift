@@ -306,16 +306,16 @@ struct SettingsView: View {
     
     private var backupAndRestoreSection: some View {
         Section("Backup and Restore") {
-            Button { isImporting = true } label: { Label("Import Data", systemImage: "square.and.arrow.down") }
-            Button(action: exportAllData) { Label("Export All Data", systemImage: "square.and.arrow.up") }
-            Button { isShowingTagExport = true } label: { Label("Selective Export...", systemImage: "square.and.arrow.up.on.square") }
+            Button { isImporting = true } label: { Text("Import Data") }
+            Button(action: exportAllData) { Text("Export All Data") }
+            Button { isShowingTagExport = true } label: { Text("Selective Export...") }
         }
     }
     
     private var dataManagementSection: some View {
         Section("Data Management") {
-            Button { isShowingTrash = true } label: { Label("Trash", systemImage: "trash") }
-            NavigationLink { AudioFileManagerView(clipboardManager: clipboardManager, speechManager: speechManager) } label: { Label("Manage Audio Files", systemImage: "waveform") }
+            Button { isShowingTrash = true } label: { Text("Trash") }
+            NavigationLink { AudioFileManagerView(clipboardManager: clipboardManager, speechManager: speechManager) } label: { Text("Manage Audio Files") }
             Button("Clear Website Cache", role: .destructive) { isShowingClearCacheAlert = true }
             Button("Clear All Data", role: .destructive) { confirmationText = ""; isShowingHardResetAlert = true }
         }
