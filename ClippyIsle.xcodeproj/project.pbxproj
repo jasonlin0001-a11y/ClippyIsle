@@ -516,7 +516,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ClippyIsle/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "C Isle";
+				INFOPLIST_KEY_CFBundleDisplayName = "CC Isle";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "用於錄音以支援語音搜尋與語音控制。";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "用於將內容儲存到您的相簿。";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "用於選取圖片以儲存或建立剪貼項目。";
@@ -557,7 +557,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ClippyIsle/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "C Isle";
+				INFOPLIST_KEY_CFBundleDisplayName = "CC Isle";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "用於錄音以支援語音搜尋與語音控制。";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "用於將內容儲存到您的相簿。";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "用於選取圖片以儲存或建立剪貼項目。";
@@ -597,7 +597,7 @@
 				DEVELOPMENT_TEAM = J894ABBU74;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ClippyIsleWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "C Isle Widget";
+				INFOPLIST_KEY_CFBundleDisplayName = "CC Isle Widget";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
@@ -630,7 +630,7 @@
 				DEVELOPMENT_TEAM = J894ABBU74;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ClippyIsleWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "C Isle Widget";
+				INFOPLIST_KEY_CFBundleDisplayName = "CC Isle Widget";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
@@ -661,7 +661,7 @@
 				DEVELOPMENT_TEAM = J894ABBU74;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ClippyIsleShare/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "C Isle Share";
+				INFOPLIST_KEY_CFBundleDisplayName = "CC Isle Share";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -691,7 +691,7 @@
 				DEVELOPMENT_TEAM = J894ABBU74;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ClippyIsleShare/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "C Isle Share";
+				INFOPLIST_KEY_CFBundleDisplayName = "CC Isle Share";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
