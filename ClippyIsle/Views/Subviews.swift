@@ -229,6 +229,19 @@ struct TagEditView: View {
     @State private var showColorPicker = false
     @State private var showPaywall = false
     @Environment(\.dismiss) var dismiss
+    
+    // Theme Color Support
+    @AppStorage("themeColorName") private var themeColorName: String = "blue"
+    @AppStorage("customColorRed") private var customColorRed: Double = 0.0
+    @AppStorage("customColorGreen") private var customColorGreen: Double = 0.478
+    @AppStorage("customColorBlue") private var customColorBlue: Double = 1.0
+    
+    var themeColor: Color {
+        if themeColorName == "custom" {
+            return Color(red: customColorRed, green: customColorGreen, blue: customColorBlue)
+        }
+        return ClippyIsleAttributes.ColorUtility.color(forName: themeColorName)
+    }
 
     var body: some View {
         NavigationView {
@@ -325,6 +338,7 @@ struct TagEditView: View {
                 }
             }
         }
+        .tint(themeColor)
     }
     private func addTag(_ tag: String) { var tags = item.tags ?? []; if !tags.contains(tag) { tags.append(tag); clipboardManager.updateTags(for: &item, newTags: tags) } }
     private func removeTag(_ tag: String) { var tags = item.tags ?? []; tags.removeAll { $0 == tag }; clipboardManager.updateTags(for: &item, newTags: tags) }
@@ -359,6 +373,19 @@ struct TagFilterView: View {
     @State private var showPaywall = false
     @State private var refreshTrigger = false
     @Environment(\.dismiss) var dismiss
+    
+    // Theme Color Support
+    @AppStorage("themeColorName") private var themeColorName: String = "blue"
+    @AppStorage("customColorRed") private var customColorRed: Double = 0.0
+    @AppStorage("customColorGreen") private var customColorGreen: Double = 0.478
+    @AppStorage("customColorBlue") private var customColorBlue: Double = 1.0
+    
+    var themeColor: Color {
+        if themeColorName == "custom" {
+            return Color(red: customColorRed, green: customColorGreen, blue: customColorBlue)
+        }
+        return ClippyIsleAttributes.ColorUtility.color(forName: themeColorName)
+    }
 
     var body: some View {
         NavigationView {
@@ -482,6 +509,7 @@ struct TagFilterView: View {
                 PaywallView()
             }
         }
+        .tint(themeColor)
     }
     
     private func exportSelectedTags() {

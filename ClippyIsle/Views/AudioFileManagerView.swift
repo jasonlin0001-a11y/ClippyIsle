@@ -126,7 +126,7 @@ struct AudioFileManagerView: View {
                 }
             }
         }
-        .navigationTitle("Manage Audio Files")
+        .navigationTitle("管理音訊")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear(perform: loadFiles)
         
