@@ -292,23 +292,25 @@ class CloudKitManager: ObservableObject {
             let localTagMap = Dictionary(uniqueKeysWithValues: localTagColors.map { ($0.tag, $0) })
             
             var recordsToSave: [CKRecord] = []
-            var mergedTagColors = localTagColors
+            // Start with cloud colors as the source of truth
+            var mergedTagColors = cloudTagColors
             
-            // 3. Process cloud tag colors
-            for cloudTagColor in cloudTagColors {
-                if localTagMap[cloudTagColor.tag] == nil {
-                    // Cloud has a color that local doesn't have - add it
-                    mergedTagColors.append(cloudTagColor)
-                }
-                // Note: We don't update existing local colors from cloud because 
-                // local changes should take precedence (user may have just customized)
-            }
-            
-            // 4. Upload local tag colors that aren't in the cloud
+            // 3. Process local tag colors
             for localTagColor in localTagColors {
-                if cloudTagMap[localTagColor.tag] == nil || cloudTagMap[localTagColor.tag] != localTagColor {
-                    // Local has a new or different color - upload it
+                if let cloudTagColor = cloudTagMap[localTagColor.tag] {
+                    // Both have this tag - check if they're different
+                    if cloudTagColor != localTagColor {
+                        // Different colors - upload local version to cloud (local takes precedence for active edits)
+                        recordsToSave.append(createTagColorRecord(from: localTagColor))
+                        // Update merged colors with local version
+                        if let index = mergedTagColors.firstIndex(where: { $0.tag == localTagColor.tag }) {
+                            mergedTagColors[index] = localTagColor
+                        }
+                    }
+                } else {
+                    // Local has a tag that cloud doesn't have - upload it and add to merged
                     recordsToSave.append(createTagColorRecord(from: localTagColor))
+                    mergedTagColors.append(localTagColor)
                 }
             }
             
