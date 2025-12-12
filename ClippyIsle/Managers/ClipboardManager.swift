@@ -69,6 +69,12 @@ class ClipboardManager: ObservableObject {
     }
     
     func performCloudSync() async {
+        // Check if iCloud sync is enabled before syncing
+        guard UserDefaults.standard.bool(forKey: "iCloudSyncEnabled") else {
+            print("⚠️ iCloud sync is disabled, skipping sync")
+            return
+        }
+        
         let syncedItems = await cloudKitManager.sync(localItems: self.items)
         await MainActor.run { self.items = syncedItems; self.sortAndSave(skipCloud: true) }
         
