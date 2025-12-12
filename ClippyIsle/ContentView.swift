@@ -255,7 +255,7 @@ struct ContentView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 if selectedTagFilter != nil { Button { selectedTagFilter = nil } label: { Image(systemName: "xmark.circle.fill") } }
-                else { Button { clipboardManager.isLiveActivityOn.toggle() } label: { Image(systemName: "circle.fill").font(.system(size: 20)).foregroundColor(clipboardManager.isLiveActivityOn ? Color.green : Color.red) }.disabled(!areActivitiesEnabled) }
+                else { Button { clipboardManager.isLiveActivityOn.toggle() } label: { Image(systemName: "c.circle.fill").font(.system(size: 20)).foregroundColor(clipboardManager.isLiveActivityOn ? Color.green : Color.red) }.disabled(!areActivitiesEnabled) }
             }
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 Button { isShowingTagSheet = true } label: { Image(systemName: "tag").frame(width: 44, height: 44).contentShape(Rectangle()) }
