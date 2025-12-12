@@ -72,9 +72,12 @@ class ClipboardManager: ObservableObject {
         let syncedItems = await cloudKitManager.sync(localItems: self.items)
         await MainActor.run { self.items = syncedItems; self.sortAndSave(skipCloud: true) }
         
-        // Also sync tag colors
-        let localTagColors = getAllTagColors()
+        // Also sync tag colors (use internal method to get colors regardless of Pro status for backup)
+        let localTagColors = getAllTagColorsInternal()
         let syncedTagColors = await cloudKitManager.syncTagColors(localTagColors: localTagColors)
+        
+        // Always apply synced colors to local storage (for backup purposes)
+        // Pro check happens when colors are retrieved for display
         await MainActor.run { setAllTagColors(syncedTagColors, skipCloudSync: true) }
     }
     
@@ -507,8 +510,8 @@ class ClipboardManager: ObservableObject {
             UserDefaults.standard.set(customOrder, forKey: "customTagOrder")
         }
         
-        // Copy tag color to new name and delete old one
-        if let oldColor = getTagColor(oldName) {
+        // Copy tag color to new name and delete old one (regardless of Pro status for preservation)
+        if let oldColor = getTagColorInternal(oldName) {
             setTagColor(newName, color: oldColor)
             setTagColor(oldName, color: nil)  // This will also delete from CloudKit
         }
@@ -540,11 +543,19 @@ class ClipboardManager: ObservableObject {
     }
     
     // MARK: - Tag Color Management (Pro Feature)
-    func getTagColor(_ tag: String) -> Color? {
+    
+    // Private method to get tag color without Pro check (for internal operations)
+    private func getTagColorInternal(_ tag: String) -> Color? {
         guard let colorData = UserDefaults.standard.data(forKey: "tagColor_\(tag)") else { return nil }
         guard let components = try? JSONDecoder().decode([Double].self, from: colorData) else { return nil }
         guard components.count == 3 else { return nil }
         return Color(red: components[0], green: components[1], blue: components[2])
+    }
+    
+    func getTagColor(_ tag: String) -> Color? {
+        // Only return tag colors for Pro users
+        guard SubscriptionManager.shared.isPro else { return nil }
+        return getTagColorInternal(tag)
     }
     
     func setTagColor(_ tag: String, color: Color?) {
@@ -572,7 +583,8 @@ class ClipboardManager: ObservableObject {
         }
     }
     
-    func getAllTagColors() -> [TagColor] {
+    // Private method to get all tag colors without Pro check (for sync purposes)
+    private func getAllTagColorsInternal() -> [TagColor] {
         var tagColors: [TagColor] = []
         let tags = allTags
         for tag in tags {
@@ -584,6 +596,12 @@ class ClipboardManager: ObservableObject {
             }
         }
         return tagColors
+    }
+    
+    func getAllTagColors() -> [TagColor] {
+        // Only return tag colors for Pro users
+        guard SubscriptionManager.shared.isPro else { return [] }
+        return getAllTagColorsInternal()
     }
     
     func setAllTagColors(_ tagColors: [TagColor], skipCloudSync: Bool = false) {
