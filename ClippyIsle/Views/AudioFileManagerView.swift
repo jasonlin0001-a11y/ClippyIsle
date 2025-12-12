@@ -5,7 +5,7 @@ import UIKit
 struct AudioFileManagerView: View {
     @ObservedObject var clipboardManager: ClipboardManager
     @ObservedObject var speechManager: SpeechManager
-    var onOpenItem: ((ClipboardItem) -> Void)? = nil
+    var onOpenItem: ((ClipboardItem) -> Void)?
     
     @State private var audioFiles: [AudioFileItem] = []
     @State private var totalSize: Int64 = 0

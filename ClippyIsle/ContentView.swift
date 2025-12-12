@@ -212,7 +212,7 @@ struct ContentView: View {
                     .toolbar {
                         ToolbarItem(placement: .navigationBarTrailing) {
                             Button("Done") { isShowingAudioManager = false }
-                                .foregroundColor(themeColor)
+                                .foregroundStyle(themeColor)
                         }
                     }
             }
