@@ -291,11 +291,11 @@ class CloudKitManager: ObservableObject {
             let cloudTagMap = Dictionary(uniqueKeysWithValues: cloudTagColors.map { ($0.tag, $0) })
             let localTagMap = Dictionary(uniqueKeysWithValues: localTagColors.map { ($0.tag, $0) })
             
+            // 3. Start with cloud colors as the source of truth
             var recordsToSave: [CKRecord] = []
-            // Start with cloud colors as the source of truth
             var mergedTagColors = cloudTagColors
             
-            // 3. Process local tag colors
+            // 4. Process local tag colors and merge with cloud
             for localTagColor in localTagColors {
                 if let cloudTagColor = cloudTagMap[localTagColor.tag] {
                     // Both have this tag - check if they're different
