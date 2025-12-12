@@ -313,7 +313,12 @@ struct ContentView: View {
                                 }
                             },
                             onTagLongPress: { tag in
-                                selectedTagFilter = tag
+                                // Toggle filter: if the tag is already filtered, clear it; otherwise, set it
+                                if selectedTagFilter == tag {
+                                    selectedTagFilter = nil
+                                } else {
+                                    selectedTagFilter = tag
+                                }
                             }
                         )
                         
