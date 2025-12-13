@@ -131,8 +131,8 @@
                 // Attempt automatic redirect to app
                 window.location.href = deepLink;
 
-                // Update status message
-                document.getElementById("status").innerHTML = "正在開啟 CC ISLE...";
+                // Update status message (using textContent for security)
+                document.getElementById("status").textContent = "正在開啟 CC ISLE...";
                 
                 // Set manual button link (fallback if auto-redirect fails)
                 const openBtn = document.getElementById("open-btn");
@@ -141,16 +141,18 @@
                 
                 // Show fallback button after a short delay
                 setTimeout(function() {
-                    document.getElementById("status").innerHTML = "如果 App 沒有自動開啟";
+                    document.getElementById("status").textContent = "如果 App 沒有自動開啟";
                     document.querySelector(".spinner").style.display = "none";
                 }, 2000);
             } else {
                 // No ID found - show error
-                document.getElementById("status").innerHTML = '<span class="error">連結無效或缺少分享 ID</span>';
-                document.querySelector(".icon").innerHTML = "⚠️";
+                const statusEl = document.getElementById("status");
+                statusEl.textContent = "連結無效或缺少分享 ID";
+                statusEl.className = "error";
+                document.querySelector(".icon").textContent = "⚠️";
                 document.querySelector(".spinner").style.display = "none";
                 document.getElementById("open-btn").style.display = "none";
-                document.querySelector("p").innerHTML = "請確認您的分享連結是否完整。";
+                document.querySelector("p").textContent = "請確認您的分享連結是否完整。";
             }
         }
     </script>
