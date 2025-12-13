@@ -529,6 +529,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ClippyIsle/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "CC Isle";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "CC Isle needs access to your local network to host the web management interface.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "用於錄音以支援語音搜尋與語音控制。";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "用於將內容儲存到您的相簿。";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "用於選取圖片以儲存或建立剪貼項目。";
@@ -570,6 +571,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ClippyIsle/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "CC Isle";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "CC Isle needs access to your local network to host the web management interface.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "用於錄音以支援語音搜尋與語音控制。";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "用於將內容儲存到您的相簿。";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "用於選取圖片以儲存或建立剪貼項目。";
