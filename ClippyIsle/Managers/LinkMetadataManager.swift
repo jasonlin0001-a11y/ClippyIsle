@@ -15,13 +15,9 @@ import Combine
 class LinkMetadataManager: ObservableObject {
     static let shared = LinkMetadataManager()
     
-    @Published var metadata: LPLinkMetadata?
-    @Published var isLoading: Bool = false
-    @Published var error: Error?
-    
     // Cache to store fetched metadata by URL string
     private var metadataCache: [String: LPLinkMetadata] = [:]
-    private var activeRequests: [String: Task<Void, Never>] = [:]
+    private var activeRequests: [String: Task<LPLinkMetadata?, Never>] = [:]
     
     private let provider = LPMetadataProvider()
     
@@ -29,8 +25,8 @@ class LinkMetadataManager: ObservableObject {
     
     /// Fetches metadata for a given URL with caching
     /// - Parameter url: The URL to fetch metadata for
-    /// - Returns: Cached or freshly fetched metadata
-    func fetchMetadata(for url: URL) -> LPLinkMetadata? {
+    /// - Returns: Task that resolves to cached or freshly fetched metadata
+    func fetchMetadata(for url: URL) async -> LPLinkMetadata? {
         let urlString = url.absoluteString
         
         // Return cached metadata if available
@@ -39,10 +35,10 @@ class LinkMetadataManager: ObservableObject {
             return cached
         }
         
-        // Check if request is already in progress
-        if activeRequests[urlString] != nil {
-            LaunchLogger.log("LinkMetadataManager.fetchMetadata() - REQUEST IN PROGRESS for URL: \(url)")
-            return nil
+        // Check if request is already in progress and await it
+        if let existingTask = activeRequests[urlString] {
+            LaunchLogger.log("LinkMetadataManager.fetchMetadata() - AWAITING IN-PROGRESS for URL: \(url)")
+            return await existingTask.value
         }
         
         // Start new request
@@ -51,16 +47,18 @@ class LinkMetadataManager: ObservableObject {
             do {
                 let fetchedMetadata = try await provider.startFetchingMetadata(for: url)
                 metadataCache[urlString] = fetchedMetadata
-                activeRequests[urlString] = nil
+                activeRequests[urlString] = nil  // Cleanup after cache assignment
                 LaunchLogger.log("LinkMetadataManager.fetchMetadata() - SUCCESS for URL: \(url)")
+                return fetchedMetadata
             } catch {
                 activeRequests[urlString] = nil
                 LaunchLogger.log("LinkMetadataManager.fetchMetadata() - FAILED for URL: \(url)")
+                return nil
             }
         }
         activeRequests[urlString] = task
         
-        return nil
+        return await task.value
     }
     
     /// Gets cached metadata for a URL without triggering a fetch
@@ -73,6 +71,5 @@ class LinkMetadataManager: ObservableObject {
     /// Cancels any ongoing metadata fetch operation
     func cancel() {
         provider.cancel()
-        isLoading = false
     }
 }

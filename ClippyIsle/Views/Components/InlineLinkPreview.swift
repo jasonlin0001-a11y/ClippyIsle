@@ -16,6 +16,9 @@ struct InlineLinkPreview: View {
     @State private var hasError = false
     @Environment(\.colorScheme) var colorScheme
     
+    // Constants for timeout handling
+    private static let fetchTimeoutSeconds: TimeInterval = 10.0
+    
     var body: some View {
         VStack(spacing: 0) {
             if isLoading {
@@ -37,54 +40,73 @@ struct InlineLinkPreview: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .task {
-            // Check cache first
-            if let cached = await LinkMetadataManager.shared.getCachedMetadata(for: url) {
-                metadata = cached
-                isLoading = false
-                LaunchLogger.log("InlineLinkPreview.task - Using cached metadata for \(url)")
-            } else {
-                // Fetch metadata if not cached
-                LaunchLogger.log("InlineLinkPreview.task - START fetching metadata for \(url)")
-                await fetchMetadata()
-            }
+            await fetchMetadata()
         }
     }
     
     @MainActor
     private func fetchMetadata() async {
-        let manager = LinkMetadataManager.shared
-        
-        // Try to get from cache (might have been populated while we were waiting)
-        if let cached = manager.getCachedMetadata(for: url) {
+        // Check cache first (synchronous)
+        if let cached = LinkMetadataManager.shared.getCachedMetadata(for: url) {
             metadata = cached
             isLoading = false
+            LaunchLogger.log("InlineLinkPreview.task - Using cached metadata for \(url)")
             return
         }
         
-        // Trigger fetch (will cache result)
-        _ = manager.fetchMetadata(for: url)
+        // Fetch metadata with timeout
+        LaunchLogger.log("InlineLinkPreview.task - START fetching metadata for \(url)")
         
-        // Poll for result with timeout
-        var attempts = 0
-        let maxAttempts = 50  // 5 seconds total (50 * 100ms)
-        
-        while attempts < maxAttempts {
-            try? await Task.sleep(for: .milliseconds(100))
-            
-            if let cached = manager.getCachedMetadata(for: url) {
-                metadata = cached
-                isLoading = false
-                return
+        do {
+            // Use async/await pattern with timeout
+            let result = try await withTimeout(seconds: Self.fetchTimeoutSeconds) {
+                await LinkMetadataManager.shared.fetchMetadata(for: url)
             }
             
-            attempts += 1
+            if let fetchedMetadata = result {
+                metadata = fetchedMetadata
+                isLoading = false
+                LaunchLogger.log("InlineLinkPreview.task - SUCCESS fetching metadata for \(url)")
+            } else {
+                hasError = true
+                isLoading = false
+                LaunchLogger.log("InlineLinkPreview.task - FAILED fetching metadata for \(url)")
+            }
+        } catch {
+            hasError = true
+            isLoading = false
+            LaunchLogger.log("InlineLinkPreview.task - TIMEOUT fetching metadata for \(url)")
         }
-        
-        // Timeout - show error
-        hasError = true
-        isLoading = false
-        LaunchLogger.log("InlineLinkPreview.task - Timeout fetching metadata for \(url)")
     }
+    
+    /// Helper to add timeout to async operations
+    private func withTimeout<T>(seconds: TimeInterval, operation: @escaping () async -> T) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            // Add the actual operation
+            group.addTask {
+                await operation()
+            }
+            
+            // Add timeout task
+            group.addTask {
+                try await Task.sleep(for: .seconds(seconds))
+                throw TimeoutError()
+            }
+            
+            // Return first result (either success or timeout)
+            guard let result = try await group.next() else {
+                throw TimeoutError()
+            }
+            
+            // Cancel remaining tasks
+            group.cancelAll()
+            
+            return result
+        }
+    }
+    
+    private struct TimeoutError: Error {}
+    
     
     // MARK: - Loading View
     private var loadingView: some View {
