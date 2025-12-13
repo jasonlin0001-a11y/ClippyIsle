@@ -101,11 +101,12 @@ class FirebaseManager {
     }
     
     // MARK: - Download Items by Share ID
-    /// Downloads a specific clipboard item from Firestore by share ID
+    /// Downloads shared clipboard items data from Firestore by share ID
     /// - Parameters:
     ///   - shareId: The share document ID to fetch
-    ///   - completion: Result callback with array of ClipboardItem or error
-    func downloadItems(byShareId shareId: String, completion: @escaping (Result<[ClipboardItem], Error>) -> Void) {
+    ///   - completion: Result callback with array of raw item dictionaries or error
+    /// - Note: Returns raw JSON data to avoid Core Data context issues. Caller should create ClipboardItem instances with appropriate context.
+    func downloadItems(byShareId shareId: String, completion: @escaping (Result<[[String: Any]], Error>) -> Void) {
         db.collection("sharedClipboards").document(shareId).getDocument { snapshot, error in
             if let error = error {
                 completion(.failure(error))
@@ -123,36 +124,8 @@ class FirebaseManager {
                 return
             }
             
-            var items: [ClipboardItem] = []
-            
-            for itemData in itemsData {
-                guard let idString = itemData["id"] as? String,
-                      let id = UUID(uuidString: idString),
-                      let content = itemData["content"] as? String,
-                      let type = itemData["type"] as? String,
-                      let timestamp = itemData["timestamp"] as? Timestamp,
-                      let isPinned = itemData["isPinned"] as? Bool,
-                      let isTrashed = itemData["isTrashed"] as? Bool else {
-                    continue
-                }
-                
-                let item = ClipboardItem(
-                    id: id,
-                    content: content,
-                    type: type,
-                    filename: itemData["filename"] as? String,
-                    timestamp: timestamp.dateValue(),
-                    isPinned: isPinned,
-                    displayName: itemData["displayName"] as? String,
-                    isTrashed: isTrashed,
-                    tags: itemData["tags"] as? [String],
-                    fileData: nil
-                )
-                
-                items.append(item)
-            }
-            
-            completion(.success(items))
+            // Return raw data for caller to process
+            completion(.success(itemsData))
         }
     }
     
@@ -215,9 +188,9 @@ class FirebaseManager {
             if let error = error {
                 completion(.failure(error))
             } else {
-                // Generate shareable deep link
+                // Generate shareable link with Firebase Hosting URL for Open Graph preview support
                 let shareId = docRef.documentID
-                let shareURL = "ccisle://import?id=\(shareId)"
+                let shareURL = "https://cc-isle.web.app/share?id=\(shareId)"
                 completion(.success(shareURL))
             }
         }

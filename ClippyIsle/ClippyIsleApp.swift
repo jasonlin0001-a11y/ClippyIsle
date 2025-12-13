@@ -1,5 +1,6 @@
 import SwiftUI
 import FirebaseCore
+import FirebaseFirestore
 
 @main
 struct ClippyIsleApp: App {
@@ -46,53 +47,73 @@ struct ClippyIsleApp: App {
     
     // MARK: - Deep Link Handling
     private func handleDeepLink(_ url: URL) {
-        // Check if this is our import URL scheme: ccisle://import?id=DOC_ID
-        guard url.scheme == "ccisle",
-              url.host == "import" else {
-            print("⚠️ Unrecognized deep link: \(url)")
-            return
+        var shareId: String?
+        
+        // Handle Firebase Hosting URL: https://cc-isle.web.app/share?id=DOC_ID
+        if url.scheme == "https" && url.host == "cc-isle.web.app" && url.path == "/share" {
+            if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+               let queryItems = components.queryItems,
+               let idItem = queryItems.first(where: { $0.name == "id" }) {
+                shareId = idItem.value
+            }
+        }
+        // Handle legacy deep link: ccisle://import?id=DOC_ID
+        else if url.scheme == "ccisle" && url.host == "import" {
+            if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+               let queryItems = components.queryItems,
+               let idItem = queryItems.first(where: { $0.name == "id" }) {
+                shareId = idItem.value
+            }
         }
         
-        // Extract the 'id' query parameter
-        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-              let queryItems = components.queryItems,
-              let idItem = queryItems.first(where: { $0.name == "id" }),
-              let shareId = idItem.value else {
-            print("⚠️ No 'id' parameter found in deep link")
+        guard let shareId = shareId else {
+            print("⚠️ Unrecognized deep link or missing 'id' parameter: \(url)")
             return
         }
         
         print("📥 Importing shared items with ID: \(shareId)")
         
-        // Download items from Firebase
+        // Download raw items data from Firebase
         FirebaseManager.shared.downloadItems(byShareId: shareId) { result in
             switch result {
-            case .success(let items):
+            case .success(let itemsData):
                 DispatchQueue.main.async {
                     // Import items while preserving their metadata
                     let clipboardManager = ClipboardManager.shared
-                    for item in items {
+                    var importedCount = 0
+                    
+                    for itemData in itemsData {
+                        // Parse raw data and create ClipboardItem instances
+                        guard let idString = itemData["id"] as? String,
+                              let content = itemData["content"] as? String,
+                              let type = itemData["type"] as? String,
+                              let timestamp = itemData["timestamp"] as? Timestamp else {
+                            print("⚠️ Skipping invalid item data")
+                            continue
+                        }
+                        
                         // Create new item with fresh ID and timestamp for import
-                        var importedItem = ClipboardItem(
-                            content: item.content,
-                            type: item.type,
-                            filename: item.filename,
+                        let importedItem = ClipboardItem(
+                            content: content,
+                            type: type,
+                            filename: itemData["filename"] as? String,
                             timestamp: Date(), // Use current time for import
                             isPinned: false, // Don't preserve pinned status on import
-                            displayName: item.displayName,
+                            displayName: itemData["displayName"] as? String,
                             isTrashed: false, // Don't import trashed items
-                            tags: item.tags,
+                            tags: itemData["tags"] as? [String],
                             fileData: nil // File data handled by ClipboardManager if present
                         )
                         
-                        // Insert at beginning and save
+                        // Insert at beginning
                         clipboardManager.items.insert(importedItem, at: 0)
+                        importedCount += 1
                     }
                     
                     // Save all changes at once
                     clipboardManager.sortAndSave()
                     
-                    print("✅ Successfully imported \(items.count) item(s)")
+                    print("✅ Successfully imported \(importedCount) item(s)")
                 }
             case .failure(let error):
                 print("❌ Failed to import items: \(error.localizedDescription)")
