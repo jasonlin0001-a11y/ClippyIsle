@@ -1,13 +1,14 @@
 import Foundation
-import CoreData
+@preconcurrency import CoreData
 import CloudKit
 import UIKit
 import Combine
 
 /// ShareGroupManager handles creating share groups for batch sharing
 /// and importing shared items into the local library.
+@MainActor
 class ShareGroupManager: ObservableObject {
-    @MainActor static let shared = ShareGroupManager()
+    static let shared = ShareGroupManager()
     
     private let persistenceController: PersistenceController
     private let clipboardManager: ClipboardManager
@@ -15,9 +16,8 @@ class ShareGroupManager: ObservableObject {
     @Published var isProcessing = false
     @Published var lastError: Error?
     
-    @MainActor
-    init(persistenceController: PersistenceController = .shared,
-         clipboardManager: ClipboardManager = .shared) {
+    nonisolated init(persistenceController: PersistenceController = .shared,
+                     clipboardManager: ClipboardManager = .shared) {
         self.persistenceController = persistenceController
         self.clipboardManager = clipboardManager
     }
@@ -90,7 +90,7 @@ class ShareGroupManager: ObservableObject {
         // Check if the object is already shared
         let existingShare: CKShare?
         if let shares = try? container.fetchShares(matching: [shareGroup.objectID]),
-           let share = shares.first {
+           let share = shares[shareGroup.objectID] {
             existingShare = share
         } else {
             existingShare = nil
@@ -191,7 +191,7 @@ class ShareGroupManager: ObservableObject {
         
         // Fetch the share
         let shares = try container.fetchShares(matching: [shareGroup.objectID])
-        guard let share = shares.first else {
+        guard let share = shares[shareGroup.objectID] else {
             throw ShareGroupError.shareNotFound
         }
         
@@ -233,7 +233,7 @@ class ShareGroupManager: ObservableObject {
         return await Task.detached {
             let sharedGroups = allGroups.filter { group in
                 if let shares = try? container.fetchShares(matching: [group.objectID]),
-                   let share = shares.first {
+                   let share = shares[group.objectID] {
                     // Check if current user is not the owner
                     return share.owner != CKCurrentUserDefaultName
                 }
