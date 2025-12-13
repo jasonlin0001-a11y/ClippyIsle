@@ -4,6 +4,7 @@ import SwiftUI
 struct CreateShareGroupView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var shareGroupManager = ShareGroupManager.shared
+    @StateObject private var sharePresenter = SharePresenter()
     
     let selectedItems: [ClipboardItem]
     
@@ -11,8 +12,6 @@ struct CreateShareGroupView: View {
     @State private var isCreating = false
     @State private var showError = false
     @State private var errorMessage = ""
-    @State private var createdGroup: ShareGroup?
-    @State private var showShareSheet = false
     
     var body: some View {
         NavigationView {
@@ -89,11 +88,10 @@ struct CreateShareGroupView: View {
             } message: {
                 Text(errorMessage)
             }
-            .sheet(isPresented: $showShareSheet) {
-                if let group = createdGroup {
-                    ShareControllerView(shareGroup: group) {
-                        dismiss()
-                    }
+            .onChange(of: sharePresenter.isPresenting) { isPresenting in
+                if !isPresenting {
+                    // Dismiss the view after sharing is complete
+                    dismiss()
                 }
             }
         }
@@ -112,97 +110,82 @@ struct CreateShareGroupView: View {
                 title: finalTitle
             )
             
+            // Present the share controller
             await MainActor.run {
-                createdGroup = group
-                showShareSheet = true
+                sharePresenter.presentShare(for: group) {
+                    // Will be called when sharing completes or fails
+                }
             }
             
         } catch {
             await MainActor.run {
-                errorMessage = error.localizedDescription
+                errorMessage = "Failed to create share group: \(error.localizedDescription)"
                 showError = true
             }
         }
     }
 }
 
-/// UIViewControllerRepresentable for presenting UICloudSharingController
-struct ShareControllerView: UIViewControllerRepresentable {
-    let shareGroup: ShareGroup
-    let onDismiss: () -> Void
+/// Helper class for presenting UICloudSharingController
+@MainActor
+class SharePresenter: NSObject, UICloudSharingControllerDelegate, ObservableObject {
+    @Published var isPresenting = false
+    private var onComplete: (() -> Void)?
     
-    func makeCoordinator() -> Coordinator {
-        Coordinator(shareGroup: shareGroup, onDismiss: onDismiss)
-    }
-    
-    func makeUIViewController(context: Context) -> UIViewController {
-        let viewController = UIViewController()
-        viewController.view.backgroundColor = .clear
-        context.coordinator.presentingViewController = viewController
-        return viewController
-    }
-    
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        // Present share controller only once when view controller is in window hierarchy
-        if uiViewController.view.window != nil && !context.coordinator.hasPresented && uiViewController.presentedViewController == nil {
-            context.coordinator.hasPresented = true
-            context.coordinator.presentShareController()
-        }
-    }
-    
-    static func dismantleUIViewController(_ uiViewController: UIViewController, coordinator: Coordinator) {
-        // Clean up presented controllers if any
-        if let presented = uiViewController.presentedViewController {
-            presented.dismiss(animated: false)
-        }
-    }
-    
-    class Coordinator: NSObject, UICloudSharingControllerDelegate {
-        let shareGroup: ShareGroup
-        let onDismiss: () -> Void
-        weak var presentingViewController: UIViewController?
-        var hasPresented = false
+    func presentShare(for shareGroup: ShareGroup, onComplete: @escaping () -> Void) {
+        self.onComplete = onComplete
+        self.isPresenting = true
         
-        init(shareGroup: ShareGroup, onDismiss: @escaping () -> Void) {
-            self.shareGroup = shareGroup
-            self.onDismiss = onDismiss
-        }
-        
-        func presentShareController() {
-            guard let viewController = presentingViewController else { return }
-            
-            Task {
-                do {
-                    try await ShareGroupManager.shared.shareGroup(shareGroup, from: viewController, delegate: self)
-                } catch {
-                    print("❌ Failed to present share controller: \(error)")
-                    // Dismiss on error
-                    await MainActor.run {
-                        onDismiss()
-                    }
+        Task {
+            do {
+                // Get the key window's root view controller
+                guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                      let rootViewController = windowScene.windows.first(where: { $0.isKeyWindow })?.rootViewController else {
+                    throw NSError(domain: "SharePresenter", code: -1, 
+                                userInfo: [NSLocalizedDescriptionKey: "No window found. Please make sure the app is in foreground."])
                 }
+                
+                // Find the topmost presented view controller
+                var topViewController = rootViewController
+                while let presented = topViewController.presentedViewController {
+                    topViewController = presented
+                }
+                
+                print("📱 Presenting share controller from: \(type(of: topViewController))")
+                
+                // Present the share controller
+                try await ShareGroupManager.shared.shareGroup(shareGroup, from: topViewController, delegate: self)
+                
+            } catch {
+                print("❌ Share presentation failed: \(error.localizedDescription)")
+                self.isPresenting = false
+                onComplete()
             }
         }
-        
-        // MARK: - UICloudSharingControllerDelegate
-        
-        func cloudSharingController(_ csc: UICloudSharingController, failedToSaveShareWithError error: Error) {
-            print("❌ Failed to save share: \(error.localizedDescription)")
-            onDismiss()
-        }
-        
-        func itemTitle(for csc: UICloudSharingController) -> String? {
-            return shareGroup.title
-        }
-        
-        func cloudSharingControllerDidSaveShare(_ csc: UICloudSharingController) {
-            print("✅ Share saved successfully")
-        }
-        
-        func cloudSharingControllerDidStopSharing(_ csc: UICloudSharingController) {
-            print("ℹ️ Stopped sharing")
-            onDismiss()
-        }
+    }
+    
+    // MARK: - UICloudSharingControllerDelegate
+    
+    func cloudSharingController(_ csc: UICloudSharingController, failedToSaveShareWithError error: Error) {
+        print("❌ Failed to save share: \(error.localizedDescription)")
+        isPresenting = false
+        onComplete?()
+    }
+    
+    func itemTitle(for csc: UICloudSharingController) -> String? {
+        return "Shared Clipboard Items"
+    }
+    
+    func cloudSharingControllerDidSaveShare(_ csc: UICloudSharingController) {
+        print("✅ Share saved successfully")
+        isPresenting = false
+        onComplete?()
+    }
+    
+    func cloudSharingControllerDidStopSharing(_ csc: UICloudSharingController) {
+        print("ℹ️ Stopped sharing")
+        isPresenting = false
+        onComplete?()
     }
 }
 

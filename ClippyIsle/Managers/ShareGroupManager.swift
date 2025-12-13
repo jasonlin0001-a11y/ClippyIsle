@@ -86,17 +86,26 @@ class ShareGroupManager: ObservableObject {
     ///   - viewController: The presenting view controller
     ///   - delegate: The UICloudSharingControllerDelegate
     func shareGroup(_ shareGroup: ShareGroup, from viewController: UIViewController, delegate: UICloudSharingControllerDelegate? = nil) async throws {
+        print("🔄 Starting shareGroup process...")
+        
         // Ensure we're working with the main context's version of the object
         let objectID = shareGroup.objectID
         let context = persistenceController.container.viewContext
         
+        print("📍 Getting object from context with ID: \(objectID)")
         guard let groupToShare = try? context.existingObject(with: objectID) as? ShareGroup else {
-            throw NSError(domain: "ShareGroupManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to find share group"])
+            let error = NSError(domain: "ShareGroupManager", code: -1, 
+                              userInfo: [NSLocalizedDescriptionKey: "Cannot find the share group. Please try again."])
+            print("❌ Error: \(error.localizedDescription)")
+            throw error
         }
+        
+        print("✅ Found share group: \(groupToShare.title ?? "Untitled")")
         
         let container = persistenceController.container
         
         // Check if already shared on a background thread
+        print("🔍 Checking for existing share...")
         let existingShare: CKShare? = try await Task.detached {
             if let shares = try? container.fetchShares(matching: [objectID]),
                let share = shares[objectID] {
@@ -108,22 +117,39 @@ class ShareGroupManager: ObservableObject {
         // Create or get the share on main thread
         let share: CKShare
         if let existing = existingShare {
+            print("✅ Using existing share")
             share = existing
         } else {
+            print("🆕 Creating new share...")
             // Save context before sharing to ensure object is persisted
             try await context.perform {
                 if context.hasChanges {
+                    print("💾 Saving context changes...")
                     try context.save()
                 }
             }
             
             // Create a new share - must be done on main thread
-            let (_, newShare, _) = try await container.share([groupToShare], to: nil)
-            share = newShare
+            print("⚙️ Calling container.share()...")
+            do {
+                let (_, newShare, _) = try await container.share([groupToShare], to: nil)
+                share = newShare
+                print("✅ Share created successfully")
+            } catch {
+                print("❌ Failed to create share: \(error)")
+                print("❌ Error details: \(error.localizedDescription)")
+                if let nsError = error as NSError? {
+                    print("❌ Error code: \(nsError.code), domain: \(nsError.domain)")
+                    print("❌ User info: \(nsError.userInfo)")
+                }
+                throw NSError(domain: "ShareGroupManager", code: -2,
+                            userInfo: [NSLocalizedDescriptionKey: "CloudKit sharing failed: \(error.localizedDescription). Make sure you're signed in to iCloud and have an active internet connection."])
+            }
             
             // Save the context again after creating the share
             try await context.perform {
                 if context.hasChanges {
+                    print("💾 Saving context after share creation...")
                     try context.save()
                 }
             }
@@ -135,6 +161,7 @@ class ShareGroupManager: ObservableObject {
         }
         
         // Create the UICloudSharingController
+        print("📱 Creating UICloudSharingController...")
         let ckContainer = CKContainer(identifier: "iCloud.J894ABBU74.ClippyIsle")
         let sharingController = UICloudSharingController(share: share, container: ckContainer)
         
@@ -144,9 +171,12 @@ class ShareGroupManager: ObservableObject {
         }
         
         // Present the controller on main thread
+        print("🎬 Presenting share controller...")
         await MainActor.run {
             viewController.present(sharingController, animated: true)
         }
+        
+        print("✅ Share controller presented successfully")
     }
     
     // MARK: - Receiver Side: Import Shared Items
