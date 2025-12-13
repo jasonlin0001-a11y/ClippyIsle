@@ -119,8 +119,8 @@ struct ClipboardItemRow: View {
     var body: some View {
         HStack(spacing: 15) {
             Button(action: copyAction) {
-                Image(systemName: itemIcon(for: item.type))
-                    .font(.title3)
+                Text(itemIcon(for: item.type))
+                    .font(.system(size: 24, weight: .bold))
                     .frame(width: 30)
                     .foregroundColor(themeColor)
             }

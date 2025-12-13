@@ -4,14 +4,14 @@ import UniformTypeIdentifiers
 // MARK: - Global Helper Functions
 
 func itemIcon(for type: String) -> String {
-    if type == UTType.url.identifier { return "link" }
-    else if type == UTType.png.identifier { return "photo" }
-    else if type == UTType.pdf.identifier { return "doc.text.fill" }
-    else if type == UTType.rtfd.identifier { return "doc.richtext" }
-    else if let utType = UTType(type), utType.conforms(to: .image) { return "photo" }
+    if type == UTType.url.identifier { return "L" }
+    else if type == UTType.png.identifier { return "P" }
+    else if type == UTType.pdf.identifier { return "D" }
+    else if type == UTType.rtfd.identifier { return "R" }
+    else if let utType = UTType(type), utType.conforms(to: .image) { return "P" }
     else {
-        if type.contains("html") { return "safari" }
-        return "doc.text"
+        if type.contains("html") { return "H" }
+        return "T"
     }
 }
 
