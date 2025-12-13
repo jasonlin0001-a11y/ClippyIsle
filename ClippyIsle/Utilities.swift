@@ -33,17 +33,11 @@ struct ExportHelper {
                                    setExportURL: @escaping (URL) -> Void) {
         switch result.format {
         case .urlScheme(let urlString):
-            // Short content - share ccisle:// URL
-            let sizeInKB = formatSizeInKB(result.estimatedSize)
-            let message = String(format: "Short content detected (%.1f KB)\n\nExporting as ccisle:// URL link.\nThis can be easily shared through messaging apps.", sizeInKB)
-            showAlert(message)
-            
-            // After showing alert, share the URL
-            DispatchQueue.main.asyncAfter(deadline: .now() + shareSheetDelay) {
-                shareURLScheme(urlString, onError: { errorMessage in
-                    showAlert("Failed to share: \(errorMessage)")
-                })
-            }
+            // Short content - share ccisle:// URL directly without showing alert first
+            // The share sheet provides the UI for sharing
+            shareURLScheme(urlString, onError: { errorMessage in
+                showAlert("Failed to share: \(errorMessage)")
+            })
             
         case .json(let url):
             // Long content - share JSON file
