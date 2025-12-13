@@ -40,21 +40,20 @@ struct InlineLinkPreview: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .task {
-            await fetchMetadata()
+            // Check cache first (synchronous, outside async to avoid Task overhead)
+            if let cached = LinkMetadataManager.shared.getCachedMetadata(for: url) {
+                metadata = cached
+                isLoading = false
+                LaunchLogger.log("InlineLinkPreview.task - Using cached metadata for \(url)")
+            } else {
+                // Fetch metadata if not cached
+                await fetchMetadata()
+            }
         }
     }
     
     @MainActor
     private func fetchMetadata() async {
-        // Check cache first (synchronous)
-        if let cached = LinkMetadataManager.shared.getCachedMetadata(for: url) {
-            metadata = cached
-            isLoading = false
-            LaunchLogger.log("InlineLinkPreview.task - Using cached metadata for \(url)")
-            return
-        }
-        
-        // Fetch metadata with timeout
         LaunchLogger.log("InlineLinkPreview.task - START fetching metadata for \(url)")
         
         do {
