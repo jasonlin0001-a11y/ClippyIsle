@@ -287,9 +287,8 @@ class CloudKitManager: ObservableObject {
             }
             print("☁️ Fetched \(cloudTagColors.count) tag colors from Cloud.")
             
-            // 2. Build maps for comparison
+            // 2. Build map for comparison
             let cloudTagMap = Dictionary(uniqueKeysWithValues: cloudTagColors.map { ($0.tag, $0) })
-            let localTagMap = Dictionary(uniqueKeysWithValues: localTagColors.map { ($0.tag, $0) })
             
             // 3. Start with cloud colors as the source of truth
             var recordsToSave: [CKRecord] = []

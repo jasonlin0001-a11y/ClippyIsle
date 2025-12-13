@@ -24,40 +24,40 @@ class ShareViewController: UIViewController {
             // Check for JSON files first (for import functionality)
             if itemProvider.hasItemConformingToTypeIdentifier(UTType.json.identifier) {
                 let data = try await itemProvider.loadDataRepresentation(forTypeIdentifier: UTType.json.identifier)
-                await importJSONData(data)
+                importJSONData(data)
             } else if itemProvider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
                 // Handle file URLs (could be .json files)
                 if let url = try await itemProvider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) as? URL {
                     if url.pathExtension.lowercased() == "json" {
                         let data = try Data(contentsOf: url)
-                        await importJSONData(data)
+                        importJSONData(data)
                     } else {
-                        await saveContent(url.absoluteString, type: UTType.url.identifier)
+                        saveContent(url.absoluteString, type: UTType.url.identifier)
                     }
                 }
             } else if itemProvider.hasItemConformingToTypeIdentifier(UTType.url.identifier) {
                 // Try to load as URL type first since URLs shared from apps often conform to this
                 if let url = try await itemProvider.loadItem(forTypeIdentifier: UTType.url.identifier, options: nil) as? URL {
-                    await saveContent(url.absoluteString, type: UTType.url.identifier)
+                    saveContent(url.absoluteString, type: UTType.url.identifier)
                 } else {
                     // Fallback: if URL type exists but can't be loaded as URL, try text
                     if itemProvider.hasItemConformingToTypeIdentifier(UTType.text.identifier),
                        let text = try await itemProvider.loadItem(forTypeIdentifier: UTType.text.identifier, options: nil) as? String {
                         // Detect if text is actually a URL
                         let detectedType = isValidURL(text) ? UTType.url.identifier : UTType.text.identifier
-                        await saveContent(text, type: detectedType)
+                        saveContent(text, type: detectedType)
                     }
                 }
             } else if itemProvider.hasItemConformingToTypeIdentifier(UTType.text.identifier) {
                 if let text = try await itemProvider.loadItem(forTypeIdentifier: UTType.text.identifier, options: nil) as? String {
                     // Detect if text is actually a URL
                     let detectedType = isValidURL(text) ? UTType.url.identifier : UTType.text.identifier
-                    await saveContent(text, type: detectedType)
+                    saveContent(text, type: detectedType)
                 }
             } else if itemProvider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
                 let data = try await itemProvider.loadDataRepresentation(forTypeIdentifier: UTType.image.identifier)
                 let filename = saveFileDataToAppGroup(data: data, type: UTType.png.identifier)
-                await saveContent("Image", type: UTType.png.identifier, filename: filename)
+                saveContent("Image", type: UTType.png.identifier, filename: filename)
             } else {
                 print("Unsupported type")
             }

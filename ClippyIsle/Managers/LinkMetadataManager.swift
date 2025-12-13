@@ -43,7 +43,7 @@ class LinkMetadataManager: ObservableObject {
         
         // Start new request
         LaunchLogger.log("LinkMetadataManager.fetchMetadata() - START for URL: \(url)")
-        let task = Task {
+        let task = Task { () -> LPLinkMetadata? in
             do {
                 let fetchedMetadata = try await provider.startFetchingMetadata(for: url)
                 metadataCache[urlString] = fetchedMetadata
