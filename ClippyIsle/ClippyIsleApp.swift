@@ -30,6 +30,9 @@ struct ClippyIsleApp: App {
                     .onAppear {
                         LaunchLogger.log("ClippyIsleApp.body.WindowGroup - onAppear")
                     }
+                    .onOpenURL { url in
+                        handleDeepLink(url)
+                    }
                 
                 // Splash Screen Overlay
                 if showSplash {
@@ -37,6 +40,44 @@ struct ClippyIsleApp: App {
                         .transition(.opacity)
                         .zIndex(1)
                 }
+            }
+        }
+    }
+    
+    // MARK: - Deep Link Handling
+    private func handleDeepLink(_ url: URL) {
+        // Check if this is our import URL scheme: ccisle://import?id=DOC_ID
+        guard url.scheme == "ccisle",
+              url.host == "import" else {
+            print("⚠️ Unrecognized deep link: \(url)")
+            return
+        }
+        
+        // Extract the 'id' query parameter
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let queryItems = components.queryItems,
+              let idItem = queryItems.first(where: { $0.name == "id" }),
+              let shareId = idItem.value else {
+            print("⚠️ No 'id' parameter found in deep link")
+            return
+        }
+        
+        print("📥 Importing shared items with ID: \(shareId)")
+        
+        // Download items from Firebase
+        FirebaseManager.shared.downloadItems(byShareId: shareId) { result in
+            switch result {
+            case .success(let items):
+                DispatchQueue.main.async {
+                    // Save each item to ClipboardManager
+                    let clipboardManager = ClipboardManager.shared
+                    for item in items {
+                        clipboardManager.addNewItem(content: item.content, type: item.type, fileData: item.fileData)
+                    }
+                    print("✅ Successfully imported \(items.count) item(s)")
+                }
+            case .failure(let error):
+                print("❌ Failed to import items: \(error.localizedDescription)")
             }
         }
     }

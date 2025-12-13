@@ -100,6 +100,62 @@ class FirebaseManager {
         }
     }
     
+    // MARK: - Download Items by Share ID
+    /// Downloads a specific clipboard item from Firestore by share ID
+    /// - Parameters:
+    ///   - shareId: The share document ID to fetch
+    ///   - completion: Result callback with array of ClipboardItem or error
+    func downloadItems(byShareId shareId: String, completion: @escaping (Result<[ClipboardItem], Error>) -> Void) {
+        db.collection("sharedClipboards").document(shareId).getDocument { snapshot, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let document = snapshot, document.exists, let data = document.data() else {
+                completion(.failure(NSError(domain: "FirebaseManager", code: 404, userInfo: [NSLocalizedDescriptionKey: "Share not found"])))
+                return
+            }
+            
+            // Extract items array from the shared document
+            guard let itemsData = data["items"] as? [[String: Any]] else {
+                completion(.failure(NSError(domain: "FirebaseManager", code: 400, userInfo: [NSLocalizedDescriptionKey: "Invalid share data"])))
+                return
+            }
+            
+            var items: [ClipboardItem] = []
+            
+            for itemData in itemsData {
+                guard let idString = itemData["id"] as? String,
+                      let id = UUID(uuidString: idString),
+                      let content = itemData["content"] as? String,
+                      let type = itemData["type"] as? String,
+                      let timestamp = itemData["timestamp"] as? Timestamp,
+                      let isPinned = itemData["isPinned"] as? Bool,
+                      let isTrashed = itemData["isTrashed"] as? Bool else {
+                    continue
+                }
+                
+                let item = ClipboardItem(
+                    id: id,
+                    content: content,
+                    type: type,
+                    filename: itemData["filename"] as? String,
+                    timestamp: timestamp.dateValue(),
+                    isPinned: isPinned,
+                    displayName: itemData["displayName"] as? String,
+                    isTrashed: isTrashed,
+                    tags: itemData["tags"] as? [String],
+                    fileData: nil
+                )
+                
+                items.append(item)
+            }
+            
+            completion(.success(items))
+        }
+    }
+    
     // MARK: - Delete Items
     /// Deletes clipboard items from Firestore
     /// - Parameters:
