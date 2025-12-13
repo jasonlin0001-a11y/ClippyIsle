@@ -1,4 +1,5 @@
 import SwiftUI
+import FirebaseCore
 
 @main
 struct ClippyIsleApp: App {
@@ -8,6 +9,8 @@ struct ClippyIsleApp: App {
     
     init() {
         LaunchLogger.log("ClippyIsleApp.init() - START")
+        // Configure Firebase
+        FirebaseApp.configure()
         // App init完成
         LaunchLogger.log("ClippyIsleApp.init() - END")
     }
