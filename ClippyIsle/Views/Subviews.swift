@@ -246,25 +246,33 @@ struct TagFirebaseShareView: View {
     }
     
     private func shareSelectedTags() {
+        print("🔥🔥🔥 shareSelectedTags() CALLED")
+        print("🔥 Selected tags: \(selectedTags)")
         let filteredItems = clipboardManager.items.filter { item in
             guard let itemTags = item.tags, !item.isTrashed else { return false }
             return !selectedTags.isDisjoint(with: itemTags)
         }
+        print("🔥 Filtered items count: \(filteredItems.count)")
         
         guard !filteredItems.isEmpty else {
+            print("🔥 No items found for selected tags")
             importAlertMessage = "No items found for the selected tags."
             isShowingImportAlert = true
             dismiss()
             return
         }
         
+        print("🔥 Calling FirebaseManager.shareItems with \(filteredItems.count) items")
         FirebaseManager.shared.shareItems(filteredItems) { result in
+            print("🔥 Firebase callback received")
             DispatchQueue.main.async {
                 switch result {
                 case .success(let shareURL):
+                    print("🔥 SUCCESS: \(shareURL)")
                     self.firebaseShareURL = shareURL
                     self.isShowingFirebaseShareAlert = true
                 case .failure(let error):
+                    print("🔥 ERROR: \(error.localizedDescription)")
                     self.importAlertMessage = "Firebase share failed.\nError: \(error.localizedDescription)"
                     self.isShowingImportAlert = true
                 }

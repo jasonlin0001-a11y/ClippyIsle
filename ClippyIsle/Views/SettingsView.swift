@@ -340,8 +340,29 @@ struct SettingsView: View {
             Button { isShowingTagExport = true } label: { Text("Selective Export...") }
             
             Button {
-                print("🔥🔥🔥 Button tapped!")
-                shareAllViaFirebase()
+                print("🔥🔥🔥 SHARE ALL BUTTON TAPPED - START")
+                let items = clipboardManager.items.filter { !$0.isTrashed }
+                if items.isEmpty {
+                    print("🔥 No items to share")
+                    importAlertMessage = "No items to share."
+                    isShowingImportAlert = true
+                } else {
+                    print("🔥 Sharing \(items.count) items")
+                    FirebaseManager.shared.shareItems(items) { result in
+                        DispatchQueue.main.async {
+                            switch result {
+                            case .success(let shareURL):
+                                print("🔥 SUCCESS: \(shareURL)")
+                                self.firebaseShareURL = shareURL
+                                self.isShowingFirebaseShareAlert = true
+                            case .failure(let error):
+                                print("🔥 ERROR: \(error)")
+                                self.importAlertMessage = "Firebase share failed.\nError: \(error.localizedDescription)"
+                                self.isShowingImportAlert = true
+                            }
+                        }
+                    }
+                }
             } label: {
                 Text("Share All via Firebase")
             }
@@ -380,38 +401,5 @@ struct SettingsView: View {
     
     private func exportAllData() {
         do { exportURL = try clipboardManager.exportData() } catch { importAlertMessage = "Export failed.\nError: \(error.localizedDescription)"; isShowingImportAlert = true }
-    }
-    
-    private func shareAllViaFirebase() {
-        print("🔥🔥🔥 shareAllViaFirebase() ENTERED")
-        print("🔥 clipboardManager exists: \(clipboardManager)")
-        print("🔥 clipboardManager.items count: \(clipboardManager.items.count)")
-        let items = clipboardManager.items.filter { !$0.isTrashed }
-        print("🔥 Found \(items.count) non-trashed items")
-        guard !items.isEmpty else {
-            print("🔥 No items to share - showing alert")
-            importAlertMessage = "No items to share."
-            isShowingImportAlert = true
-            return
-        }
-        
-        print("🔥 Calling FirebaseManager.shared.shareItems() with \(items.count) items")
-        FirebaseManager.shared.shareItems(items) { result in
-            print("🔥 Firebase callback received")
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let shareURL):
-                    print("🔥 Success! Share URL: \(shareURL)")
-                    self.firebaseShareURL = shareURL
-                    self.isShowingFirebaseShareAlert = true
-                    print("🔥 Set isShowingFirebaseShareAlert = true")
-                case .failure(let error):
-                    print("🔥 Error: \(error.localizedDescription)")
-                    self.importAlertMessage = "Firebase share failed.\nError: \(error.localizedDescription)"
-                    self.isShowingImportAlert = true
-                }
-            }
-        }
-        print("🔥 shareAllViaFirebase() about to EXIT")
     }
 }
