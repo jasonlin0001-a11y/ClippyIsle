@@ -259,21 +259,21 @@ struct ContentView: View {
             }
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 Button { isShowingTagSheet = true } label: {
-                    Image(systemName: "t.circle.fill")
+                    Image(systemName: "tag.circle.fill")
                         .font(.system(size: 20, weight: .bold))
                         .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
                 }
                 
                 Button { isShowingAudioManager = true } label: {
-                    Image(systemName: "v.circle.fill")
+                    Image(systemName: "waveform.circle.fill")
                         .font(.system(size: 20, weight: .bold))
                         .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
                 }
                 
                 Button { isShowingSettings = true } label: {
-                    Image(systemName: "s.circle.fill")
+                    Image(systemName: "gearshape.circle.fill")
                         .font(.system(size: 20, weight: .bold))
                         .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
