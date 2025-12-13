@@ -16,10 +16,10 @@ class ShareGroupManager: ObservableObject {
     @Published var isProcessing = false
     @Published var lastError: Error?
     
-    nonisolated init(persistenceController: PersistenceController = .shared,
-                     clipboardManager: ClipboardManager = .shared) {
-        self.persistenceController = persistenceController
-        self.clipboardManager = clipboardManager
+    nonisolated init(persistenceController: PersistenceController? = nil,
+                     clipboardManager: ClipboardManager? = nil) {
+        self.persistenceController = persistenceController ?? .shared
+        self.clipboardManager = clipboardManager ?? .shared
     }
     
     // MARK: - Sender Side: Create Share Group
@@ -80,11 +80,6 @@ class ShareGroupManager: ObservableObject {
             throw ShareGroupError.noContext
         }
         
-        // Get the persistent store coordinator and container
-        guard let persistentStore = managedObjectContext.persistentStoreCoordinator?.persistentStores.first else {
-            throw ShareGroupError.noPersistentStore
-        }
-        
         let container = persistenceController.container
         
         // Check if the object is already shared
@@ -102,7 +97,7 @@ class ShareGroupManager: ObservableObject {
             share = existing
         } else {
             // Create a new share
-            let (_, newShare, _) = try await container.share([shareGroup], to: persistentStore)
+            let (_, newShare) = try await container.share([shareGroup], to: nil)
             share = newShare
         }
         
@@ -110,7 +105,7 @@ class ShareGroupManager: ObservableObject {
         share[CKShare.SystemFieldKey.title] = shareGroup.title
         
         // Create the UICloudSharingController
-        let sharingController = UICloudSharingController(share: share, container: container.cloudKitContainer)
+        let sharingController = UICloudSharingController(share: share, container: container.container)
         
         // Present the controller
         await MainActor.run {
@@ -196,7 +191,7 @@ class ShareGroupManager: ObservableObject {
         }
         
         // Purge the share
-        try await container.purgeObjectsAndRecordsInZone(with: share.recordID.zoneID)
+        try await container.purgeObjectsAndRecordsInZone(with: share.recordID.zoneID, in: .shared)
         
         print("✅ Left share and purged data for ShareGroup '\(shareGroup.title ?? "Untitled")'")
     }
@@ -235,7 +230,7 @@ class ShareGroupManager: ObservableObject {
                 if let shares = try? container.fetchShares(matching: [group.objectID]),
                    let share = shares[group.objectID] {
                     // Check if current user is not the owner
-                    return share.owner != CKCurrentUserDefaultName
+                    return share.owner.userIdentity.userRecordID?.recordName != CKCurrentUserDefaultName
                 }
                 return false
             }
@@ -261,7 +256,6 @@ class ShareGroupManager: ObservableObject {
 
 enum ShareGroupError: LocalizedError {
     case noContext
-    case noPersistentStore
     case noItemsInGroup
     case shareNotFound
     
@@ -269,8 +263,6 @@ enum ShareGroupError: LocalizedError {
         switch self {
         case .noContext:
             return "Managed object context not available"
-        case .noPersistentStore:
-            return "Persistent store not available"
         case .noItemsInGroup:
             return "No items found in share group"
         case .shareNotFound:
