@@ -287,6 +287,132 @@ class ClipboardManager: ObservableObject {
         if newItemsCount > 0 { sortAndSave(); if UserDefaults.standard.bool(forKey: "iCloudSyncEnabled") { Task { await performCloudSync() } } }
         return newItemsCount
     }
+    
+    // MARK: - Hybrid Export/Import (URL Scheme + JSON)
+    
+    enum ExportFormat {
+        case urlScheme(String)  // ccisle:// URL for short content
+        case json(URL)          // JSON file for large content
+    }
+    
+    struct ExportResult {
+        let format: ExportFormat
+        let itemCount: Int
+        let estimatedSize: Int
+    }
+    
+    // Threshold for determining short vs long content (10KB)
+    // This size limit ensures URL schemes remain manageable for messaging apps
+    // while avoiding iOS URL length limitations (typically ~2MB but 10KB is safer)
+    private let urlSchemeMaxBytes = 10_000
+    
+    // Analyze export data and determine the appropriate format
+    func analyzeExportFormat(items: [ClipboardItem]) throws -> ExportResult {
+        let itemsToExport = createExportableItems(from: items)
+        let tagColors = getAllTagColors()
+        let exportData = ExportableData(items: itemsToExport, tagColors: tagColors.isEmpty ? nil : tagColors)
+        let encoder = JSONEncoder()
+        // First encode: compact format for size estimation and URL scheme
+        let data = try encoder.encode(exportData)
+        
+        let estimatedSize = data.count
+        
+        if estimatedSize <= urlSchemeMaxBytes {
+            // Short content - use URL scheme (reuse already encoded data)
+            let urlString = try createURLScheme(from: data)
+            return ExportResult(format: .urlScheme(urlString), itemCount: items.count, estimatedSize: estimatedSize)
+        } else {
+            // Long content - use JSON file with pretty printing
+            // Note: Must re-encode with prettyPrinted for human-readable exported files.
+            // This is intentional - compact encoding for size check, pretty for file export.
+            // The overhead is acceptable for large exports as they're infrequent operations.
+            let tempURL = getTimestampedBackupURL(prefix: "ClippyIsle-Backup")
+            encoder.outputFormatting = .prettyPrinted
+            let prettyData = try encoder.encode(exportData)
+            try prettyData.write(to: tempURL)
+            return ExportResult(format: .json(tempURL), itemCount: items.count, estimatedSize: estimatedSize)
+        }
+    }
+    
+    // Create ccisle:// URL scheme from encoded JSON data
+    private func createURLScheme(from jsonData: Data) throws -> String {
+        let base64String = jsonData.base64EncodedString()
+        let urlEncodedString = base64String.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? base64String
+        return "ccisle://import?data=\(urlEncodedString)"
+    }
+    
+    // Import from ccisle:// URL
+    func importFromURLScheme(_ urlString: String) throws -> Int {
+        guard let url = URL(string: urlString),
+              url.scheme == "ccisle",
+              url.host == "import",
+              let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let queryItems = components.queryItems,
+              let dataParam = queryItems.first(where: { $0.name == "data" })?.value,
+              let decodedString = dataParam.removingPercentEncoding,
+              let jsonData = Data(base64Encoded: decodedString) else {
+            throw NSError(domain: "ClipboardManager", code: -3, userInfo: [NSLocalizedDescriptionKey: "Invalid ccisle:// URL format. Expected format: ccisle://import?data=<base64_encoded_json>"])
+        }
+        
+        let decoder = JSONDecoder()
+        let exportData = try decoder.decode(ExportableData.self, from: jsonData)
+        
+        var newItemsCount = 0
+        let existingIDs = Set(self.items.map { $0.id })
+        
+        for importedItem in exportData.items {
+            guard !existingIDs.contains(importedItem.id) else { continue }
+            var newItem = ClipboardItem(
+                id: importedItem.id,
+                content: importedItem.content,
+                type: importedItem.type,
+                filename: importedItem.filename,
+                timestamp: importedItem.timestamp,
+                isPinned: importedItem.isPinned,
+                displayName: importedItem.displayName,
+                isTrashed: importedItem.isTrashed,
+                tags: importedItem.tags,
+                fileData: nil
+            )
+            if let fileData = importedItem.fileData {
+                if let newFilename = saveFileDataToAppGroup(data: fileData, type: importedItem.type) {
+                    newItem.filename = newFilename
+                }
+            }
+            self.items.append(newItem)
+            newItemsCount += 1
+        }
+        
+        // Import tag colors if available
+        if let tagColors = exportData.tagColors {
+            setAllTagColors(tagColors, skipCloudSync: true)
+        }
+        
+        if newItemsCount > 0 {
+            sortAndSave()
+            if UserDefaults.standard.bool(forKey: "iCloudSyncEnabled") {
+                Task { await performCloudSync() }
+            }
+        }
+        
+        return newItemsCount
+    }
+    
+    // Analyze and export with automatic format selection
+    func exportDataHybrid() throws -> ExportResult {
+        return try analyzeExportFormat(items: self.items)
+    }
+    
+    // Analyze and export for specific tags
+    func exportDataHybrid(forTags tags: Set<String>) throws -> ExportResult? {
+        guard !tags.isEmpty else { return nil }
+        let filteredItems = self.items.filter { item in
+            guard let itemTags = item.tags else { return false }
+            return !tags.isDisjoint(with: itemTags)
+        }
+        guard !filteredItems.isEmpty else { return nil }
+        return try analyzeExportFormat(items: filteredItems)
+    }
 
     func cleanupItems() {
         let clearAfterDays = UserDefaults.standard.integer(forKey: "clearAfterDays")

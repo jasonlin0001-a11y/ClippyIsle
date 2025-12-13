@@ -15,6 +15,63 @@ func itemIcon(for type: String) -> String {
     }
 }
 
+// MARK: - Export Helpers
+
+struct ExportHelper {
+    // Delay before showing share sheet after alert (in seconds)
+    // This delay ensures the alert is visible to the user before the share sheet appears,
+    // providing context about what is being shared (URL link vs JSON file)
+    private static let shareSheetDelay: TimeInterval = 0.5
+    
+    // Helper function to format size in KB
+    private static func formatSizeInKB(_ bytes: Int) -> Double {
+        return Double(bytes) / 1024.0
+    }
+    
+    static func handleExportResult(_ result: ClipboardManager.ExportResult, 
+                                   showAlert: @escaping (String) -> Void,
+                                   setExportURL: @escaping (URL) -> Void) {
+        switch result.format {
+        case .urlScheme(let urlString):
+            // Short content - share ccisle:// URL directly without showing alert first
+            // The share sheet provides the UI for sharing
+            shareURLScheme(urlString, onError: { errorMessage in
+                showAlert("Failed to share: \(errorMessage)")
+            })
+            
+        case .json(let url):
+            // Long content - share JSON file
+            let sizeInKB = formatSizeInKB(result.estimatedSize)
+            let message = String(format: "Large content detected (%.1f KB)\n\nExporting as standard .json backup file.\nThis format works well with all apps including LINE.", sizeInKB)
+            showAlert(message)
+            setExportURL(url)
+        }
+    }
+    
+    static func shareURLScheme(_ urlString: String, onError: @escaping (String) -> Void) {
+        // Use modern approach for iOS 15+
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene else {
+            onError("Unable to find window scene")
+            return
+        }
+        
+        guard let rootViewController = windowScene.windows.first?.rootViewController else {
+            onError("Unable to find root view controller")
+            return
+        }
+        
+        let activityVC = UIActivityViewController(activityItems: [urlString], applicationActivities: nil)
+        if let popover = activityVC.popoverPresentationController {
+            popover.sourceView = rootViewController.view
+            popover.sourceRect = CGRect(x: rootViewController.view.bounds.midX, 
+                                       y: rootViewController.view.bounds.midY, 
+                                       width: 0, height: 0)
+            popover.permittedArrowDirections = []
+        }
+        rootViewController.present(activityVC, animated: true)
+    }
+}
+
 // MARK: - Enums
 
 enum AppearanceMode: Int, CaseIterable, Identifiable {

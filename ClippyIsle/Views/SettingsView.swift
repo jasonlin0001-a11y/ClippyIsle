@@ -339,6 +339,19 @@ struct SettingsView: View {
     }
     
     private func exportAllData() {
-        do { exportURL = try clipboardManager.exportData() } catch { importAlertMessage = "Export failed.\nError: \(error.localizedDescription)"; isShowingImportAlert = true }
+        do {
+            let result = try clipboardManager.exportDataHybrid()
+            ExportHelper.handleExportResult(result, 
+                                          showAlert: { message in
+                                              importAlertMessage = message
+                                              isShowingImportAlert = true
+                                          },
+                                          setExportURL: { url in
+                                              exportURL = url
+                                          })
+        } catch {
+            importAlertMessage = "Export failed.\nError: \(error.localizedDescription)"
+            isShowingImportAlert = true
+        }
     }
 }

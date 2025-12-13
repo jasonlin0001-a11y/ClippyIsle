@@ -213,9 +213,23 @@ struct TagExportSelectionView: View {
     }
     private func exportSelectedTags() {
         do {
-            if let url = try clipboardManager.exportData(forTags: selectedTags) { exportURL = url }
-            else { importAlertMessage = "No items found for the selected tags."; isShowingImportAlert = true }
-        } catch { importAlertMessage = "Export failed.\nError: \(error.localizedDescription)"; isShowingImportAlert = true }
+            if let result = try clipboardManager.exportDataHybrid(forTags: selectedTags) {
+                ExportHelper.handleExportResult(result,
+                                              showAlert: { message in
+                                                  importAlertMessage = message
+                                                  isShowingImportAlert = true
+                                              },
+                                              setExportURL: { url in
+                                                  exportURL = url
+                                              })
+            } else {
+                importAlertMessage = "No items found for the selected tags."
+                isShowingImportAlert = true
+            }
+        } catch {
+            importAlertMessage = "Export failed.\nError: \(error.localizedDescription)"
+            isShowingImportAlert = true
+        }
         dismiss()
     }
 }
