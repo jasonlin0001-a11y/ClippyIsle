@@ -1,5 +1,6 @@
 import CoreData
 import CloudKit
+import Combine
 
 /// PersistenceController manages the Core Data stack with CloudKit integration
 /// for ShareGroup and ClipboardItemEntity entities used in batch sharing feature.

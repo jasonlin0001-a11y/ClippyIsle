@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 /// View for creating and sharing a group of clipboard items
 struct CreateShareGroupView: View {
@@ -88,8 +89,8 @@ struct CreateShareGroupView: View {
             } message: {
                 Text(errorMessage)
             }
-            .onChange(of: sharePresenter.isPresenting) { isPresenting in
-                if !isPresenting {
+            .onChange(of: sharePresenter.isPresenting) { oldValue, newValue in
+                if !newValue {
                     // Dismiss the view after sharing is complete
                     dismiss()
                 }

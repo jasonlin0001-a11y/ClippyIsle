@@ -106,7 +106,7 @@ class ShareGroupManager: ObservableObject {
         
         // Check if already shared on a background thread
         print("🔍 Checking for existing share...")
-        let existingShare: CKShare? = try await Task.detached {
+        let existingShare: CKShare? = await Task.detached {
             if let shares = try? container.fetchShares(matching: [objectID]),
                let share = shares[objectID] {
                 return share
