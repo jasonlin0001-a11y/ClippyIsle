@@ -116,12 +116,21 @@ Find your item's context menu (usually in the List item's `.contextMenu { }` blo
 
 Add this modifier to your main view (after `.navigationTitle` or similar):
 
+**Note:** Only present the sheet when itemToShare is valid. The sheet should not appear if itemToShare is nil.
+
 ```swift
-.cloudSharing(
-    isPresented: $isShowingShareSheet,
-    item: itemToShare ?? ClipboardItemEntity(context: PersistenceController.shared.container.viewContext),
-    container: CKContainer(identifier: "iCloud.J894ABBU74.ClippyIsle")
-)
+// Option 1: Use if-let binding (recommended)
+if let itemToShare = itemToShare {
+    EmptyView()
+        .cloudSharing(
+            isPresented: $isShowingShareSheet,
+            item: itemToShare,
+            container: CKContainer(identifier: "iCloud.J894ABBU74.ClippyIsle")
+        )
+}
+
+// Option 2: Guard against nil in shareItem method
+// Ensure shareItem() only sets isShowingShareSheet = true when entity is valid
 ```
 
 ## Step 4: Build and Test

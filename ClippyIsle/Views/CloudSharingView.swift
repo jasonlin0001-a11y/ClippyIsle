@@ -80,8 +80,7 @@ struct CloudSharingView: UIViewControllerRepresentable {
                 }
                 
                 let icon = UIImage(systemName: iconName, withConfiguration: UIImage.SymbolConfiguration(pointSize: 80))
-                UIColor.systemBlue.setFill()
-                icon?.withTintColor(.systemBlue).draw(in: CGRect(x: 60, y: 60, width: 80, height: 80))
+                icon?.withTintColor(.systemBlue, renderingMode: .alwaysOriginal).draw(in: CGRect(x: 60, y: 60, width: 80, height: 80))
             }
             
             return image.pngData()
@@ -121,7 +120,7 @@ struct CloudSharingModifier: ViewModifier {
                         .padding()
                 }
             }
-            .onChange(of: isPresented) { _, newValue in
+            .onChange(of: isPresented) { oldValue, newValue in
                 if newValue && share == nil {
                     prepareShare()
                 }

@@ -222,12 +222,17 @@ struct ContentViewWithSharing: View {
         
         if let existing = try? ClipboardItemEntity.fetch(id: item.id, in: context) {
             itemToShare = existing
+            isShowingShareSheet = true
         } else {
-            itemToShare = ClipboardItemEntity.create(from: item, in: context)
-            try? context.save()
+            let newEntity = ClipboardItemEntity.create(from: item, in: context)
+            do {
+                try context.save()
+                itemToShare = newEntity
+                isShowingShareSheet = true
+            } catch {
+                print("Error creating entity for sharing: \(error)")
+            }
         }
-        
-        isShowingShareSheet = true
     }
     
     func itemContextMenu(for item: ClipboardItem) -> some View {
@@ -295,6 +300,7 @@ struct CoreDataMigrationHelper {
         }
     }
     
+    @MainActor
     static func syncFromCoreData(to clipboardManager: ClipboardManager) {
         let context = PersistenceController.shared.container.viewContext
         

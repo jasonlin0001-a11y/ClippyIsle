@@ -62,18 +62,14 @@ class PersistenceController {
     func existingShare(for object: NSManagedObject) -> CKShare? {
         guard isShared(object: object) else { return nil }
         
-        var share: CKShare?
-        let context = container.viewContext
-        context.performAndWait {
-            do {
-                // Use Core Data to fetch the share record for this object
-                let shares = try container.fetchShares(matching: [object.objectID])
-                share = shares.first
-            } catch {
-                print("Error fetching share: \(error)")
-            }
+        do {
+            // Use Core Data to fetch the share record for this object
+            let shares = try container.fetchShares(matching: [object.objectID])
+            return shares.first
+        } catch {
+            print("Error fetching share: \(error)")
+            return nil
         }
-        return share
     }
     
     /// Create a new share for an object
