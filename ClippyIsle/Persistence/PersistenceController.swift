@@ -101,8 +101,8 @@ class PersistenceController {
             return
         }
         
-        // Stop sharing using the container's delete method
-        container.delete(share) { error in
+        // Stop sharing by purging the zone containing the share
+        container.purgeObjectsAndRecordsInZone(with: share.recordID.zoneID, in: container.persistentStoreCoordinator.persistentStores.first!) { zoneID, error in
             completion(error)
         }
     }
