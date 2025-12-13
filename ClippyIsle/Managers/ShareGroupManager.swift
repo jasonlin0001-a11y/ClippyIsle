@@ -18,8 +18,17 @@ class ShareGroupManager: ObservableObject {
     
     nonisolated init(persistenceController: PersistenceController? = nil,
                      clipboardManager: ClipboardManager? = nil) {
-        self.persistenceController = persistenceController ?? .shared
-        self.clipboardManager = clipboardManager ?? .shared
+        if let persistenceController = persistenceController {
+            self.persistenceController = persistenceController
+        } else {
+            self.persistenceController = .shared
+        }
+        
+        if let clipboardManager = clipboardManager {
+            self.clipboardManager = clipboardManager
+        } else {
+            self.clipboardManager = .shared
+        }
     }
     
     // MARK: - Sender Side: Create Share Group
@@ -97,7 +106,7 @@ class ShareGroupManager: ObservableObject {
             share = existing
         } else {
             // Create a new share
-            let (_, newShare) = try await container.share([shareGroup], to: nil)
+            let (_, newShare, _) = try await container.share([shareGroup], to: nil)
             share = newShare
         }
         
@@ -105,7 +114,8 @@ class ShareGroupManager: ObservableObject {
         share[CKShare.SystemFieldKey.title] = shareGroup.title
         
         // Create the UICloudSharingController
-        let sharingController = UICloudSharingController(share: share, container: container.container)
+        let ckContainer = CKContainer(identifier: "iCloud.J894ABBU74.ClippyIsle")
+        let sharingController = UICloudSharingController(share: share, container: ckContainer)
         
         // Present the controller
         await MainActor.run {
@@ -191,7 +201,7 @@ class ShareGroupManager: ObservableObject {
         }
         
         // Purge the share
-        try await container.purgeObjectsAndRecordsInZone(with: share.recordID.zoneID, in: .shared)
+        try await container.purgeObjectsAndRecordsInZone(with: share.recordID.zoneID, in: CKDatabase.Scope.shared)
         
         print("✅ Left share and purged data for ShareGroup '\(shareGroup.title ?? "Untitled")'")
     }
@@ -224,20 +234,29 @@ class ShareGroupManager: ObservableObject {
         let allGroups = await fetchShareGroups()
         let container = persistenceController.container
         
-        // Move the filtering to a background queue
-        return await Task.detached {
-            let sharedGroups = allGroups.filter { group in
-                if let shares = try? container.fetchShares(matching: [group.objectID]),
-                   let share = shares[group.objectID] {
+        // Extract objectIDs to pass to detached task (objectIDs are Sendable)
+        let groupObjectIDs = allGroups.map { $0.objectID }
+        
+        // Filter in a background context
+        let sharedObjectIDs = await Task.detached {
+            let sharedIDs = groupObjectIDs.filter { objectID in
+                if let shares = try? container.fetchShares(matching: [objectID]),
+                   let share = shares[objectID] {
                     // Check if current user is not the owner
                     return share.owner.userIdentity.userRecordID?.recordName != CKCurrentUserDefaultName
                 }
                 return false
             }
-            
-            print("✅ Fetched \(sharedGroups.count) incoming shared groups")
-            return sharedGroups
+            return sharedIDs
         }.value
+        
+        // Filter the original array based on the objectIDs
+        let sharedGroups = allGroups.filter { group in
+            sharedObjectIDs.contains(group.objectID)
+        }
+        
+        print("✅ Fetched \(sharedGroups.count) incoming shared groups")
+        return sharedGroups
     }
     
     /// Deletes a ShareGroup from Core Data
