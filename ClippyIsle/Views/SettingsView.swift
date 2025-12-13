@@ -25,6 +25,7 @@ struct SettingsModalPresenterView: View {
     @Binding var firebaseShareURL: String?
     @Binding var isShowingFirebaseShareAlert: Bool
     @Binding var isShowingTagFirebaseShare: Bool
+    @Binding var showShareSheet: Bool
     @ObservedObject var clipboardManager: ClipboardManager
     let dismissAction: () -> Void
 
@@ -34,17 +35,19 @@ struct SettingsModalPresenterView: View {
             .sheet(item: $exportURL) { url in ActivityView(activityItems: [url]) }
             .sheet(isPresented: $isShowingTagExport) { TagExportSelectionView(clipboardManager: clipboardManager, exportURL: $exportURL, isShowingImportAlert: $isShowingImportAlert, importAlertMessage: $importAlertMessage) }
             .sheet(isPresented: $isShowingTagFirebaseShare) { TagFirebaseShareView(clipboardManager: clipboardManager, firebaseShareURL: $firebaseShareURL, isShowingFirebaseShareAlert: $isShowingFirebaseShareAlert, isShowingImportAlert: $isShowingImportAlert, importAlertMessage: $importAlertMessage) }
+            .sheet(isPresented: $showShareSheet) {
+                if let urlString = firebaseShareURL {
+                    ActivityView(activityItems: [urlString])
+                }
+            }
             .fileImporter(isPresented: $isImporting, allowedContentTypes: [.json], allowsMultipleSelection: false) { result in handleImport(result: result) }
             .alert("Import Result", isPresented: $isShowingImportAlert, presenting: importAlertMessage) { msg in Button("OK") {} } message: { msg in Text(msg) }
             .alert("Share Link Created", isPresented: $isShowingFirebaseShareAlert, presenting: firebaseShareURL) { url in
-                Button("Copy Link") { UIPasteboard.general.string = url }
-                Button("Share") { 
-                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                       let window = windowScene.windows.first,
-                       let rootVC = window.rootViewController {
-                        let activityVC = UIActivityViewController(activityItems: [url], applicationActivities: nil)
-                        rootVC.present(activityVC, animated: true)
-                    }
+                Button("Copy Link") { 
+                    UIPasteboard.general.string = url
+                }
+                Button("Share") {
+                    showShareSheet = true
                 }
                 Button("OK") {}
             } message: { url in 
@@ -121,6 +124,7 @@ struct SettingsView: View {
     @State private var firebaseShareURL: String?
     @State private var isShowingFirebaseShareAlert = false
     @State private var isShowingTagFirebaseShare = false
+    @State private var showShareSheet = false
 
     let countOptions = [50, 100, 200, 0]
     let dayOptions = [7, 30, 90, 0]
@@ -192,7 +196,7 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() } } }
-            .background(SettingsModalPresenterView(isShowingTrash: $isShowingTrash, exportURL: $exportURL, isImporting: $isImporting, isShowingImportAlert: $isShowingImportAlert, importAlertMessage: $importAlertMessage, isShowingClearCacheAlert: $isShowingClearCacheAlert, isShowingCacheClearedAlert: $isShowingCacheClearedAlert, isShowingHardResetAlert: $isShowingHardResetAlert, confirmationText: $confirmationText, isShowingTagExport: $isShowingTagExport, firebaseShareURL: $firebaseShareURL, isShowingFirebaseShareAlert: $isShowingFirebaseShareAlert, isShowingTagFirebaseShare: $isShowingTagFirebaseShare, clipboardManager: clipboardManager, dismissAction: { dismiss() }))
+            .background(SettingsModalPresenterView(isShowingTrash: $isShowingTrash, exportURL: $exportURL, isImporting: $isImporting, isShowingImportAlert: $isShowingImportAlert, importAlertMessage: $importAlertMessage, isShowingClearCacheAlert: $isShowingClearCacheAlert, isShowingCacheClearedAlert: $isShowingCacheClearedAlert, isShowingHardResetAlert: $isShowingHardResetAlert, confirmationText: $confirmationText, isShowingTagExport: $isShowingTagExport, firebaseShareURL: $firebaseShareURL, isShowingFirebaseShareAlert: $isShowingFirebaseShareAlert, isShowingTagFirebaseShare: $isShowingTagFirebaseShare, showShareSheet: $showShareSheet, clipboardManager: clipboardManager, dismissAction: { dismiss() }))
             .sheet(isPresented: $showPaywall) { PaywallView() }
             .onAppear {
                 WebServerManager.shared.clipboardManager = clipboardManager
@@ -330,8 +334,6 @@ struct SettingsView: View {
             Button { isImporting = true } label: { Text("Import Data") }
             Button(action: exportAllData) { Text("Export All Data") }
             Button { isShowingTagExport = true } label: { Text("Selective Export...") }
-            
-            Divider()
             
             Button(action: shareAllViaFirebase) { 
                 Label("Share All via Firebase", systemImage: "square.and.arrow.up.on.cloud")
