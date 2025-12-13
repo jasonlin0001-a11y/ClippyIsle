@@ -37,6 +37,7 @@ struct ContentView: View {
     @State private var selectedTagFilter: String? = nil
     @State private var itemToDelete: ClipboardItem?
     @State private var isShowingDeleteConfirm = false
+    @State private var isShowingGuideDeleteAlert = false
     @State private var areActivitiesEnabled = false
     @State private var isSheetPresented = false
     @State private var lastTopItemID: UUID?
@@ -233,6 +234,11 @@ struct ContentView: View {
             Button("Cancel", role: .cancel) {}
         } message: { item in Text("Are you sure you want to move “\(item.displayName ?? item.content.prefix(20).description)...” to the trash?") }
         
+        .alert("升級至付費版", isPresented: $isShowingGuideDeleteAlert) {
+            Button("升級") { showPaywall = true }
+            Button("取消", role: .cancel) {}
+        } message: { Text("使用說明項目僅限付費版用戶可以刪除。升級至付費版即可解鎖此功能及更多進階功能。") }
+        
         // **NEW**: Attach Paywall Sheet
         .sheet(isPresented: $showPaywall) {
             PaywallView()
@@ -305,7 +311,15 @@ struct ContentView: View {
                             previewAction: { previewState = .loading(item) },
                             createDragItem: { createDragItem(for: item) }, 
                             togglePinAction: { clipboardManager.togglePin(for: item) },
-                            deleteAction: { itemToDelete = item; isShowingDeleteConfirm = true },
+                            deleteAction: { 
+                                // Check if trying to delete the user guide in free version
+                                if item.id == userGuideItemID && !subscriptionManager.isPro {
+                                    isShowingGuideDeleteAlert = true
+                                } else {
+                                    itemToDelete = item
+                                    isShowingDeleteConfirm = true
+                                }
+                            },
                             renameAction: { itemToRename = item; newName = item.displayName ?? ""; isShowingRenameAlert = true },
                             // **MODIFIED**: Tag Limit Logic
                             tagAction: {
