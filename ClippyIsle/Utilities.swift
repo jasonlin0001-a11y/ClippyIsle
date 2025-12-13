@@ -19,7 +19,14 @@ func itemIcon(for type: String) -> String {
 
 struct ExportHelper {
     // Delay before showing share sheet after alert (in seconds)
+    // This delay ensures the alert is visible to the user before the share sheet appears,
+    // providing context about what is being shared (URL link vs JSON file)
     private static let shareSheetDelay: TimeInterval = 0.5
+    
+    // Helper function to format size in KB
+    private static func formatSizeInKB(_ bytes: Int) -> Double {
+        return Double(bytes) / 1024.0
+    }
     
     static func handleExportResult(_ result: ClipboardManager.ExportResult, 
                                    showAlert: @escaping (String) -> Void,
@@ -27,7 +34,7 @@ struct ExportHelper {
         switch result.format {
         case .urlScheme(let urlString):
             // Short content - share ccisle:// URL
-            let sizeInKB = Double(result.estimatedSize) / 1024.0
+            let sizeInKB = formatSizeInKB(result.estimatedSize)
             let message = String(format: "Short content detected (%.1f KB)\n\nExporting as ccisle:// URL link.\nThis can be easily shared through messaging apps.", sizeInKB)
             showAlert(message)
             
@@ -40,7 +47,7 @@ struct ExportHelper {
             
         case .json(let url):
             // Long content - share JSON file
-            let sizeInKB = Double(result.estimatedSize) / 1024.0
+            let sizeInKB = formatSizeInKB(result.estimatedSize)
             let message = String(format: "Large content detected (%.1f KB)\n\nExporting as standard .json backup file.\nThis format works well with all apps including LINE.", sizeInKB)
             showAlert(message)
             setExportURL(url)

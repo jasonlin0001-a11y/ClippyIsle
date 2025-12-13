@@ -312,6 +312,7 @@ class ClipboardManager: ObservableObject {
         let tagColors = getAllTagColors()
         let exportData = ExportableData(items: itemsToExport, tagColors: tagColors.isEmpty ? nil : tagColors)
         let encoder = JSONEncoder()
+        // First encode: compact format for size estimation and URL scheme
         let data = try encoder.encode(exportData)
         
         let estimatedSize = data.count
@@ -322,7 +323,9 @@ class ClipboardManager: ObservableObject {
             return ExportResult(format: .urlScheme(urlString), itemCount: items.count, estimatedSize: estimatedSize)
         } else {
             // Long content - use JSON file with pretty printing
-            // Note: Re-encoding with pretty printing for better readability in exported files
+            // Note: Must re-encode with prettyPrinted for human-readable exported files.
+            // This is intentional - compact encoding for size check, pretty for file export.
+            // The overhead is acceptable for large exports as they're infrequent operations.
             let tempURL = getTimestampedBackupURL(prefix: "ClippyIsle-Backup")
             encoder.outputFormatting = .prettyPrinted
             let prettyData = try encoder.encode(exportData)
