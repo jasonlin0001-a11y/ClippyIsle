@@ -20,6 +20,9 @@ struct ContentView: View {
     @StateObject private var speechManager = SpeechManager()
     @StateObject private var speechRecognizer = SpeechRecognizer()
     
+    // Binding to signal when app is ready (data loaded)
+    @Binding var isAppReady: Bool
+    
     // **NEW**: IAP Manager
     @EnvironmentObject var subscriptionManager: SubscriptionManager
     @State private var showPaywall = false
@@ -117,6 +120,8 @@ struct ContentView: View {
             LaunchLogger.log("ContentView.task - ClipboardManager.initializeData() - START")
             clipboardManager.initializeData()
             LaunchLogger.log("ContentView.task - ClipboardManager.initializeData() - END")
+            // Signal that app is ready
+            isAppReady = true
         }
         .onAppear {
             LaunchLogger.log("ContentView.onAppear - START")

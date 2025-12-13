@@ -11,16 +11,18 @@ import LinkPresentation
 /// A compact inline view that displays link metadata between list items
 struct InlineLinkPreview: View {
     let url: URL
-    @StateObject private var metadataManager = LinkMetadataManager()
+    @State private var metadata: LPLinkMetadata?
+    @State private var isLoading = true
+    @State private var hasError = false
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         VStack(spacing: 0) {
-            if metadataManager.isLoading {
+            if isLoading {
                 loadingView
-            } else if let error = metadataManager.error {
+            } else if hasError {
                 errorView
-            } else if let metadata = metadataManager.metadata {
+            } else if let metadata = metadata {
                 contentView(metadata: metadata)
             }
         }
@@ -34,10 +36,54 @@ struct InlineLinkPreview: View {
         )
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .onAppear {
-            LaunchLogger.log("InlineLinkPreview.onAppear - START fetching metadata")
-            metadataManager.fetchMetadata(for: url)
+        .task {
+            // Check cache first
+            if let cached = await LinkMetadataManager.shared.getCachedMetadata(for: url) {
+                metadata = cached
+                isLoading = false
+                LaunchLogger.log("InlineLinkPreview.task - Using cached metadata for \(url)")
+            } else {
+                // Fetch metadata if not cached
+                LaunchLogger.log("InlineLinkPreview.task - START fetching metadata for \(url)")
+                await fetchMetadata()
+            }
         }
+    }
+    
+    @MainActor
+    private func fetchMetadata() async {
+        let manager = LinkMetadataManager.shared
+        
+        // Try to get from cache (might have been populated while we were waiting)
+        if let cached = manager.getCachedMetadata(for: url) {
+            metadata = cached
+            isLoading = false
+            return
+        }
+        
+        // Trigger fetch (will cache result)
+        _ = manager.fetchMetadata(for: url)
+        
+        // Poll for result with timeout
+        var attempts = 0
+        let maxAttempts = 50  // 5 seconds total (50 * 100ms)
+        
+        while attempts < maxAttempts {
+            try? await Task.sleep(for: .milliseconds(100))
+            
+            if let cached = manager.getCachedMetadata(for: url) {
+                metadata = cached
+                isLoading = false
+                return
+            }
+            
+            attempts += 1
+        }
+        
+        // Timeout - show error
+        hasError = true
+        isLoading = false
+        LaunchLogger.log("InlineLinkPreview.task - Timeout fetching metadata for \(url)")
     }
     
     // MARK: - Loading View
