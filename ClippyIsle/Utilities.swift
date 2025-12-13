@@ -18,6 +18,9 @@ func itemIcon(for type: String) -> String {
 // MARK: - Export Helpers
 
 struct ExportHelper {
+    // Delay before showing share sheet after alert (in seconds)
+    private static let shareSheetDelay: TimeInterval = 0.5
+    
     static func handleExportResult(_ result: ClipboardManager.ExportResult, 
                                    showAlert: @escaping (String) -> Void,
                                    setExportURL: @escaping (URL) -> Void) {
@@ -29,8 +32,10 @@ struct ExportHelper {
             showAlert(message)
             
             // After showing alert, share the URL
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                shareURLScheme(urlString)
+            DispatchQueue.main.asyncAfter(deadline: .now() + shareSheetDelay) {
+                shareURLScheme(urlString, onError: { errorMessage in
+                    showAlert("Failed to share: \(errorMessage)")
+                })
             }
             
         case .json(let url):
@@ -42,10 +47,15 @@ struct ExportHelper {
         }
     }
     
-    static func shareURLScheme(_ urlString: String) {
+    static func shareURLScheme(_ urlString: String, onError: @escaping (String) -> Void) {
         // Use modern approach for iOS 15+
-        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let rootViewController = windowScene.windows.first?.rootViewController else {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene else {
+            onError("Unable to find window scene")
+            return
+        }
+        
+        guard let rootViewController = windowScene.windows.first?.rootViewController else {
+            onError("Unable to find root view controller")
             return
         }
         

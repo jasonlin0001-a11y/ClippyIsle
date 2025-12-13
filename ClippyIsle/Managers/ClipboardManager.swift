@@ -302,6 +302,8 @@ class ClipboardManager: ObservableObject {
     }
     
     // Threshold for determining short vs long content (10KB)
+    // This size limit ensures URL schemes remain manageable for messaging apps
+    // while avoiding iOS URL length limitations (typically ~2MB but 10KB is safer)
     private let urlSchemeMaxBytes = 10_000
     
     // Analyze export data and determine the appropriate format
@@ -320,6 +322,7 @@ class ClipboardManager: ObservableObject {
             return ExportResult(format: .urlScheme(urlString), itemCount: items.count, estimatedSize: estimatedSize)
         } else {
             // Long content - use JSON file with pretty printing
+            // Note: Re-encoding with pretty printing for better readability in exported files
             let tempURL = getTimestampedBackupURL(prefix: "ClippyIsle-Backup")
             encoder.outputFormatting = .prettyPrinted
             let prettyData = try encoder.encode(exportData)
@@ -345,7 +348,7 @@ class ClipboardManager: ObservableObject {
               let dataParam = queryItems.first(where: { $0.name == "data" })?.value,
               let decodedString = dataParam.removingPercentEncoding,
               let jsonData = Data(base64Encoded: decodedString) else {
-            throw NSError(domain: "ClipboardManager", code: -3, userInfo: [NSLocalizedDescriptionKey: "Invalid ccisle:// URL format"])
+            throw NSError(domain: "ClipboardManager", code: -3, userInfo: [NSLocalizedDescriptionKey: "Invalid ccisle:// URL format. Expected format: ccisle://import?data=<base64_encoded_json>"])
         }
         
         let decoder = JSONDecoder()
