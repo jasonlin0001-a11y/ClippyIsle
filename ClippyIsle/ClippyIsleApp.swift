@@ -69,11 +69,29 @@ struct ClippyIsleApp: App {
             switch result {
             case .success(let items):
                 DispatchQueue.main.async {
-                    // Save each item to ClipboardManager
+                    // Import items while preserving their metadata
                     let clipboardManager = ClipboardManager.shared
                     for item in items {
-                        clipboardManager.addNewItem(content: item.content, type: item.type, fileData: item.fileData)
+                        // Create new item with fresh ID and timestamp for import
+                        var importedItem = ClipboardItem(
+                            content: item.content,
+                            type: item.type,
+                            filename: item.filename,
+                            timestamp: Date(), // Use current time for import
+                            isPinned: false, // Don't preserve pinned status on import
+                            displayName: item.displayName,
+                            isTrashed: false, // Don't import trashed items
+                            tags: item.tags,
+                            fileData: nil // File data handled by ClipboardManager if present
+                        )
+                        
+                        // Insert at beginning and save
+                        clipboardManager.items.insert(importedItem, at: 0)
                     }
+                    
+                    // Save all changes at once
+                    clipboardManager.sortAndSave()
+                    
                     print("✅ Successfully imported \(items.count) item(s)")
                 }
             case .failure(let error):
