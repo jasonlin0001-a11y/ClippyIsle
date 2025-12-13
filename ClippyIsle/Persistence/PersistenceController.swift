@@ -55,7 +55,13 @@ class PersistenceController {
     
     /// Check if an item is already shared
     func isShared(object: NSManagedObject) -> Bool {
-        return container.isSharing(object: object)
+        // Check if we can fetch a share for this object
+        do {
+            let shares = try container.fetchShares(matching: [object.objectID])
+            return !shares.isEmpty
+        } catch {
+            return false
+        }
     }
     
     /// Get existing share for an object
@@ -63,12 +69,9 @@ class PersistenceController {
         guard isShared(object: object) else { return nil }
         
         do {
-            // Use Core Data to fetch the share record for this object
+            // fetchShares returns [NSManagedObjectID: CKShare]
             let shares = try container.fetchShares(matching: [object.objectID])
-            if let sharesDictionary = shares as? [NSManagedObjectID: CKShare] {
-                return sharesDictionary[object.objectID]
-            }
-            return nil
+            return shares[object.objectID]
         } catch {
             print("Error fetching share: \(error)")
             return nil
@@ -98,17 +101,9 @@ class PersistenceController {
             return
         }
         
-        // Stop sharing by deleting the share record
-        // This removes the share but keeps the object in the owner's database
-        container.persistentStoreCoordinator.perform {
-            do {
-                let context = self.container.viewContext
-                context.delete(share)
-                try context.save()
-                completion(nil)
-            } catch {
-                completion(error)
-            }
+        // Stop sharing using the container's delete method
+        container.delete(share) { error in
+            completion(error)
         }
     }
 }
