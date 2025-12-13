@@ -93,6 +93,8 @@ extension ContentView {
 // MARK: - UI Integration Examples
 
 /// Example 1: Add Share Button to Item Context Menu
+/// Note: This example assumes you have implemented shareItem() and isShared() methods
+/*
 extension ContentView {
     
     /// Add this to your item's contextMenu
@@ -126,8 +128,11 @@ extension ContentView {
         }
     }
 }
+*/
 
 /// Example 2: Add Share Button to Item Row
+/// Note: This example assumes you have implemented shareItem() and isShared() methods
+/*
 extension ContentView {
     
     func shareButton(for item: ClipboardItem) -> some View {
@@ -142,6 +147,7 @@ extension ContentView {
         .help(isShared(item) ? "Item is shared" : "Share this item")
     }
 }
+*/
 
 /// Example 3: Add to Main View Body
 /// Note: This extension example assumes you have the required state variables
