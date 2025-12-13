@@ -35,28 +35,8 @@ struct SettingsModalPresenterView: View {
             .sheet(item: $exportURL) { url in ActivityView(activityItems: [url]) }
             .sheet(isPresented: $isShowingTagExport) { TagExportSelectionView(clipboardManager: clipboardManager, exportURL: $exportURL, isShowingImportAlert: $isShowingImportAlert, importAlertMessage: $importAlertMessage) }
             .sheet(isPresented: $isShowingTagFirebaseShare) { TagFirebaseShareView(clipboardManager: clipboardManager, firebaseShareURL: $firebaseShareURL, isShowingFirebaseShareAlert: $isShowingFirebaseShareAlert, isShowingImportAlert: $isShowingImportAlert, importAlertMessage: $importAlertMessage) }
-            .sheet(isPresented: $showShareSheet) {
-                if let urlString = firebaseShareURL {
-                    ActivityView(activityItems: [urlString])
-                }
-            }
             .fileImporter(isPresented: $isImporting, allowedContentTypes: [.json], allowsMultipleSelection: false) { result in handleImport(result: result) }
             .alert("Import Result", isPresented: $isShowingImportAlert, presenting: importAlertMessage) { msg in Button("OK") {} } message: { msg in Text(msg) }
-            .alert("Share Link Created", isPresented: $isShowingFirebaseShareAlert, presenting: firebaseShareURL) { url in
-                Button("Copy Link") { 
-                    print("🔥 Copy Link button pressed")
-                    UIPasteboard.general.string = url
-                }
-                Button("Share") {
-                    print("🔥 Share button pressed, setting showShareSheet = true")
-                    showShareSheet = true
-                }
-                Button("OK") {
-                    print("🔥 OK button pressed")
-                }
-            } message: { url in 
-                Text("Share this link with others to let them import your clipboard items:\n\n\(url)")
-            }
             .alert("Clear Website Cache?", isPresented: $isShowingClearCacheAlert) {
                 Button("Clear", role: .destructive) { clearWebViewCache() }; Button("Cancel", role: .cancel) {}
             } message: { Text("This will remove all cookies, login sessions, and cached data for websites viewed within the app. This action cannot be undone.") }
@@ -202,6 +182,26 @@ struct SettingsView: View {
             .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() } } }
             .background(SettingsModalPresenterView(isShowingTrash: $isShowingTrash, exportURL: $exportURL, isImporting: $isImporting, isShowingImportAlert: $isShowingImportAlert, importAlertMessage: $importAlertMessage, isShowingClearCacheAlert: $isShowingClearCacheAlert, isShowingCacheClearedAlert: $isShowingCacheClearedAlert, isShowingHardResetAlert: $isShowingHardResetAlert, confirmationText: $confirmationText, isShowingTagExport: $isShowingTagExport, firebaseShareURL: $firebaseShareURL, isShowingFirebaseShareAlert: $isShowingFirebaseShareAlert, isShowingTagFirebaseShare: $isShowingTagFirebaseShare, showShareSheet: $showShareSheet, clipboardManager: clipboardManager, dismissAction: { dismiss() }))
             .sheet(isPresented: $showPaywall) { PaywallView() }
+            .alert("Share Link Created", isPresented: $isShowingFirebaseShareAlert, presenting: firebaseShareURL) { url in
+                Button("Copy Link") { 
+                    print("🔥 Copy Link button pressed")
+                    UIPasteboard.general.string = url
+                }
+                Button("Share") {
+                    print("🔥 Share button pressed, setting showShareSheet = true")
+                    showShareSheet = true
+                }
+                Button("OK") {
+                    print("🔥 OK button pressed")
+                }
+            } message: { url in 
+                Text("Share this link with others to let them import your clipboard items:\n\n\(url)")
+            }
+            .sheet(isPresented: $showShareSheet) {
+                if let urlString = firebaseShareURL {
+                    ActivityView(activityItems: [urlString])
+                }
+            }
             .onAppear {
                 WebServerManager.shared.clipboardManager = clipboardManager
                 nicknameInput = userNickname
