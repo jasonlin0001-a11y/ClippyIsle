@@ -16,19 +16,17 @@ class ShareGroupManager: ObservableObject {
     @Published var isProcessing = false
     @Published var lastError: Error?
     
-    nonisolated init(persistenceController: PersistenceController? = nil,
-                     clipboardManager: ClipboardManager? = nil) {
+    init(persistenceController: PersistenceController? = nil,
+         clipboardManager: ClipboardManager? = nil) {
         if let persistenceController = persistenceController {
             self.persistenceController = persistenceController
         } else {
-            // Access MainActor-isolated property in a nonisolated context
             self.persistenceController = PersistenceController.shared
         }
         
         if let clipboardManager = clipboardManager {
             self.clipboardManager = clipboardManager
         } else {
-            // Access MainActor-isolated property in a nonisolated context
             self.clipboardManager = ClipboardManager.shared
         }
     }
