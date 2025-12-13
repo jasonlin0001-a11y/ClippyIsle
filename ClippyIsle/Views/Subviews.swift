@@ -214,7 +214,14 @@ struct TagExportSelectionView: View {
     private func exportSelectedTags() {
         do {
             if let result = try clipboardManager.exportDataHybrid(forTags: selectedTags) {
-                handleExportResult(result)
+                ExportHelper.handleExportResult(result,
+                                              showAlert: { message in
+                                                  importAlertMessage = message
+                                                  isShowingImportAlert = true
+                                              },
+                                              setExportURL: { url in
+                                                  exportURL = url
+                                              })
             } else {
                 importAlertMessage = "No items found for the selected tags."
                 isShowingImportAlert = true
@@ -224,39 +231,6 @@ struct TagExportSelectionView: View {
             isShowingImportAlert = true
         }
         dismiss()
-    }
-    
-    private func handleExportResult(_ result: ClipboardManager.ExportResult) {
-        switch result.format {
-        case .urlScheme(let urlString):
-            // Short content - share ccisle:// URL
-            let sizeInKB = Double(result.estimatedSize) / 1024.0
-            importAlertMessage = String(format: "Short content detected (%.1f KB)\n\nExporting as ccisle:// URL link.\nThis can be easily shared through messaging apps.", sizeInKB)
-            isShowingImportAlert = true
-            
-            // After showing alert, share the URL
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                shareURLScheme(urlString)
-            }
-            
-        case .json(let url):
-            // Long content - share JSON file
-            let sizeInKB = Double(result.estimatedSize) / 1024.0
-            importAlertMessage = String(format: "Large content detected (%.1f KB)\n\nExporting as standard .json backup file.\nThis format works well with all apps including LINE.", sizeInKB)
-            isShowingImportAlert = true
-            exportURL = url
-        }
-    }
-    
-    private func shareURLScheme(_ urlString: String) {
-        guard let sourceView = UIApplication.shared.windows.first?.rootViewController?.view else { return }
-        let activityVC = UIActivityViewController(activityItems: [urlString], applicationActivities: nil)
-        if let popover = activityVC.popoverPresentationController {
-            popover.sourceView = sourceView
-            popover.sourceRect = CGRect(x: sourceView.bounds.midX, y: sourceView.bounds.midY, width: 0, height: 0)
-            popover.permittedArrowDirections = []
-        }
-        sourceView.window?.rootViewController?.present(activityVC, animated: true)
     }
 }
 

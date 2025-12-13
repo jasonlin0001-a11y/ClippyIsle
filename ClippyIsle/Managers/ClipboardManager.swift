@@ -315,11 +315,11 @@ class ClipboardManager: ObservableObject {
         let estimatedSize = data.count
         
         if estimatedSize <= urlSchemeMaxBytes {
-            // Short content - use URL scheme
-            let urlString = try createURLScheme(from: exportData)
+            // Short content - use URL scheme (reuse already encoded data)
+            let urlString = try createURLScheme(from: data)
             return ExportResult(format: .urlScheme(urlString), itemCount: items.count, estimatedSize: estimatedSize)
         } else {
-            // Long content - use JSON file
+            // Long content - use JSON file with pretty printing
             let tempURL = getTimestampedBackupURL(prefix: "ClippyIsle-Backup")
             encoder.outputFormatting = .prettyPrinted
             let prettyData = try encoder.encode(exportData)
@@ -328,10 +328,8 @@ class ClipboardManager: ObservableObject {
         }
     }
     
-    // Create ccisle:// URL scheme from export data
-    private func createURLScheme(from exportData: ExportableData) throws -> String {
-        let encoder = JSONEncoder()
-        let jsonData = try encoder.encode(exportData)
+    // Create ccisle:// URL scheme from encoded JSON data
+    private func createURLScheme(from jsonData: Data) throws -> String {
         let base64String = jsonData.base64EncodedString()
         let urlEncodedString = base64String.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? base64String
         return "ccisle://import?data=\(urlEncodedString)"

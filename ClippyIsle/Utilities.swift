@@ -15,6 +15,52 @@ func itemIcon(for type: String) -> String {
     }
 }
 
+// MARK: - Export Helpers
+
+struct ExportHelper {
+    static func handleExportResult(_ result: ClipboardManager.ExportResult, 
+                                   showAlert: @escaping (String) -> Void,
+                                   setExportURL: @escaping (URL) -> Void) {
+        switch result.format {
+        case .urlScheme(let urlString):
+            // Short content - share ccisle:// URL
+            let sizeInKB = Double(result.estimatedSize) / 1024.0
+            let message = String(format: "Short content detected (%.1f KB)\n\nExporting as ccisle:// URL link.\nThis can be easily shared through messaging apps.", sizeInKB)
+            showAlert(message)
+            
+            // After showing alert, share the URL
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                shareURLScheme(urlString)
+            }
+            
+        case .json(let url):
+            // Long content - share JSON file
+            let sizeInKB = Double(result.estimatedSize) / 1024.0
+            let message = String(format: "Large content detected (%.1f KB)\n\nExporting as standard .json backup file.\nThis format works well with all apps including LINE.", sizeInKB)
+            showAlert(message)
+            setExportURL(url)
+        }
+    }
+    
+    static func shareURLScheme(_ urlString: String) {
+        // Use modern approach for iOS 15+
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let rootViewController = windowScene.windows.first?.rootViewController else {
+            return
+        }
+        
+        let activityVC = UIActivityViewController(activityItems: [urlString], applicationActivities: nil)
+        if let popover = activityVC.popoverPresentationController {
+            popover.sourceView = rootViewController.view
+            popover.sourceRect = CGRect(x: rootViewController.view.bounds.midX, 
+                                       y: rootViewController.view.bounds.midY, 
+                                       width: 0, height: 0)
+            popover.permittedArrowDirections = []
+        }
+        rootViewController.present(activityVC, animated: true)
+    }
+}
+
 // MARK: - Enums
 
 enum AppearanceMode: Int, CaseIterable, Identifiable {
