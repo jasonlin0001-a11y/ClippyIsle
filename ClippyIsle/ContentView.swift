@@ -258,17 +258,18 @@ struct ContentView: View {
                 else { Button { clipboardManager.isLiveActivityOn.toggle() } label: { Image(systemName: "c.circle.fill").font(.system(size: 20)).foregroundColor(clipboardManager.isLiveActivityOn ? Color.green : Color.red) }.disabled(!areActivitiesEnabled) }
             }
             ToolbarItemGroup(placement: .navigationBarTrailing) {
-                Button { isShowingTagSheet = true } label: { Image(systemName: "tag").frame(width: 44, height: 44).contentShape(Rectangle()) }
+                Button { isShowingTagSheet = true } label: { Image(systemName: "t.circle.fill").font(.system(size: 20, weight: .bold)).frame(width: 44, height: 44).contentShape(Rectangle()) }
                 
                 Button {
                     isShowingAudioManager = true
                 } label: {
-                    Image(systemName: "waveform")
+                    Image(systemName: "v.circle.fill")
+                        .font(.system(size: 20, weight: .bold))
                         .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
                 }
                 
-                Button { isShowingSettings = true } label: { Image(systemName: "slider.horizontal.3").frame(width: 44, height: 44).contentShape(Rectangle()) }
+                Button { isShowingSettings = true } label: { Image(systemName: "s.circle.fill").font(.system(size: 20, weight: .bold)).frame(width: 44, height: 44).contentShape(Rectangle()) }
             }
         }
     }
