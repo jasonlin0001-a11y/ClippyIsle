@@ -227,6 +227,7 @@ struct TagFirebaseShareView: View {
     @Binding var isShowingImportAlert: Bool
     @Binding var importAlertMessage: String?
     @State private var selectedTags: Set<String> = []
+    @State private var isSharingFirebase = false
     @Environment(\.dismiss) var dismiss
 
     var body: some View {
@@ -241,7 +242,21 @@ struct TagFirebaseShareView: View {
                 }
             }
             .navigationTitle("Share via Firebase").navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Share") { shareSelectedTags() }.disabled(selectedTags.isEmpty) } }
+            .toolbar { 
+                ToolbarItem(placement: .navigationBarTrailing) { 
+                    Button {
+                        shareSelectedTags()
+                    } label: {
+                        if isSharingFirebase {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle())
+                        } else {
+                            Text("Share")
+                        }
+                    }
+                    .disabled(selectedTags.isEmpty || isSharingFirebase)
+                } 
+            }
         }
     }
     
@@ -263,20 +278,23 @@ struct TagFirebaseShareView: View {
         }
         
         print("🔥 Calling FirebaseManager.shareItems with \(filteredItems.count) items")
+        isSharingFirebase = true
         FirebaseManager.shared.shareItems(filteredItems) { result in
             print("🔥 Firebase callback received")
             DispatchQueue.main.async {
+                self.isSharingFirebase = false
                 switch result {
                 case .success(let shareURL):
                     print("🔥 SUCCESS: \(shareURL)")
                     self.firebaseShareURL = shareURL
                     self.isShowingFirebaseShareAlert = true
+                    dismiss()
                 case .failure(let error):
                     print("🔥 ERROR: \(error.localizedDescription)")
                     self.importAlertMessage = "Firebase share failed.\nError: \(error.localizedDescription)"
                     self.isShowingImportAlert = true
+                    dismiss()
                 }
-                dismiss()
             }
         }
     }

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CC ISLE 剪貼簿分享</title>
+
+    <!-- Open Graph Tags for LINE and other messaging apps -->
+    <meta property="og:title" content="CC ISLE 剪貼簿分享">
+    <meta property="og:description" content="點擊此連結將剪貼簿資料匯入您的 CC ISLE App">
+    <meta property="og:image" content="https://cc-isle.web.app/preview_image.png">
+    <meta property="og:url" content="https://cc-isle.web.app/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="CC ISLE">
+    
+    <!-- Twitter Card Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="CC ISLE 剪貼簿分享">
+    <meta name="twitter:description" content="點擊此連結將剪貼簿資料匯入您的 CC ISLE App">
+    <meta name="twitter:image" content="https://cc-isle.web.app/preview_image.png">
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            text-align: center;
+        }
+        .card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 90%;
+            width: 350px;
+            animation: slideUp 0.5s ease-out;
+        }
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            animation: bounce 1s ease-in-out infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        h1 { 
+            font-size: 1.5rem; 
+            color: #333; 
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        p { 
+            color: #666; 
+            margin-bottom: 2rem; 
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 14px 32px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-block;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        .btn:active {
+            transform: translateY(0);
+        }
+        .footer { 
+            margin-top: 2rem; 
+            font-size: 0.85rem; 
+            color: #999;
+        }
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .error {
+            color: #e74c3c;
+            font-weight: 500;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+
+    <script>
+        window.onload = function() {
+            // Extract the 'id' parameter from URL query string
+            const urlParams = new URLSearchParams(window.location.search);
+            const docId = urlParams.get('id');
+
+            if (docId) {
+                // Construct the deep link to open the app
+                const deepLink = "ccisle://import?id=" + docId;
+
+                // Attempt automatic redirect to app
+                window.location.href = deepLink;
+
+                // Update status message (using textContent for security)
+                document.getElementById("status").textContent = "正在開啟 CC ISLE...";
+                
+                // Set manual button link (fallback if auto-redirect fails)
+                const openBtn = document.getElementById("open-btn");
+                openBtn.href = deepLink;
+                openBtn.style.display = "inline-block";
+                
+                // Show fallback button after a short delay
+                setTimeout(function() {
+                    document.getElementById("status").textContent = "如果 App 沒有自動開啟";
+                    document.querySelector(".spinner").style.display = "none";
+                }, 2000);
+            } else {
+                // No ID found - show error
+                const statusEl = document.getElementById("status");
+                statusEl.textContent = "連結無效或缺少分享 ID";
+                statusEl.className = "error";
+                document.querySelector(".icon").textContent = "⚠️";
+                document.querySelector(".spinner").style.display = "none";
+                document.getElementById("open-btn").style.display = "none";
+                document.querySelector("p").textContent = "請確認您的分享連結是否完整。";
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="card">
+        <div class="spinner"></div>
+        <div class="icon">📋</div>
+        <h1 id="status">準備中...</h1>
+        <p>請稍候，系統正在處理您的分享資料。</p>
+        <a id="open-btn" href="#" class="btn" style="display:none;">點擊開啟 App</a>
+        
+        <div class="footer">
+            尚未安裝？<a href="https://apps.apple.com/app/cc-isle" target="_blank">前往 App Store 下載</a>
+        </div>
+    </div>
+</body>
+</html>
