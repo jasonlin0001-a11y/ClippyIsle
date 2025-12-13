@@ -5,7 +5,6 @@ import UIKit
 
 /// ShareGroupManager handles creating share groups for batch sharing
 /// and importing shared items into the local library.
-@MainActor
 class ShareGroupManager: ObservableObject {
     static let shared = ShareGroupManager()
     
@@ -27,13 +26,17 @@ class ShareGroupManager: ObservableObject {
     /// This creates new Core Data entities to avoid affecting the user's original data.
     ///
     /// - Parameter items: Array of ClipboardItems to include in the share group
+    /// - Parameter title: Title for the share group (will be localized if empty)
     /// - Returns: The newly created ShareGroup entity
-    func createShareGroup(with items: [ClipboardItem], title: String = String(localized: "Shared Items")) throws -> ShareGroup {
+    func createShareGroup(with items: [ClipboardItem], title: String) throws -> ShareGroup {
         let context = persistenceController.container.viewContext
+        
+        // Use localized default if title is empty
+        let finalTitle = title.isEmpty ? String(localized: "Shared Items") : title
         
         // Create the ShareGroup
         let shareGroup = ShareGroup(context: context)
-        shareGroup.title = title
+        shareGroup.title = finalTitle
         shareGroup.createdAt = Date()
         
         // Create copies of the ClipboardItems as ClipboardItemEntity objects
@@ -122,8 +125,14 @@ class ShareGroupManager: ObservableObject {
     /// - Returns: The number of items imported
     @discardableResult
     func importSharedItems(from group: ShareGroup) async throws -> Int {
-        isProcessing = true
-        defer { isProcessing = false }
+        await MainActor.run {
+            isProcessing = true
+        }
+        defer { 
+            Task { @MainActor in
+                isProcessing = false
+            }
+        }
         
         guard let items = group.items?.allObjects as? [ClipboardItemEntity] else {
             throw ShareGroupError.noItemsInGroup
@@ -216,10 +225,10 @@ class ShareGroupManager: ObservableObject {
     /// Fetches only the incoming shared groups (shared by others)
     func fetchIncomingSharedGroups() async -> [ShareGroup] {
         let allGroups = await fetchShareGroups()
+        let container = persistenceController.container
         
-        return await withCheckedContinuation { continuation in
-            // Filter only shared items (not owned by current user)
-            let container = persistenceController.container
+        // Move the filtering to a background queue
+        return await Task.detached {
             let sharedGroups = allGroups.filter { group in
                 if let shares = try? container.fetchShares(matching: [group.objectID]),
                    let share = shares.first {
@@ -230,8 +239,8 @@ class ShareGroupManager: ObservableObject {
             }
             
             print("✅ Fetched \(sharedGroups.count) incoming shared groups")
-            continuation.resume(returning: sharedGroups)
-        }
+            return sharedGroups
+        }.value
     }
     
     /// Deletes a ShareGroup from Core Data
