@@ -3,8 +3,7 @@ import FirebaseCore
 import FirebaseFirestore
 
 // MARK: - Firebase Manager
-@MainActor
-class FirebaseManager: ObservableObject {
+class FirebaseManager {
     static let shared = FirebaseManager()
     
     private let db: Firestore
