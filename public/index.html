@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CC ISLE 剪貼簿分享</title>
+
+    <meta property="og:title" content="CC ISLE 剪貼簿分享">
+    <meta property="og:description" content="點擊此連結將資料匯入您的 App">
+    <meta property="og:image" content="https://cc-isle.web.app/preview_image.png"> <meta property="og:type" content="website">
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify_content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f2f2f7;
+            text-align: center;
+        }
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            max-width: 90%;
+            width: 300px;
+        }
+        h1 { font-size: 1.2rem; color: #333; margin-bottom: 1rem; }
+        p { color: #666; margin-bottom: 2rem; font-size: 0.9rem; }
+        .btn {
+            background-color: #007AFF;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .footer { margin-top: 2rem; font-size: 0.8rem; color: #999; }
+    </style>
+
+    <script>
+        window.onload = function() {
+            // 1. 抓取網址中的 id 參數 (例如 ?id=123)
+            const urlParams = new URLSearchParams(window.location.search);
+            const docId = urlParams.get('id');
+
+            if (docId) {
+                // 2. 組合 Deep Link (喚醒 App 的鑰匙)
+                const deepLink = "ccisle://import?id=" + docId;
+
+                // 3. 嘗試自動跳轉
+                window.location.href = deepLink;
+
+                // 4. 更新畫面文字
+                document.getElementById("status").innerText = "正在開啟 CC ISLE...";
+                
+                // 5. 設定手動按鈕 (以防自動跳轉失敗)
+                document.getElementById("open-btn").href = deepLink;
+            } else {
+                document.getElementById("status").innerText = "連結無效或缺少 ID";
+                document.getElementById("open-btn").style.display = "none";
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="card">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
+        <h1 id="status">準備中...</h1>
+        <p>如果 App 沒有自動開啟，請點擊下方按鈕。</p>
+        <a id="open-btn" href="#" class="btn">開啟 App</a>
+        
+        <div class="footer">
+            尚未安裝？<a href="#" style="color:#007AFF;">前往 App Store 下載</a>
+        </div>
+    </div>
+</body>
+</html>
