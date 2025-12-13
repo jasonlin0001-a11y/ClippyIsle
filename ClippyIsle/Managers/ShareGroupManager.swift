@@ -21,13 +21,15 @@ class ShareGroupManager: ObservableObject {
         if let persistenceController = persistenceController {
             self.persistenceController = persistenceController
         } else {
-            self.persistenceController = .shared
+            // Access MainActor-isolated property in a nonisolated context
+            self.persistenceController = PersistenceController.shared
         }
         
         if let clipboardManager = clipboardManager {
             self.clipboardManager = clipboardManager
         } else {
-            self.clipboardManager = .shared
+            // Access MainActor-isolated property in a nonisolated context
+            self.clipboardManager = ClipboardManager.shared
         }
     }
     
@@ -85,10 +87,6 @@ class ShareGroupManager: ObservableObject {
     ///   - shareGroup: The ShareGroup to share
     ///   - viewController: The presenting view controller
     func shareGroup(_ shareGroup: ShareGroup, from viewController: UIViewController) async throws {
-        guard let managedObjectContext = shareGroup.managedObjectContext else {
-            throw ShareGroupError.noContext
-        }
-        
         let container = persistenceController.container
         
         // Check if the object is already shared
@@ -200,8 +198,13 @@ class ShareGroupManager: ObservableObject {
             throw ShareGroupError.shareNotFound
         }
         
+        // Get the persistent store
+        guard let store = managedObjectContext.persistentStoreCoordinator?.persistentStores.first else {
+            throw ShareGroupError.noContext
+        }
+        
         // Purge the share
-        try await container.purgeObjectsAndRecordsInZone(with: share.recordID.zoneID, in: CKDatabase.Scope.shared)
+        try await container.purgeObjectsAndRecordsInZone(with: share.recordID.zoneID, in: store)
         
         print("✅ Left share and purged data for ShareGroup '\(shareGroup.title ?? "Untitled")'")
     }
