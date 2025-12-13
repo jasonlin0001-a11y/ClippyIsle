@@ -582,17 +582,16 @@ struct PreviewView: View {
             let textRect = CGRect(x: 40, y: 40, width: 515, height: 762) // Margins
             
             // Split content into pages if needed
-            let text = contentToExport as NSString
-            var remainingText = text
+            var remainingText = contentToExport
             var currentPage = 0
             
-            while remainingText.length > 0 {
+            while !remainingText.isEmpty {
                 if currentPage > 0 {
                     context.beginPage()
                 }
                 
                 let frameSetter = CTFramesetterCreateWithAttributedString(
-                    NSAttributedString(string: remainingText as String, attributes: attributes)
+                    NSAttributedString(string: remainingText, attributes: attributes)
                 )
                 
                 let path = UIBezierPath(rect: textRect).cgPath
@@ -601,14 +600,14 @@ struct PreviewView: View {
                 let visibleRange = CTFrameGetVisibleStringRange(frame)
                 
                 // Draw only the visible portion that fits on this page
-                let visibleText = remainingText.substring(to: visibleRange.length)
+                let visibleText = String(remainingText.prefix(visibleRange.length))
                 (visibleText as NSString).draw(in: textRect, withAttributes: attributes)
                 
-                if visibleRange.length == remainingText.length {
+                if visibleRange.length == remainingText.count {
                     break
                 }
                 
-                remainingText = remainingText.substring(from: visibleRange.length) as NSString
+                remainingText = String(remainingText.dropFirst(visibleRange.length))
                 currentPage += 1
                 
                 if currentPage > 100 { // Safety limit
