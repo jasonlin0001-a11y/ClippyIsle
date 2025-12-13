@@ -1,5 +1,6 @@
 import SwiftUI
 import CoreData
+import CloudKit
 
 // MARK: - Example Integration for CloudKit Sharing
 
@@ -42,6 +43,8 @@ extension ContentView {
     }
     
     /// Initiate sharing for a clipboard item
+    /// Note: This example assumes you have itemToShare and isShowingShareSheet state variables
+    /*
     func shareItem(_ item: ClipboardItem) {
         // Convert to Core Data entity
         guard let entity = convertToEntity(item) else {
@@ -59,6 +62,7 @@ extension ContentView {
         itemToShare = entity
         isShowingShareSheet = true
     }
+    */
     
     /// Check if an item is currently shared
     func isShared(_ item: ClipboardItem) -> Bool {
@@ -140,18 +144,24 @@ extension ContentView {
 }
 
 /// Example 3: Add to Main View Body
+/// Note: This extension example assumes you have the required state variables
+/*
 extension ContentView {
     
     /// Add this modifier to your main view
     var sharingModifier: some View {
-        EmptyView()
-            .cloudSharing(
-                isPresented: $isShowingShareSheet,
-                item: itemToShare ?? ClipboardItemEntity(),
-                container: CKContainer(identifier: "iCloud.J894ABBU74.ClippyIsle")
-            )
+        // Only show sharing sheet when we have a valid entity
+        if let itemToShare = itemToShare {
+            EmptyView()
+                .cloudSharing(
+                    isPresented: $isShowingShareSheet,
+                    item: itemToShare,
+                    container: CKContainer(identifier: "iCloud.J894ABBU74.ClippyIsle")
+                )
+        }
     }
 }
+*/
 
 // MARK: - Complete Example View
 
