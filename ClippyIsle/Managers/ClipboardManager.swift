@@ -57,6 +57,8 @@ class ClipboardManager: ObservableObject {
         }
         loadItems()
         LaunchLogger.log("ClipboardManager.initializeData() - loadItems() completed")
+        ensureUserGuideExists()
+        LaunchLogger.log("ClipboardManager.initializeData() - ensureUserGuideExists() completed")
         cleanupItems()
         LaunchLogger.log("ClipboardManager.initializeData() - cleanupItems() completed")
         if UserDefaults.standard.bool(forKey: "iCloudSyncEnabled") { 
@@ -66,6 +68,137 @@ class ClipboardManager: ObservableObject {
             }
         }
         LaunchLogger.log("ClipboardManager.initializeData() - END")
+    }
+    
+    // MARK: - Built-in User Guide
+    /// Ensures the built-in user guide item exists and is up to date
+    /// 確保內建使用說明項目存在且為最新版本
+    /// To edit the user guide content, modify this function in ClipboardManager.swift
+    /// 要編輯使用說明內容，請修改 ClipboardManager.swift 中的此函數
+    private func ensureUserGuideExists() {
+        let guideContent = """
+# CC Isle 使用說明
+
+歡迎使用 CC Isle（ClippyIsle）！這是一個功能強大的剪貼簿管理工具。
+
+## 主要功能介紹
+
+### 📋 剪貼簿管理
+- **自動/手動新增**：自動偵測剪貼簿內容或手動新增項目
+- **多種內容類型**：支援文字、圖片、URL等多種格式
+- **智慧搜尋**：使用搜尋欄快速找到需要的內容
+- **語音搜尋**：點擊麥克風圖示使用語音輸入搜尋
+
+### 📌 項目管理
+- **釘選功能**：重要項目可以釘選在最上方
+- **刪除/復原**：項目會先移至垃圾桶，可隨時復原
+- **重新命名**：為項目設定容易辨識的自訂名稱
+- **分享**：透過系統分享功能將內容分享到其他應用
+
+### 🏷️ 標籤系統
+- **標籤分類**：為項目加上標籤以便分類管理
+- **標籤篩選**：點擊標籤圖示或滑動標籤即可快速篩選
+- **標籤顏色**：付費版可自訂標籤顏色
+
+### 🔊 語音功能
+- **朗讀內容**：點擊項目即可開啟預覽並朗讀內容
+- **調整語速**：在設定中可調整朗讀速度
+- **字幕顯示**：支援朗讀時同步顯示字幕
+
+### 🌐 網頁預覽
+- **URL 預覽**：自動產生連結預覽卡片
+- **內建瀏覽器**：直接在 App 內瀏覽網頁
+
+### 🎨 個人化設定
+- **主題顏色**：多種主題顏色可選擇
+- **深色模式**：支援深色/淺色模式切換
+- **字體大小**：可調整預覽畫面的字體大小
+
+### ☁️ 資料同步
+- **iCloud 同步**：在多個裝置間同步您的剪貼簿項目
+- **匯入/匯出**：支援 JSON 格式的資料備份與還原
+
+### 🎵 音訊檔案管理
+- **音訊儲存**：可將音訊檔案儲存至項目中
+- **音訊管理**：專用的音訊檔案管理介面（點擊 V 圖示）
+
+## 免費版 vs 付費版功能差異
+
+### ✅ 免費版功能
+- 基本剪貼簿管理（新增、複製、刪除、搜尋）
+- 釘選功能
+- 最多 10 個標籤
+- 語音朗讀
+- 網頁預覽
+- 基本主題顏色
+- iCloud 同步
+- 資料匯入/匯出
+
+### 🌟 付費版專屬功能
+- **無限標籤**：可以建立超過 10 個標籤
+- **自訂標籤顏色**：為每個標籤設定專屬的顏色
+- **刪除此使用說明**：付費版用戶可以刪除本使用說明項目
+- **未來更多功能**：持續開發中的進階功能
+
+## 快速操作提示
+
+### 在主畫面：
+- **點擊項目**：開啟預覽並朗讀
+- **點擊圖示**：快速複製到剪貼簿
+- **左滑**：分享、釘選
+- **右滑**：刪除、加標籤、重新命名
+- **長按拖曳**：拖放內容到其他應用
+- **下拉更新**：執行 iCloud 同步
+
+### 工具列圖示：
+- **🔍 搜尋欄**：輸入關鍵字搜尋項目
+- **🎤 麥克風**：語音搜尋
+- **➕ 加號**：手動新增項目或從剪貼簿新增
+- **T 圖示**：標籤篩選
+- **V 圖示**：音訊檔案管理
+- **S 圖示**：開啟設定
+
+### 在設定中：
+- 調整自動清理規則
+- 開啟/關閉 iCloud 同步
+- 管理垃圾桶中的項目
+- 匯出/匯入資料備份
+- 購買付費版功能
+
+---
+
+💡 **小提示**：本使用說明項目永遠保持在最上方，僅付費版用戶可以刪除。
+
+如有任何問題或建議，歡迎聯絡開發者！
+"""
+        
+        // Check if the guide item already exists
+        if let existingGuide = items.first(where: { $0.id == userGuideItemID }) {
+            // Update content if needed (in case we want to update the guide in future versions)
+            if existingGuide.content != guideContent {
+                if let index = items.firstIndex(where: { $0.id == userGuideItemID }) {
+                    items[index].content = guideContent
+                    items[index].timestamp = Date()
+                    sortAndSave()
+                }
+            }
+        } else {
+            // Create the guide item
+            let guideItem = ClipboardItem(
+                id: userGuideItemID,
+                content: guideContent,
+                type: UTType.text.identifier,
+                filename: nil,
+                timestamp: Date(),
+                isPinned: true, // Always pinned
+                displayName: "CC Isle 使用說明",
+                isTrashed: false,
+                tags: nil,
+                fileData: nil
+            )
+            items.insert(guideItem, at: 0)
+            sortAndSave()
+        }
     }
     
     func performCloudSync() async {
@@ -113,6 +246,11 @@ class ClipboardManager: ObservableObject {
     }
     
     func moveItemToTrash(item: ClipboardItem) {
+        // Prevent deleting the user guide in free version
+        if item.id == userGuideItemID && !SubscriptionManager.shared.isPro {
+            print("⚠️ 使用說明項目僅限付費版可以刪除")
+            return
+        }
         guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
         items[index].isTrashed = true; items[index].timestamp = Date()
         sortAndSave()
@@ -125,6 +263,11 @@ class ClipboardManager: ObservableObject {
     }
 
     func permanentlyDeleteItem(item: ClipboardItem) {
+        // Prevent deleting the user guide in free version
+        if item.id == userGuideItemID && !SubscriptionManager.shared.isPro {
+            print("⚠️ 使用說明項目僅限付費版可以刪除")
+            return
+        }
         if let filename = item.filename, let containerURL = getSharedContainerURL() {
             let fileURL = containerURL.appendingPathComponent(filename); try? fileManager.removeItem(at: fileURL)
         }
@@ -149,7 +292,12 @@ class ClipboardManager: ObservableObject {
     func sortAndSave(skipCloud: Bool = false) {
         guard dataLoadError == nil else { print("‼️ 偵測到資料載入錯誤，已阻止儲存操作以保護原始資料。"); return }
         items.sort { item1, item2 in
+            // User guide always comes first
+            if item1.id == userGuideItemID { return true }
+            if item2.id == userGuideItemID { return false }
+            // Then sort by pinned status
             if item1.isPinned != item2.isPinned { return item1.isPinned && !item2.isPinned }
+            // Finally sort by timestamp
             return item1.timestamp > item2.timestamp
         }
         guard didInitializeSuccessfully else { return }
@@ -297,14 +445,14 @@ class ClipboardManager: ObservableObject {
         if isDayCleanupEnabled {
             let dateLimit = Calendar.current.date(byAdding: .day, value: -clearAfterDays, to: Date())!
             let originalCount = tempItems.count
-            tempItems.removeAll { !$0.isPinned && !$0.isTrashed && $0.timestamp < dateLimit }
+            tempItems.removeAll { !$0.isPinned && !$0.isTrashed && $0.timestamp < dateLimit && $0.id != userGuideItemID }
             if tempItems.count != originalCount { itemsDidChange = true }
         }
 
         if isCountCleanupEnabled && tempItems.filter({ !$0.isTrashed }).count > maxItemCount {
             tempItems.sort { $0.timestamp > $1.timestamp }; tempItems.sort { $0.isPinned && !$1.isPinned }
             while tempItems.filter({ !$0.isTrashed }).count > maxItemCount {
-                if let lastNonPinnedIndex = tempItems.lastIndex(where: { !$0.isPinned && !$0.isTrashed }) {
+                if let lastNonPinnedIndex = tempItems.lastIndex(where: { !$0.isPinned && !$0.isTrashed && $0.id != userGuideItemID }) {
                     let itemToDelete = tempItems[lastNonPinnedIndex]; tempItems.remove(at: lastNonPinnedIndex)
                     if UserDefaults.standard.bool(forKey: "iCloudSyncEnabled") { cloudKitManager.delete(itemID: itemToDelete.id) }
                 } else { break }

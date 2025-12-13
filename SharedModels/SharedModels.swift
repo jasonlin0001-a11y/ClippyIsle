@@ -6,6 +6,9 @@ import UniformTypeIdentifiers
 // MARK: - Global Constants & Functions
 public let appGroupID = "group.com.shihchieh.clippyisle"
 
+// Built-in User Guide Item UUID (fixed UUID to identify the special guide item)
+public let userGuideItemID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+
 public func saveFileDataToAppGroup(data: Data, type: String) -> String? {
     guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) else {
         print("❌ 儲存檔案失敗：無法取得共享容器 URL。")
