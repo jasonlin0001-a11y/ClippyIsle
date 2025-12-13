@@ -44,12 +44,16 @@ struct SettingsModalPresenterView: View {
             .alert("Import Result", isPresented: $isShowingImportAlert, presenting: importAlertMessage) { msg in Button("OK") {} } message: { msg in Text(msg) }
             .alert("Share Link Created", isPresented: $isShowingFirebaseShareAlert, presenting: firebaseShareURL) { url in
                 Button("Copy Link") { 
+                    print("🔥 Copy Link button pressed")
                     UIPasteboard.general.string = url
                 }
                 Button("Share") {
+                    print("🔥 Share button pressed, setting showShareSheet = true")
                     showShareSheet = true
                 }
-                Button("OK") {}
+                Button("OK") {
+                    print("🔥 OK button pressed")
+                }
             } message: { url in 
                 Text("Share this link with others to let them import your clipboard items:\n\n\(url)")
             }
@@ -335,7 +339,9 @@ struct SettingsView: View {
             Button(action: exportAllData) { Text("Export All Data") }
             Button { isShowingTagExport = true } label: { Text("Selective Export...") }
             
-            Button(action: shareAllViaFirebase) { 
+            Button { 
+                shareAllViaFirebase()
+            } label: { 
                 Label("Share All via Firebase", systemImage: "square.and.arrow.up.on.cloud")
             }
             Button { isShowingTagFirebaseShare = true } label: { 
@@ -375,20 +381,26 @@ struct SettingsView: View {
     }
     
     private func shareAllViaFirebase() {
+        print("🔥 shareAllViaFirebase() called")
         let items = clipboardManager.items.filter { !$0.isTrashed }
+        print("🔥 Found \(items.count) non-trashed items")
         guard !items.isEmpty else {
+            print("🔥 No items to share")
             importAlertMessage = "No items to share."
             isShowingImportAlert = true
             return
         }
         
+        print("🔥 Calling FirebaseManager.shared.shareItems()")
         FirebaseManager.shared.shareItems(items) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let shareURL):
+                    print("🔥 Success! Share URL: \(shareURL)")
                     self.firebaseShareURL = shareURL
                     self.isShowingFirebaseShareAlert = true
                 case .failure(let error):
+                    print("🔥 Error: \(error.localizedDescription)")
                     self.importAlertMessage = "Firebase share failed.\nError: \(error.localizedDescription)"
                     self.isShowingImportAlert = true
                 }
