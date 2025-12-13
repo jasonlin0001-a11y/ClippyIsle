@@ -114,12 +114,12 @@ Find your item's context menu (usually in the List item's `.contextMenu { }` blo
 
 ### 3.4: Add CloudSharing Modifier
 
+**Important:** Only present the sharing sheet when you have a valid entity to share. 
+
 Add this modifier to your main view (after `.navigationTitle` or similar):
 
-**Note:** Only present the sheet when itemToShare is valid. The sheet should not appear if itemToShare is nil.
-
 ```swift
-// Option 1: Use if-let binding (recommended)
+// Conditionally show sharing based on valid entity
 if let itemToShare = itemToShare {
     EmptyView()
         .cloudSharing(
@@ -128,10 +128,9 @@ if let itemToShare = itemToShare {
             container: CKContainer(identifier: "iCloud.J894ABBU74.ClippyIsle")
         )
 }
-
-// Option 2: Guard against nil in shareItem method
-// Ensure shareItem() only sets isShowingShareSheet = true when entity is valid
 ```
+
+**Note:** Ensure your `shareItem()` method only sets `isShowingShareSheet = true` when the entity is successfully created and saved.
 
 ## Step 4: Build and Test
 

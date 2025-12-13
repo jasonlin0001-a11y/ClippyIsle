@@ -95,8 +95,17 @@ class PersistenceController {
             return
         }
         
-        container.purgeObjectsAndRecordsInZone(with: share.recordID.zoneID, in: .shared) { zoneID, error in
-            completion(error)
+        // Stop sharing by deleting the share record
+        // This removes the share but keeps the object in the owner's database
+        container.persistentStoreCoordinator.perform {
+            do {
+                let context = self.container.viewContext
+                context.delete(share)
+                try context.save()
+                completion(nil)
+            } catch {
+                completion(error)
+            }
         }
     }
 }

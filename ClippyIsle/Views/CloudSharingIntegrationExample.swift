@@ -201,11 +201,15 @@ struct ContentViewWithSharing: View {
                 }
             }
         }
-        .cloudSharing(
-            isPresented: $isShowingShareSheet,
-            item: itemToShare ?? ClipboardItemEntity(context: PersistenceController.shared.container.viewContext),
-            container: CKContainer(identifier: "iCloud.J894ABBU74.ClippyIsle")
-        )
+        // Conditional sharing sheet - only show when we have a valid entity
+        if let itemToShare = itemToShare {
+            EmptyView()
+                .cloudSharing(
+                    isPresented: $isShowingShareSheet,
+                    item: itemToShare,
+                    container: CKContainer(identifier: "iCloud.J894ABBU74.ClippyIsle")
+                )
+        }
     }
     
     // Helper methods
