@@ -5,6 +5,8 @@ struct ClippyIsleApp: App {
     // 1. 初始化 Singleton (因為 init 是空的，這裡幾乎不耗時)
     @StateObject private var subscriptionManager = SubscriptionManager.shared
     @State private var showSplash = true
+    @State private var showImportAlert = false
+    @State private var importAlertMessage = ""
     
     init() {
         LaunchLogger.log("ClippyIsleApp.init() - START")
@@ -27,6 +29,14 @@ struct ClippyIsleApp: App {
                     .onAppear {
                         LaunchLogger.log("ClippyIsleApp.body.WindowGroup - onAppear")
                     }
+                    .onOpenURL { url in
+                        handleIncomingURL(url)
+                    }
+                    .alert("Import Result", isPresented: $showImportAlert) {
+                        Button("OK") {}
+                    } message: {
+                        Text(importAlertMessage)
+                    }
                 
                 // Splash Screen Overlay
                 if showSplash {
@@ -34,6 +44,21 @@ struct ClippyIsleApp: App {
                         .transition(.opacity)
                         .zIndex(1)
                 }
+            }
+        }
+    }
+    
+    private func handleIncomingURL(_ url: URL) {
+        // Handle ccisle:// URL scheme for import
+        if url.scheme == "ccisle" {
+            Task { @MainActor in
+                do {
+                    let count = try ClipboardManager.shared.importFromURLScheme(url.absoluteString)
+                    importAlertMessage = "Import successful!\nAdded \(count) new items."
+                } catch {
+                    importAlertMessage = "Import failed.\nError: \(error.localizedDescription)"
+                }
+                showImportAlert = true
             }
         }
     }

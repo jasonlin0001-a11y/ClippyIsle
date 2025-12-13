@@ -339,6 +339,45 @@ struct SettingsView: View {
     }
     
     private func exportAllData() {
-        do { exportURL = try clipboardManager.exportData() } catch { importAlertMessage = "Export failed.\nError: \(error.localizedDescription)"; isShowingImportAlert = true }
+        do {
+            let result = try clipboardManager.exportDataHybrid()
+            handleExportResult(result)
+        } catch {
+            importAlertMessage = "Export failed.\nError: \(error.localizedDescription)"
+            isShowingImportAlert = true
+        }
+    }
+    
+    private func handleExportResult(_ result: ClipboardManager.ExportResult) {
+        switch result.format {
+        case .urlScheme(let urlString):
+            // Short content - share ccisle:// URL
+            let sizeInKB = Double(result.estimatedSize) / 1024.0
+            importAlertMessage = String(format: "Short content detected (%.1f KB)\n\nExporting as ccisle:// URL link.\nThis can be easily shared through messaging apps.", sizeInKB)
+            isShowingImportAlert = true
+            
+            // After showing alert, share the URL
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                shareURLScheme(urlString)
+            }
+            
+        case .json(let url):
+            // Long content - share JSON file
+            let sizeInKB = Double(result.estimatedSize) / 1024.0
+            importAlertMessage = String(format: "Large content detected (%.1f KB)\n\nExporting as standard .json backup file.\nThis format works well with all apps including LINE.", sizeInKB)
+            isShowingImportAlert = true
+            exportURL = url
+        }
+    }
+    
+    private func shareURLScheme(_ urlString: String) {
+        guard let sourceView = UIApplication.shared.windows.first?.rootViewController?.view else { return }
+        let activityVC = UIActivityViewController(activityItems: [urlString], applicationActivities: nil)
+        if let popover = activityVC.popoverPresentationController {
+            popover.sourceView = sourceView
+            popover.sourceRect = CGRect(x: sourceView.bounds.midX, y: sourceView.bounds.midY, width: 0, height: 0)
+            popover.permittedArrowDirections = []
+        }
+        sourceView.window?.rootViewController?.present(activityVC, animated: true)
     }
 }
