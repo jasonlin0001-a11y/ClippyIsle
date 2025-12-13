@@ -50,12 +50,12 @@ class PersistenceController {
     
     /// Check if an item can be shared
     func canShare(object: NSManagedObject) -> Bool {
-        return container.canUpdateRecord(for: object.objectID)
+        return container.canUpdateRecord(forManagedObjectWith: object.objectID)
     }
     
     /// Check if an item is already shared
     func isShared(object: NSManagedObject) -> Bool {
-        return container.isShared(object: object.objectID)
+        return container.isSharing(object: object)
     }
     
     /// Get existing share for an object
@@ -65,7 +65,10 @@ class PersistenceController {
         do {
             // Use Core Data to fetch the share record for this object
             let shares = try container.fetchShares(matching: [object.objectID])
-            return shares.first
+            if let sharesDictionary = shares as? [NSManagedObjectID: CKShare] {
+                return sharesDictionary[object.objectID]
+            }
+            return nil
         } catch {
             print("Error fetching share: \(error)")
             return nil
