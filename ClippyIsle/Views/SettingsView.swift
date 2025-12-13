@@ -22,6 +22,10 @@ struct SettingsModalPresenterView: View {
     @Binding var isShowingHardResetAlert: Bool
     @Binding var confirmationText: String
     @Binding var isShowingTagExport: Bool
+    @Binding var firebaseShareURL: String?
+    @Binding var isShowingFirebaseShareAlert: Bool
+    @Binding var isShowingTagFirebaseShare: Bool
+    @Binding var showShareSheet: Bool
     @ObservedObject var clipboardManager: ClipboardManager
     let dismissAction: () -> Void
 
@@ -30,8 +34,29 @@ struct SettingsModalPresenterView: View {
             .sheet(isPresented: $isShowingTrash) { TrashView(clipboardManager: clipboardManager) }
             .sheet(item: $exportURL) { url in ActivityView(activityItems: [url]) }
             .sheet(isPresented: $isShowingTagExport) { TagExportSelectionView(clipboardManager: clipboardManager, exportURL: $exportURL, isShowingImportAlert: $isShowingImportAlert, importAlertMessage: $importAlertMessage) }
+            .sheet(isPresented: $isShowingTagFirebaseShare) { TagFirebaseShareView(clipboardManager: clipboardManager, firebaseShareURL: $firebaseShareURL, isShowingFirebaseShareAlert: $isShowingFirebaseShareAlert, isShowingImportAlert: $isShowingImportAlert, importAlertMessage: $importAlertMessage) }
+            .sheet(isPresented: $showShareSheet) {
+                if let urlString = firebaseShareURL {
+                    ActivityView(activityItems: [urlString])
+                }
+            }
             .fileImporter(isPresented: $isImporting, allowedContentTypes: [.json], allowsMultipleSelection: false) { result in handleImport(result: result) }
             .alert("Import Result", isPresented: $isShowingImportAlert, presenting: importAlertMessage) { msg in Button("OK") {} } message: { msg in Text(msg) }
+            .alert("Share Link Created", isPresented: $isShowingFirebaseShareAlert, presenting: firebaseShareURL) { url in
+                Button("Copy Link") { 
+                    print("🔥 Copy Link button pressed")
+                    UIPasteboard.general.string = url
+                }
+                Button("Share") {
+                    print("🔥 Share button pressed, setting showShareSheet = true")
+                    showShareSheet = true
+                }
+                Button("OK") {
+                    print("🔥 OK button pressed")
+                }
+            } message: { url in 
+                Text("Share this link with others to let them import your clipboard items:\n\n\(url)")
+            }
             .alert("Clear Website Cache?", isPresented: $isShowingClearCacheAlert) {
                 Button("Clear", role: .destructive) { clearWebViewCache() }; Button("Cancel", role: .cancel) {}
             } message: { Text("This will remove all cookies, login sessions, and cached data for websites viewed within the app. This action cannot be undone.") }
@@ -100,6 +125,10 @@ struct SettingsView: View {
     @State private var importAlertMessage: String?
     @State private var isShowingImportAlert = false
     @State private var isShowingTagExport = false
+    @State private var firebaseShareURL: String?
+    @State private var isShowingFirebaseShareAlert = false
+    @State private var isShowingTagFirebaseShare = false
+    @State private var showShareSheet = false
 
     let countOptions = [50, 100, 200, 0]
     let dayOptions = [7, 30, 90, 0]
@@ -171,7 +200,7 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() } } }
-            .background(SettingsModalPresenterView(isShowingTrash: $isShowingTrash, exportURL: $exportURL, isImporting: $isImporting, isShowingImportAlert: $isShowingImportAlert, importAlertMessage: $importAlertMessage, isShowingClearCacheAlert: $isShowingClearCacheAlert, isShowingCacheClearedAlert: $isShowingCacheClearedAlert, isShowingHardResetAlert: $isShowingHardResetAlert, confirmationText: $confirmationText, isShowingTagExport: $isShowingTagExport, clipboardManager: clipboardManager, dismissAction: { dismiss() }))
+            .background(SettingsModalPresenterView(isShowingTrash: $isShowingTrash, exportURL: $exportURL, isImporting: $isImporting, isShowingImportAlert: $isShowingImportAlert, importAlertMessage: $importAlertMessage, isShowingClearCacheAlert: $isShowingClearCacheAlert, isShowingCacheClearedAlert: $isShowingCacheClearedAlert, isShowingHardResetAlert: $isShowingHardResetAlert, confirmationText: $confirmationText, isShowingTagExport: $isShowingTagExport, firebaseShareURL: $firebaseShareURL, isShowingFirebaseShareAlert: $isShowingFirebaseShareAlert, isShowingTagFirebaseShare: $isShowingTagFirebaseShare, showShareSheet: $showShareSheet, clipboardManager: clipboardManager, dismissAction: { dismiss() }))
             .sheet(isPresented: $showPaywall) { PaywallView() }
             .onAppear {
                 WebServerManager.shared.clipboardManager = clipboardManager
@@ -309,6 +338,38 @@ struct SettingsView: View {
             Button { isImporting = true } label: { Text("Import Data") }
             Button(action: exportAllData) { Text("Export All Data") }
             Button { isShowingTagExport = true } label: { Text("Selective Export...") }
+            
+            Button {
+                print("🔥🔥🔥 SHARE ALL BUTTON TAPPED - START")
+                let items = clipboardManager.items.filter { !$0.isTrashed }
+                if items.isEmpty {
+                    print("🔥 No items to share")
+                    importAlertMessage = "No items to share."
+                    isShowingImportAlert = true
+                } else {
+                    print("🔥 Sharing \(items.count) items")
+                    FirebaseManager.shared.shareItems(items) { result in
+                        DispatchQueue.main.async {
+                            switch result {
+                            case .success(let shareURL):
+                                print("🔥 SUCCESS: \(shareURL)")
+                                self.firebaseShareURL = shareURL
+                                self.isShowingFirebaseShareAlert = true
+                            case .failure(let error):
+                                print("🔥 ERROR: \(error)")
+                                self.importAlertMessage = "Firebase share failed.\nError: \(error.localizedDescription)"
+                                self.isShowingImportAlert = true
+                            }
+                        }
+                    }
+                }
+            } label: {
+                Text("Share All via Firebase")
+            }
+            
+            Button { isShowingTagFirebaseShare = true } label: { 
+                Text("Share Selected Tags via Firebase...")
+            }
         }
     }
     

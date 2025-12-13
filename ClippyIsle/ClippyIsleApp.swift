@@ -1,4 +1,5 @@
 import SwiftUI
+import FirebaseCore
 
 @main
 struct ClippyIsleApp: App {
@@ -8,6 +9,8 @@ struct ClippyIsleApp: App {
     
     init() {
         LaunchLogger.log("ClippyIsleApp.init() - START")
+        // Configure Firebase
+        FirebaseApp.configure()
         // App init完成
         LaunchLogger.log("ClippyIsleApp.init() - END")
     }
@@ -27,6 +30,9 @@ struct ClippyIsleApp: App {
                     .onAppear {
                         LaunchLogger.log("ClippyIsleApp.body.WindowGroup - onAppear")
                     }
+                    .onOpenURL { url in
+                        handleDeepLink(url)
+                    }
                 
                 // Splash Screen Overlay
                 if showSplash {
@@ -34,6 +40,62 @@ struct ClippyIsleApp: App {
                         .transition(.opacity)
                         .zIndex(1)
                 }
+            }
+        }
+    }
+    
+    // MARK: - Deep Link Handling
+    private func handleDeepLink(_ url: URL) {
+        // Check if this is our import URL scheme: ccisle://import?id=DOC_ID
+        guard url.scheme == "ccisle",
+              url.host == "import" else {
+            print("⚠️ Unrecognized deep link: \(url)")
+            return
+        }
+        
+        // Extract the 'id' query parameter
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let queryItems = components.queryItems,
+              let idItem = queryItems.first(where: { $0.name == "id" }),
+              let shareId = idItem.value else {
+            print("⚠️ No 'id' parameter found in deep link")
+            return
+        }
+        
+        print("📥 Importing shared items with ID: \(shareId)")
+        
+        // Download items from Firebase
+        FirebaseManager.shared.downloadItems(byShareId: shareId) { result in
+            switch result {
+            case .success(let items):
+                DispatchQueue.main.async {
+                    // Import items while preserving their metadata
+                    let clipboardManager = ClipboardManager.shared
+                    for item in items {
+                        // Create new item with fresh ID and timestamp for import
+                        var importedItem = ClipboardItem(
+                            content: item.content,
+                            type: item.type,
+                            filename: item.filename,
+                            timestamp: Date(), // Use current time for import
+                            isPinned: false, // Don't preserve pinned status on import
+                            displayName: item.displayName,
+                            isTrashed: false, // Don't import trashed items
+                            tags: item.tags,
+                            fileData: nil // File data handled by ClipboardManager if present
+                        )
+                        
+                        // Insert at beginning and save
+                        clipboardManager.items.insert(importedItem, at: 0)
+                    }
+                    
+                    // Save all changes at once
+                    clipboardManager.sortAndSave()
+                    
+                    print("✅ Successfully imported \(items.count) item(s)")
+                }
+            case .failure(let error):
+                print("❌ Failed to import items: \(error.localizedDescription)")
             }
         }
     }
