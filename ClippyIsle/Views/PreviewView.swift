@@ -38,6 +38,8 @@ struct PreviewView: View {
     @State private var isShowingDeleteAudioAlert: Bool = false
     
     @State private var showSaveAlert = false
+    @State private var pdfShareURL: URL?
+    @State private var isShowingPDFShare = false
 
     private var isYouTubeItem: Bool { extractYouTubeVideoID(from: item.content) != nil }
     private var isFacebookItem: Bool { item.content.contains("facebook.com") }
@@ -85,11 +87,6 @@ struct PreviewView: View {
             UIApplication.shared.isIdleTimerDisabled = false
         }
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: { dismiss() }) {
-                    Image(systemName: "chevron.down").font(.body.weight(.semibold))
-                }
-            }
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 if isYouTubeItem || isFacebookItem || isTwitterItem || isWebItem {
                     let urlToOpen = currentWebURL ?? URL(string: item.content)
@@ -120,6 +117,11 @@ struct PreviewView: View {
         // **NEW**: Attach Paywall Sheet
         .sheet(isPresented: $showPaywall) {
             PaywallView()
+        }
+        .sheet(isPresented: $isShowingPDFShare) {
+            if let url = pdfShareURL {
+                ActivityView(activityItems: [url])
+            }
         }
         .navigationBarBackButtonHidden(true)
         .navigationTitle(Text(navigationTitle))
@@ -367,6 +369,11 @@ struct PreviewView: View {
                         .font(.title3)
                 }
                 
+                Button(action: exportToPDF) {
+                    Image(systemName: "doc.text")
+                        .font(.title3)
+                }
+                
                 Button(action: { fontSize -= 1 }) { Image(systemName: "textformat.size.smaller") }.disabled(fontSize <= 12)
                 Button(action: { fontSize += 1 }) { Image(systemName: "textformat.size.larger") }.disabled(fontSize >= 28)
                 Button(action: { keepScreenOn.toggle() }) { Image(systemName: keepScreenOn ? "sun.max.fill" : "sun.max") }.tint(keepScreenOn ? .yellow : .secondary)
@@ -538,5 +545,88 @@ struct PreviewView: View {
             popover.sourceView = sourceView; popover.sourceRect = CGRect(x: sourceView.bounds.midX, y: sourceView.bounds.midY, width: 0, height: 0); popover.permittedArrowDirections = []
         }
         sourceView.window?.rootViewController?.present(activityVC, animated: true)
+    }
+    
+    private func exportToPDF() {
+        // Get the content to export
+        let contentToExport: String
+        
+        if isWebItem || isYouTubeItem || isFacebookItem || isTwitterItem {
+            if webDisplayMode == .text, let text = extractedWebText, !text.isEmpty {
+                contentToExport = text
+            } else {
+                contentToExport = extractedWebText ?? item.content
+            }
+        } else {
+            contentToExport = draftItem?.content ?? item.content
+        }
+        
+        guard !contentToExport.isEmpty else { return }
+        
+        // Create PDF
+        let pdfRenderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 595, height: 842)) // A4 size
+        
+        let pdfData = pdfRenderer.pdfData { context in
+            context.beginPage()
+            
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.alignment = .left
+            paragraphStyle.lineBreakMode = .byWordWrapping
+            
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: CGFloat(fontSize)),
+                .paragraphStyle: paragraphStyle
+            ]
+            
+            let textRect = CGRect(x: 40, y: 40, width: 515, height: 762) // Margins
+            
+            // Split content into pages if needed
+            let text = contentToExport as NSString
+            var remainingText = text
+            var currentPage = 0
+            
+            while remainingText.length > 0 {
+                if currentPage > 0 {
+                    context.beginPage()
+                }
+                
+                let frameSetter = CTFramesetterCreateWithAttributedString(
+                    NSAttributedString(string: remainingText as String, attributes: attributes)
+                )
+                
+                let path = UIBezierPath(rect: textRect).cgPath
+                let frame = CTFramesetterCreateFrame(frameSetter, CFRangeMake(0, 0), path, nil)
+                
+                let visibleRange = CTFrameGetVisibleStringRange(frame)
+                
+                remainingText.draw(in: textRect, withAttributes: attributes)
+                
+                if visibleRange.length == remainingText.length {
+                    break
+                }
+                
+                remainingText = remainingText.substring(from: visibleRange.length) as NSString
+                currentPage += 1
+                
+                if currentPage > 100 { // Safety limit
+                    break
+                }
+            }
+        }
+        
+        // Save PDF to temporary location
+        let fileName = (item.displayName ?? "Export") + ".pdf"
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+        
+        do {
+            try pdfData.write(to: tempURL)
+            pdfShareURL = tempURL
+            isShowingPDFShare = true
+            
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(.success)
+        } catch {
+            print("Failed to save PDF: \(error)")
+        }
     }
 }

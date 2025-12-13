@@ -220,7 +220,7 @@ struct ContentView: View {
         }
         
         .sheet(item: $itemToTag) { item in TagEditView(item: Binding(get: { item }, set: { itemToTag = $0 }), clipboardManager: clipboardManager) }
-        .fullScreenCover(isPresented: $isSheetPresented, onDismiss: { isSheetPresented = false; previewState = .idle }) {
+        .sheet(isPresented: $isSheetPresented, onDismiss: { isSheetPresented = false; previewState = .idle }) {
             previewSheetContent()
         }
         .alert("Rename Item", isPresented: $isShowingRenameAlert) {
@@ -255,7 +255,7 @@ struct ContentView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 if selectedTagFilter != nil { Button { selectedTagFilter = nil } label: { Image(systemName: "xmark.circle.fill") } }
-                else { Button { clipboardManager.isLiveActivityOn.toggle() } label: { Image(systemName: "c.circle.fill").font(.system(size: 20)).foregroundColor(clipboardManager.isLiveActivityOn ? Color.green : Color.red) }.disabled(!areActivitiesEnabled) }
+                else { Button { clipboardManager.isLiveActivityOn.toggle() } label: { Image(systemName: "c.circle.fill").font(.system(size: 20, weight: .bold)).foregroundColor(clipboardManager.isLiveActivityOn ? Color.green : Color.red) }.disabled(!areActivitiesEnabled) }
             }
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 Button { isShowingTagSheet = true } label: {
