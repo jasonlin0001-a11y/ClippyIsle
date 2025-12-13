@@ -5,9 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CC ISLE 剪貼簿分享</title>
 
+    <!-- Open Graph Tags for LINE and other messaging apps -->
     <meta property="og:title" content="CC ISLE 剪貼簿分享">
-    <meta property="og:description" content="點擊此連結將資料匯入您的 App">
-    <meta property="og:image" content="https://cc-isle.web.app/preview_image.png"> <meta property="og:type" content="website">
+    <meta property="og:description" content="點擊此連結將剪貼簿資料匯入您的 CC ISLE App">
+    <meta property="og:image" content="https://cc-isle.web.app/preview_image.png">
+    <meta property="og:url" content="https://cc-isle.web.app/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="CC ISLE">
+    
+    <!-- Twitter Card Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="CC ISLE 剪貼簿分享">
+    <meta name="twitter:description" content="點擊此連結將剪貼簿資料匯入您的 CC ISLE App">
+    <meta name="twitter:image" content="https://cc-isle.web.app/preview_image.png">
 
     <style>
         body {
@@ -15,68 +25,146 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify_content: center;
+            justify-content: center;
             height: 100vh;
             margin: 0;
-            background-color: #f2f2f7;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             text-align: center;
         }
         .card {
             background: white;
-            padding: 2rem;
+            padding: 2.5rem;
             border-radius: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
             max-width: 90%;
-            width: 300px;
+            width: 350px;
+            animation: slideUp 0.5s ease-out;
         }
-        h1 { font-size: 1.2rem; color: #333; margin-bottom: 1rem; }
-        p { color: #666; margin-bottom: 2rem; font-size: 0.9rem; }
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            animation: bounce 1s ease-in-out infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        h1 { 
+            font-size: 1.5rem; 
+            color: #333; 
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        p { 
+            color: #666; 
+            margin-bottom: 2rem; 
+            font-size: 1rem;
+            line-height: 1.5;
+        }
         .btn {
-            background-color: #007AFF;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 12px 24px;
+            padding: 14px 32px;
             border-radius: 12px;
             text-decoration: none;
             font-weight: 600;
             display: inline-block;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
         }
-        .footer { margin-top: 2rem; font-size: 0.8rem; color: #999; }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        .btn:active {
+            transform: translateY(0);
+        }
+        .footer { 
+            margin-top: 2rem; 
+            font-size: 0.85rem; 
+            color: #999;
+        }
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .error {
+            color: #e74c3c;
+            font-weight: 500;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 
     <script>
         window.onload = function() {
-            // 1. 抓取網址中的 id 參數 (例如 ?id=123)
+            // Extract the 'id' parameter from URL query string
             const urlParams = new URLSearchParams(window.location.search);
             const docId = urlParams.get('id');
 
             if (docId) {
-                // 2. 組合 Deep Link (喚醒 App 的鑰匙)
+                // Construct the deep link to open the app
                 const deepLink = "ccisle://import?id=" + docId;
 
-                // 3. 嘗試自動跳轉
+                // Attempt automatic redirect to app
                 window.location.href = deepLink;
 
-                // 4. 更新畫面文字
-                document.getElementById("status").innerText = "正在開啟 CC ISLE...";
+                // Update status message
+                document.getElementById("status").innerHTML = "正在開啟 CC ISLE...";
                 
-                // 5. 設定手動按鈕 (以防自動跳轉失敗)
-                document.getElementById("open-btn").href = deepLink;
+                // Set manual button link (fallback if auto-redirect fails)
+                const openBtn = document.getElementById("open-btn");
+                openBtn.href = deepLink;
+                openBtn.style.display = "inline-block";
+                
+                // Show fallback button after a short delay
+                setTimeout(function() {
+                    document.getElementById("status").innerHTML = "如果 App 沒有自動開啟";
+                    document.querySelector(".spinner").style.display = "none";
+                }, 2000);
             } else {
-                document.getElementById("status").innerText = "連結無效或缺少 ID";
+                // No ID found - show error
+                document.getElementById("status").innerHTML = '<span class="error">連結無效或缺少分享 ID</span>';
+                document.querySelector(".icon").innerHTML = "⚠️";
+                document.querySelector(".spinner").style.display = "none";
                 document.getElementById("open-btn").style.display = "none";
+                document.querySelector("p").innerHTML = "請確認您的分享連結是否完整。";
             }
         }
     </script>
 </head>
 <body>
     <div class="card">
-        <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
+        <div class="spinner"></div>
+        <div class="icon">📋</div>
         <h1 id="status">準備中...</h1>
-        <p>如果 App 沒有自動開啟，請點擊下方按鈕。</p>
-        <a id="open-btn" href="#" class="btn">開啟 App</a>
+        <p>請稍候，系統正在處理您的分享資料。</p>
+        <a id="open-btn" href="#" class="btn" style="display:none;">點擊開啟 App</a>
         
         <div class="footer">
-            尚未安裝？<a href="#" style="color:#007AFF;">前往 App Store 下載</a>
+            尚未安裝？<a href="https://apps.apple.com/app/cc-isle" target="_blank">前往 App Store 下載</a>
         </div>
     </div>
 </body>
