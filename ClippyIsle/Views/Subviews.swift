@@ -220,6 +220,60 @@ struct TagExportSelectionView: View {
     }
 }
 
+struct TagFirebaseShareView: View {
+    @ObservedObject var clipboardManager: ClipboardManager
+    @Binding var firebaseShareURL: String?
+    @Binding var isShowingFirebaseShareAlert: Bool
+    @Binding var isShowingImportAlert: Bool
+    @Binding var importAlertMessage: String?
+    @State private var selectedTags: Set<String> = []
+    @Environment(\.dismiss) var dismiss
+
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Select tags to share via Firebase")) {
+                    List(clipboardManager.allTags, id: \.self) { tag in
+                        Button(action: { if selectedTags.contains(tag) { selectedTags.remove(tag) } else { selectedTags.insert(tag) } }) {
+                            HStack { Text(tag); Spacer(); if selectedTags.contains(tag) { Image(systemName: "checkmark").foregroundColor(.accentColor) } }
+                        }.foregroundColor(.primary)
+                    }
+                }
+            }
+            .navigationTitle("Share via Firebase").navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Share") { shareSelectedTags() }.disabled(selectedTags.isEmpty) } }
+        }
+    }
+    
+    private func shareSelectedTags() {
+        let filteredItems = clipboardManager.items.filter { item in
+            guard let itemTags = item.tags, !item.isTrashed else { return false }
+            return !selectedTags.isDisjoint(with: itemTags)
+        }
+        
+        guard !filteredItems.isEmpty else {
+            importAlertMessage = "No items found for the selected tags."
+            isShowingImportAlert = true
+            dismiss()
+            return
+        }
+        
+        FirebaseManager.shared.shareItems(filteredItems) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let shareURL):
+                    self.firebaseShareURL = shareURL
+                    self.isShowingFirebaseShareAlert = true
+                case .failure(let error):
+                    self.importAlertMessage = "Firebase share failed.\nError: \(error.localizedDescription)"
+                    self.isShowingImportAlert = true
+                }
+                dismiss()
+            }
+        }
+    }
+}
+
 struct TagEditView: View {
     @Binding var item: ClipboardItem
     @ObservedObject var clipboardManager: ClipboardManager

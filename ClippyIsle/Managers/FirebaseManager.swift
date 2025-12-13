@@ -177,4 +177,49 @@ class FirebaseManager {
             }
         }
     }
+    
+    // MARK: - Share Items
+    /// Creates a shareable link for clipboard items by uploading to Firestore
+    /// - Parameters:
+    ///   - items: Array of ClipboardItem to share
+    ///   - completion: Result callback with shareable URL string or error
+    func shareItems(_ items: [ClipboardItem], completion: @escaping (Result<String, Error>) -> Void) {
+        // Convert items to array of dictionaries
+        var itemsData: [[String: Any]] = []
+        
+        for item in items {
+            let itemData: [String: Any] = [
+                "id": item.id.uuidString,
+                "content": item.content,
+                "type": item.type,
+                "timestamp": Timestamp(date: item.timestamp),
+                "isPinned": item.isPinned,
+                "isTrashed": item.isTrashed,
+                "filename": item.filename as Any,
+                "displayName": item.displayName as Any,
+                "tags": item.tags as Any
+            ]
+            itemsData.append(itemData)
+        }
+        
+        // Create a new document in sharedClipboards collection
+        let shareData: [String: Any] = [
+            "items": itemsData,
+            "createdAt": Timestamp(date: Date()),
+            "itemCount": items.count
+        ]
+        
+        // Add document and get auto-generated ID
+        let docRef = db.collection("sharedClipboards").document()
+        docRef.setData(shareData) { error in
+            if let error = error {
+                completion(.failure(error))
+            } else {
+                // Generate shareable deep link
+                let shareId = docRef.documentID
+                let shareURL = "ccisle://import?id=\(shareId)"
+                completion(.success(shareURL))
+            }
+        }
+    }
 }
