@@ -1,6 +1,7 @@
 import SwiftUI
 import CloudKit
 import UIKit
+import UniformTypeIdentifiers
 
 /// SwiftUI wrapper for UICloudSharingController
 struct CloudSharingView: UIViewControllerRepresentable {
@@ -64,12 +65,16 @@ struct CloudSharingView: UIViewControllerRepresentable {
                 UIColor.systemBackground.setFill()
                 context.fill(CGRect(origin: .zero, size: size))
                 
-                // Icon based on content type
+                // Icon based on content type using UTType conformance
                 let iconName: String
-                if item.type.contains("image") {
-                    iconName = "photo"
-                } else if item.type.contains("url") {
-                    iconName = "link"
+                if let utType = UTType(item.type) {
+                    if utType.conforms(to: .image) {
+                        iconName = "photo"
+                    } else if utType.conforms(to: .url) {
+                        iconName = "link"
+                    } else {
+                        iconName = "doc.text"
+                    }
                 } else {
                     iconName = "doc.text"
                 }
@@ -116,7 +121,7 @@ struct CloudSharingModifier: ViewModifier {
                         .padding()
                 }
             }
-            .onChange(of: isPresented) { newValue in
+            .onChange(of: isPresented) { _, newValue in
                 if newValue && share == nil {
                     prepareShare()
                 }

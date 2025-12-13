@@ -302,11 +302,9 @@ struct CoreDataMigrationHelper {
             let entities = try ClipboardItemEntity.fetchAll(in: context)
             let items = entities.map { $0.toClipboardItem() }
             
-            // Update clipboard manager
-            Task { @MainActor in
-                clipboardManager.items = items
-                clipboardManager.sortAndSave(skipCloud: true)
-            }
+            // Update clipboard manager on main actor
+            clipboardManager.items = items
+            clipboardManager.sortAndSave(skipCloud: true)
         } catch {
             print("❌ Sync failed: \(error.localizedDescription)")
         }

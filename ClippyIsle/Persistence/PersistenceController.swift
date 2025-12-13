@@ -66,8 +66,9 @@ class PersistenceController {
         let context = container.viewContext
         context.performAndWait {
             do {
-                let shares = try context.existingObjectsForFetchRequest(CKShare.fetchRequest(for: object)) as? [CKShare]
-                share = shares?.first
+                // Use Core Data to fetch the share record for this object
+                let shares = try container.fetchShares(matching: [object.objectID])
+                share = shares.first
             } catch {
                 print("Error fetching share: \(error)")
             }
@@ -101,14 +102,5 @@ class PersistenceController {
         container.purgeObjectsAndRecordsInZone(with: share.recordID.zoneID, in: .shared) { zoneID, error in
             completion(error)
         }
-    }
-}
-
-// MARK: - CKShare Fetch Request Extension
-extension CKShare {
-    static func fetchRequest(for object: NSManagedObject) -> NSFetchRequest<NSFetchRequestResult> {
-        let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "CKShare")
-        fetchRequest.predicate = NSPredicate(format: "recordName == %@", object.objectID.uriRepresentation().absoluteString)
-        return fetchRequest
     }
 }
