@@ -109,6 +109,7 @@ struct SettingsView: View {
     @State private var isShowingFirebaseShareAlert = false
     @State private var isShowingTagFirebaseShare = false
     @State private var showShareSheet = false
+    @State private var isSharingFirebase = false
 
     let countOptions = [50, 100, 200, 0]
     let dayOptions = [7, 30, 90, 0]
@@ -348,8 +349,10 @@ struct SettingsView: View {
                     isShowingImportAlert = true
                 } else {
                     print("🔥 Sharing \(items.count) items")
+                    isSharingFirebase = true
                     FirebaseManager.shared.shareItems(items) { result in
                         DispatchQueue.main.async {
+                            self.isSharingFirebase = false
                             switch result {
                             case .success(let shareURL):
                                 print("🔥 SUCCESS: \(shareURL)")
@@ -364,8 +367,15 @@ struct SettingsView: View {
                     }
                 }
             } label: {
-                Text("Share All via Firebase")
+                HStack {
+                    if isSharingFirebase {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                    }
+                    Text("Share All via Firebase")
+                }
             }
+            .disabled(isSharingFirebase)
             
             Button { isShowingTagFirebaseShare = true } label: { 
                 Text("Share Selected Tags via Firebase...")
