@@ -118,7 +118,6 @@ struct SettingsView: View {
     @State private var importAlertMessage: String?
     @State private var isShowingImportAlert = false
     @State private var isShowingTagExport = false
-    @State private var isShowingFirebaseShare = false
     @State private var firebaseShareURL: String?
     @State private var isShowingFirebaseShareAlert = false
     @State private var isShowingTagFirebaseShare = false
