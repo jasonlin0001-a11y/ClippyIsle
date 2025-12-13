@@ -52,6 +52,12 @@ struct ContentView: View {
     
     // State to control Audio Manager sheet
     @State private var isShowingAudioManager = false
+    
+    // State for batch sharing feature
+    @State private var isInSelectionMode = false
+    @State private var selectedItems: Set<UUID> = []
+    @State private var showCreateShareGroup = false
+    @State private var showShareGroupList = false
 
     @AppStorage("themeColorName") private var themeColorName: String = "blue"
     
@@ -237,6 +243,21 @@ struct ContentView: View {
         .sheet(isPresented: $showPaywall) {
             PaywallView()
         }
+        
+        // Batch Sharing: Create Share Group
+        .sheet(isPresented: $showCreateShareGroup) {
+            let itemsToShare = clipboardManager.items.filter { selectedItems.contains($0.id) }
+            CreateShareGroupView(selectedItems: itemsToShare)
+                .onDisappear {
+                    isInSelectionMode = false
+                    selectedItems.removeAll()
+                }
+        }
+        
+        // Batch Sharing: View Share Groups
+        .sheet(isPresented: $showShareGroupList) {
+            ShareGroupListView()
+        }
     }
     
     private func stopTranscription() {
@@ -258,25 +279,39 @@ struct ContentView: View {
                 else { Button { clipboardManager.isLiveActivityOn.toggle() } label: { Image(systemName: "c.circle.fill").font(.system(size: 20, weight: .bold)).foregroundColor(clipboardManager.isLiveActivityOn ? Color.green : Color.red) }.disabled(!areActivitiesEnabled) }
             }
             ToolbarItemGroup(placement: .navigationBarTrailing) {
-                Button { isShowingTagSheet = true } label: {
-                    Image(systemName: "t.circle.fill")
-                        .font(.system(size: 20, weight: .bold))
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
-                }
-                
-                Button { isShowingAudioManager = true } label: {
-                    Image(systemName: "v.circle.fill")
-                        .font(.system(size: 20, weight: .bold))
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
-                }
-                
-                Button { isShowingSettings = true } label: {
-                    Image(systemName: "s.circle.fill")
-                        .font(.system(size: 20, weight: .bold))
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
+                if !isInSelectionMode {
+                    Button { showShareGroupList = true } label: {
+                        Image(systemName: "square.and.arrow.up.on.square.fill")
+                            .font(.system(size: 20, weight: .bold))
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    
+                    Button { isShowingTagSheet = true } label: {
+                        Image(systemName: "t.circle.fill")
+                            .font(.system(size: 20, weight: .bold))
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    
+                    Button { isShowingAudioManager = true } label: {
+                        Image(systemName: "v.circle.fill")
+                            .font(.system(size: 20, weight: .bold))
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    
+                    Button { isShowingSettings = true } label: {
+                        Image(systemName: "s.circle.fill")
+                            .font(.system(size: 20, weight: .bold))
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                } else {
+                    Button("Cancel") {
+                        isInSelectionMode = false
+                        selectedItems.removeAll()
+                    }
                 }
             }
         }
@@ -296,48 +331,91 @@ struct ContentView: View {
             List {
                 ForEach(filteredItems) { item in
                     VStack(spacing: 0) {
-                        ClipboardItemRow(
-                            item: item,
-                            themeColor: themeColor,
-                            isHighlighted: item.id == newlyAddedItemID,
-                            clipboardManager: clipboardManager,
-                            copyAction: { copyItemToClipboard(item: item) }, 
-                            previewAction: { previewState = .loading(item) },
-                            createDragItem: { createDragItem(for: item) }, 
-                            togglePinAction: { clipboardManager.togglePin(for: item) },
-                            deleteAction: { itemToDelete = item; isShowingDeleteConfirm = true },
-                            renameAction: { itemToRename = item; newName = item.displayName ?? ""; isShowingRenameAlert = true },
-                            // **MODIFIED**: Tag Limit Logic
-                            tagAction: {
-                                // Check if user is Pro OR if total unique tags < 10
-                                if subscriptionManager.isPro || clipboardManager.allTags.count < 10 {
-                                    itemToTag = item
-                                } else {
-                                    showPaywall = true
+                        HStack(spacing: 10) {
+                            // Selection checkbox in selection mode
+                            if isInSelectionMode {
+                                Button {
+                                    if selectedItems.contains(item.id) {
+                                        selectedItems.remove(item.id)
+                                    } else {
+                                        selectedItems.insert(item.id)
+                                    }
+                                } label: {
+                                    Image(systemName: selectedItems.contains(item.id) ? "checkmark.circle.fill" : "circle")
+                                        .font(.system(size: 24))
+                                        .foregroundColor(selectedItems.contains(item.id) ? themeColor : .gray)
                                 }
-                            },
-                            shareAction: { shareItem(item: item) },
-                            linkPreviewAction: {
-                                // Toggle inline preview for URL items
-                                if item.type == UTType.url.identifier, URL(string: item.content) != nil {
-                                    withAnimation(.easeInOut(duration: 0.3)) {
-                                        if expandedPreviewItemID == item.id {
-                                            expandedPreviewItemID = nil
+                                .buttonStyle(.plain)
+                            }
+                            
+                            ClipboardItemRow(
+                                item: item,
+                                themeColor: themeColor,
+                                isHighlighted: item.id == newlyAddedItemID,
+                                clipboardManager: clipboardManager,
+                                copyAction: { 
+                                    if isInSelectionMode {
+                                        // Toggle selection in selection mode
+                                        if selectedItems.contains(item.id) {
+                                            selectedItems.remove(item.id)
                                         } else {
-                                            expandedPreviewItemID = item.id
+                                            selectedItems.insert(item.id)
+                                        }
+                                    } else {
+                                        copyItemToClipboard(item: item)
+                                    }
+                                }, 
+                                previewAction: { 
+                                    if !isInSelectionMode {
+                                        previewState = .loading(item)
+                                    }
+                                },
+                                createDragItem: { createDragItem(for: item) }, 
+                                togglePinAction: { clipboardManager.togglePin(for: item) },
+                                deleteAction: { itemToDelete = item; isShowingDeleteConfirm = true },
+                                renameAction: { itemToRename = item; newName = item.displayName ?? ""; isShowingRenameAlert = true },
+                                // **MODIFIED**: Tag Limit Logic
+                                tagAction: {
+                                    // Check if user is Pro OR if total unique tags < 10
+                                    if subscriptionManager.isPro || clipboardManager.allTags.count < 10 {
+                                        itemToTag = item
+                                    } else {
+                                        showPaywall = true
+                                    }
+                                },
+                                shareAction: { shareItem(item: item) },
+                                linkPreviewAction: {
+                                    // Toggle inline preview for URL items
+                                    if item.type == UTType.url.identifier, URL(string: item.content) != nil {
+                                        withAnimation(.easeInOut(duration: 0.3)) {
+                                            if expandedPreviewItemID == item.id {
+                                                expandedPreviewItemID = nil
+                                            } else {
+                                                expandedPreviewItemID = item.id
+                                            }
                                         }
                                     }
+                                },
+                                onTagLongPress: { tag in
+                                    // Toggle filter: if the tag is already filtered, clear it; otherwise, set it
+                                    if selectedTagFilter == tag {
+                                        selectedTagFilter = nil
+                                    } else {
+                                        selectedTagFilter = tag
+                                    }
                                 }
-                            },
-                            onTagLongPress: { tag in
-                                // Toggle filter: if the tag is already filtered, clear it; otherwise, set it
-                                if selectedTagFilter == tag {
-                                    selectedTagFilter = nil
+                            )
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if isInSelectionMode {
+                                if selectedItems.contains(item.id) {
+                                    selectedItems.remove(item.id)
                                 } else {
-                                    selectedTagFilter = tag
+                                    selectedItems.insert(item.id)
                                 }
                             }
-                        )
+                        }
                         
                         // Show inline preview if this item is expanded
                         if expandedPreviewItemID == item.id, 
@@ -377,41 +455,81 @@ struct ContentView: View {
 
     private var bottomToolbar: some View {
         HStack(spacing: 0) {
-            Image(systemName: "magnifyingglass").foregroundColor(.secondary).padding(.leading, 12)
-            TextField("Search...", text: $searchText).padding(.horizontal, 8).submitLabel(.search)
-            if !searchText.isEmpty { Button { searchText = ""; hideKeyboard() } label: { Image(systemName: "xmark.circle.fill").foregroundColor(Color(.systemGray3)) }.padding(.trailing, 8) }
-            
-            Button {
-                if isTranscribing {
-                    stopTranscription()
-                } else {
-                    isTranscribing = true
-                    speechRecognizer.startTranscribing()
-                }
-            } label: {
-                Image(systemName: "mic.fill")
-                    .foregroundColor(isTranscribing ? .red : .secondary)
-            }
-            .padding(.trailing, 8)
-            
-            Rectangle().frame(width: 1, height: 20).foregroundColor(.gray.opacity(0.3)).padding(.horizontal, 4)
-            Menu {
-                Button {
-                    let oldIDs = Set(clipboardManager.items.map { $0.id })
-                    clipboardManager.addNewItem(content: String(localized: "New Item"), type: UTType.text.identifier)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                        if let newItem = clipboardManager.items.first(where: { !oldIDs.contains($0.id) }) { highlightAndScroll(to: newItem.id) }
-                    }
-                } label: { Label("New Item", systemImage: "square.and.pencil") }
+            if !isInSelectionMode {
+                Image(systemName: "magnifyingglass").foregroundColor(.secondary).padding(.leading, 12)
+                TextField("Search...", text: $searchText).padding(.horizontal, 8).submitLabel(.search)
+                if !searchText.isEmpty { Button { searchText = ""; hideKeyboard() } label: { Image(systemName: "xmark.circle.fill").foregroundColor(Color(.systemGray3)) }.padding(.trailing, 8) }
                 
                 Button {
-                    let oldIDs = Set(clipboardManager.items.map { $0.id })
-                    clipboardManager.checkClipboard(isManual: true)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                        if let newItem = clipboardManager.items.first(where: { !oldIDs.contains($0.id) }) { highlightAndScroll(to: newItem.id) }
+                    if isTranscribing {
+                        stopTranscription()
+                    } else {
+                        isTranscribing = true
+                        speechRecognizer.startTranscribing()
                     }
-                } label: { Label("Add from Clipboard", systemImage: "doc.on.clipboard") }
-            } label: { Image(systemName: "plus.circle.fill").font(.system(size: 24, weight: .semibold)).foregroundColor(themeColor) }.padding(.trailing, 12)
+                } label: {
+                    Image(systemName: "mic.fill")
+                        .foregroundColor(isTranscribing ? .red : .secondary)
+                }
+                .padding(.trailing, 8)
+                
+                Rectangle().frame(width: 1, height: 20).foregroundColor(.gray.opacity(0.3)).padding(.horizontal, 4)
+                Menu {
+                    Button {
+                        let oldIDs = Set(clipboardManager.items.map { $0.id })
+                        clipboardManager.addNewItem(content: String(localized: "New Item"), type: UTType.text.identifier)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                            if let newItem = clipboardManager.items.first(where: { !oldIDs.contains($0.id) }) { highlightAndScroll(to: newItem.id) }
+                        }
+                    } label: { Label("New Item", systemImage: "square.and.pencil") }
+                    
+                    Button {
+                        let oldIDs = Set(clipboardManager.items.map { $0.id })
+                        clipboardManager.checkClipboard(isManual: true)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                            if let newItem = clipboardManager.items.first(where: { !oldIDs.contains($0.id) }) { highlightAndScroll(to: newItem.id) }
+                        }
+                    } label: { Label("Add from Clipboard", systemImage: "doc.on.clipboard") }
+                    
+                    Divider()
+                    
+                    Button {
+                        isInSelectionMode = true
+                    } label: { Label("Select Items to Share", systemImage: "checkmark.circle") }
+                } label: { Image(systemName: "plus.circle.fill").font(.system(size: 24, weight: .semibold)).foregroundColor(themeColor) }.padding(.trailing, 12)
+            } else {
+                // Selection mode toolbar
+                Text("\(selectedItems.count) selected")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .padding(.leading, 12)
+                
+                Spacer()
+                
+                Button {
+                    // Select all
+                    selectedItems = Set(filteredItems.map { $0.id })
+                } label: {
+                    Text("Select All")
+                        .font(.subheadline)
+                        .foregroundColor(themeColor)
+                }
+                .padding(.horizontal, 8)
+                
+                Button {
+                    // Create share group with selected items
+                    let itemsToShare = clipboardManager.items.filter { selectedItems.contains($0.id) }
+                    if !itemsToShare.isEmpty {
+                        showCreateShareGroup = true
+                    }
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 20))
+                        .foregroundColor(selectedItems.isEmpty ? .gray : themeColor)
+                }
+                .disabled(selectedItems.isEmpty)
+                .padding(.trailing, 12)
+            }
         }.frame(height: 46).background(.ultraThinMaterial).clipShape(Capsule()).shadow(color: .black.opacity(0.15), radius: 5, y: 2).padding(.horizontal, 22)
     }
     

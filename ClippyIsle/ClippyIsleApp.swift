@@ -6,6 +6,9 @@ struct ClippyIsleApp: App {
     @StateObject private var subscriptionManager = SubscriptionManager.shared
     @State private var showSplash = true
     
+    // Initialize PersistenceController for Core Data
+    let persistenceController = PersistenceController.shared
+    
     init() {
         LaunchLogger.log("ClippyIsleApp.init() - START")
         // App init完成
@@ -18,6 +21,7 @@ struct ClippyIsleApp: App {
                 ContentView()
                     // 2. 注入環境變數供全 App 使用
                     .environmentObject(subscriptionManager)
+                    .environment(\.managedObjectContext, persistenceController.container.viewContext)
                     // 3. 關鍵效能優化：在背景 Task 啟動監聽，完全不阻塞 Main Thread
                     .task(priority: .background) {
                         LaunchLogger.log("SubscriptionManager.start() - Task BEGIN")
