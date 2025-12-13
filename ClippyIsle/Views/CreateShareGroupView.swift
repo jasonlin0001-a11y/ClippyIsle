@@ -131,26 +131,78 @@ struct ShareControllerView: UIViewControllerRepresentable {
     let shareGroup: ShareGroup
     let onDismiss: () -> Void
     
+    func makeCoordinator() -> Coordinator {
+        Coordinator(shareGroup: shareGroup, onDismiss: onDismiss)
+    }
+    
     func makeUIViewController(context: Context) -> UIViewController {
         let viewController = UIViewController()
-        
-        Task {
-            do {
-                try await ShareGroupManager.shared.shareGroup(shareGroup, from: viewController)
-            } catch {
-                print("❌ Failed to present share controller: \(error)")
-            }
-        }
-        
+        viewController.view.backgroundColor = .clear
+        context.coordinator.presentingViewController = viewController
         return viewController
     }
     
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        // No updates needed
+        // Present share controller only once when view controller is in window hierarchy
+        if uiViewController.view.window != nil && !context.coordinator.hasPresented && uiViewController.presentedViewController == nil {
+            context.coordinator.hasPresented = true
+            context.coordinator.presentShareController()
+        }
     }
     
-    static func dismantleUIViewController(_ uiViewController: UIViewController, coordinator: ()) {
-        // Clean up if needed
+    static func dismantleUIViewController(_ uiViewController: UIViewController, coordinator: Coordinator) {
+        // Clean up presented controllers if any
+        if let presented = uiViewController.presentedViewController {
+            presented.dismiss(animated: false)
+        }
+    }
+    
+    class Coordinator: NSObject, UICloudSharingControllerDelegate {
+        let shareGroup: ShareGroup
+        let onDismiss: () -> Void
+        weak var presentingViewController: UIViewController?
+        var hasPresented = false
+        
+        init(shareGroup: ShareGroup, onDismiss: @escaping () -> Void) {
+            self.shareGroup = shareGroup
+            self.onDismiss = onDismiss
+        }
+        
+        func presentShareController() {
+            guard let viewController = presentingViewController else { return }
+            
+            Task {
+                do {
+                    try await ShareGroupManager.shared.shareGroup(shareGroup, from: viewController, delegate: self)
+                } catch {
+                    print("❌ Failed to present share controller: \(error)")
+                    // Dismiss on error
+                    await MainActor.run {
+                        onDismiss()
+                    }
+                }
+            }
+        }
+        
+        // MARK: - UICloudSharingControllerDelegate
+        
+        func cloudSharingController(_ csc: UICloudSharingController, failedToSaveShareWithError error: Error) {
+            print("❌ Failed to save share: \(error.localizedDescription)")
+            onDismiss()
+        }
+        
+        func itemTitle(for csc: UICloudSharingController) -> String? {
+            return shareGroup.title
+        }
+        
+        func cloudSharingControllerDidSaveShare(_ csc: UICloudSharingController) {
+            print("✅ Share saved successfully")
+        }
+        
+        func cloudSharingControllerDidStopSharing(_ csc: UICloudSharingController) {
+            print("ℹ️ Stopped sharing")
+            onDismiss()
+        }
     }
 }
 

@@ -84,7 +84,8 @@ class ShareGroupManager: ObservableObject {
     /// - Parameters:
     ///   - shareGroup: The ShareGroup to share
     ///   - viewController: The presenting view controller
-    func shareGroup(_ shareGroup: ShareGroup, from viewController: UIViewController) async throws {
+    ///   - delegate: The UICloudSharingControllerDelegate
+    func shareGroup(_ shareGroup: ShareGroup, from viewController: UIViewController, delegate: UICloudSharingControllerDelegate? = nil) async throws {
         let container = persistenceController.container
         
         // Check if the object is already shared
@@ -112,6 +113,11 @@ class ShareGroupManager: ObservableObject {
         // Create the UICloudSharingController
         let ckContainer = CKContainer(identifier: "iCloud.J894ABBU74.ClippyIsle")
         let sharingController = UICloudSharingController(share: share, container: ckContainer)
+        
+        // Set delegate if provided
+        if let delegate = delegate {
+            sharingController.delegate = delegate
+        }
         
         // Present the controller
         await MainActor.run {
