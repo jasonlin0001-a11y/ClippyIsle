@@ -138,7 +138,10 @@ class ClipboardManager: ObservableObject {
         for item in trashedItems { permanentlyDeleteItem(item: item) }
     }
     
-    nonisolated func getSharedContainerURL() -> URL? { FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) }
+    nonisolated func getSharedContainerURL() -> URL? { 
+        let groupID = "group.com.shihchieh.clippyisle"
+        return FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: groupID)
+    }
 
     nonisolated func loadFileData(filename: String) -> Data? {
         guard let containerURL = getSharedContainerURL() else { return nil }
@@ -429,7 +432,7 @@ class ClipboardManager: ObservableObject {
     
     @MainActor
     func ensureLiveActivityIsRunningIfNeeded() async {
-        guard await ActivityAuthorizationInfo().areActivitiesEnabled else {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
             if isLiveActivityOn { isLiveActivityOn = false; UserDefaults.standard.set(false, forKey: "isLiveActivityOn") }
             return
         }

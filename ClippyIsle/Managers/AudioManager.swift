@@ -28,7 +28,7 @@ class AudioManager {
             
             switch scenario {
             case .speechPlayback:
-                try session.setCategory(.playback, mode: .spokenAudio, options: [.allowBluetooth, .allowAirPlay, .allowBluetoothA2DP])
+                try session.setCategory(.playback, mode: .spokenAudio, options: [.allowBluetoothA2DP, .allowAirPlay])
             case .webViewPlayback:
                 try session.setCategory(.playback, mode: .moviePlayback, options: [])
             case .speechRecognition:
