@@ -157,7 +157,7 @@ struct IncomingGroupRow: View {
                 Spacer()
                 
                 if let createdAt = group.createdAt {
-                    Text(createdAt, style: .relative)
+                    Text("Shared \(createdAt, style: .relative) ago")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
