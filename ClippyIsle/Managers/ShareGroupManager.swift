@@ -28,7 +28,7 @@ class ShareGroupManager: ObservableObject {
     ///
     /// - Parameter items: Array of ClipboardItems to include in the share group
     /// - Returns: The newly created ShareGroup entity
-    func createShareGroup(with items: [ClipboardItem], title: String = "Shared Items") throws -> ShareGroup {
+    func createShareGroup(with items: [ClipboardItem], title: String = String(localized: "Shared Items")) throws -> ShareGroup {
         let context = persistenceController.container.viewContext
         
         // Create the ShareGroup
@@ -193,31 +193,31 @@ class ShareGroupManager: ObservableObject {
     // MARK: - Fetch Share Groups
     
     /// Fetches all ShareGroups (both owned and shared with the user)
-    func fetchShareGroups() -> [ShareGroup] {
+    func fetchShareGroups() async -> [ShareGroup] {
         let context = persistenceController.container.viewContext
         let fetchRequest: NSFetchRequest<ShareGroup> = ShareGroup.fetchRequest()
         fetchRequest.sortDescriptors = [NSSortDescriptor(keyPath: \ShareGroup.createdAt, ascending: false)]
         
-        do {
-            let groups = try context.fetch(fetchRequest)
-            print("✅ Fetched \(groups.count) share groups")
-            return groups
-        } catch {
-            print("❌ Failed to fetch share groups: \(error)")
-            lastError = error
-            return []
+        return await context.perform {
+            do {
+                let groups = try context.fetch(fetchRequest)
+                print("✅ Fetched \(groups.count) share groups")
+                return groups
+            } catch {
+                print("❌ Failed to fetch share groups: \(error)")
+                Task { @MainActor in
+                    self.lastError = error
+                }
+                return []
+            }
         }
     }
     
     /// Fetches only the incoming shared groups (shared by others)
-    func fetchIncomingSharedGroups() -> [ShareGroup] {
-        let context = persistenceController.container.viewContext
-        let fetchRequest: NSFetchRequest<ShareGroup> = ShareGroup.fetchRequest()
-        fetchRequest.sortDescriptors = [NSSortDescriptor(keyPath: \ShareGroup.createdAt, ascending: false)]
+    func fetchIncomingSharedGroups() async -> [ShareGroup] {
+        let allGroups = await fetchShareGroups()
         
-        do {
-            let allGroups = try context.fetch(fetchRequest)
-            
+        return await withCheckedContinuation { continuation in
             // Filter only shared items (not owned by current user)
             let container = persistenceController.container
             let sharedGroups = allGroups.filter { group in
@@ -230,11 +230,7 @@ class ShareGroupManager: ObservableObject {
             }
             
             print("✅ Fetched \(sharedGroups.count) incoming shared groups")
-            return sharedGroups
-        } catch {
-            print("❌ Failed to fetch incoming shared groups: \(error)")
-            lastError = error
-            return []
+            continuation.resume(returning: sharedGroups)
         }
     }
     

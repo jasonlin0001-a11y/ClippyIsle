@@ -108,7 +108,7 @@ struct CreateShareGroupView: View {
             let group = try await MainActor.run {
                 try shareGroupManager.createShareGroup(
                     with: selectedItems,
-                    title: trimmedTitle.isEmpty ? "Shared Items" : trimmedTitle
+                    title: trimmedTitle.isEmpty ? String(localized: "Shared Items") : trimmedTitle
                 )
             }
             

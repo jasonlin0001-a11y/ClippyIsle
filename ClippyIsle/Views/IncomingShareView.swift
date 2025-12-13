@@ -10,6 +10,8 @@ struct IncomingShareView: View {
     @State private var selectedGroup: ShareGroup?
     @State private var showImportSuccess = false
     @State private var importedCount = 0
+    @State private var showError = false
+    @State private var errorMessage = ""
     
     var body: some View {
         NavigationView {
@@ -35,6 +37,11 @@ struct IncomingShareView: View {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text("Successfully imported \(importedCount) items to your library.")
+            }
+            .alert("Import Failed", isPresented: $showError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(errorMessage)
             }
         }
         .task {
@@ -79,8 +86,9 @@ struct IncomingShareView: View {
         isLoading = true
         defer { isLoading = false }
         
+        let groups = await shareGroupManager.fetchIncomingSharedGroups()
         await MainActor.run {
-            sharedGroups = shareGroupManager.fetchIncomingSharedGroups()
+            sharedGroups = groups
         }
     }
     
@@ -102,7 +110,10 @@ struct IncomingShareView: View {
             }
         } catch {
             print("❌ Failed to import group: \(error)")
-            // TODO: Show error alert
+            await MainActor.run {
+                errorMessage = error.localizedDescription
+                showError = true
+            }
         }
     }
 }

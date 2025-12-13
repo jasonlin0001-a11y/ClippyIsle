@@ -6,12 +6,9 @@ struct ShareGroupListView: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var allGroups: [ShareGroup] = []
+    @State private var incomingGroups: [ShareGroup] = []
     @State private var isLoading = false
     @State private var selectedTab = 0
-    
-    var incomingGroups: [ShareGroup] {
-        shareGroupManager.fetchIncomingSharedGroups()
-    }
     
     var ownedGroups: [ShareGroup] {
         allGroups.filter { group in
@@ -121,8 +118,12 @@ struct ShareGroupListView: View {
         isLoading = true
         defer { isLoading = false }
         
+        let all = await shareGroupManager.fetchShareGroups()
+        let incoming = await shareGroupManager.fetchIncomingSharedGroups()
+        
         await MainActor.run {
-            allGroups = shareGroupManager.fetchShareGroups()
+            allGroups = all
+            incomingGroups = incoming
         }
     }
 }
