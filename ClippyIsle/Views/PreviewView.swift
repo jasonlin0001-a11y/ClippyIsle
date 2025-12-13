@@ -2,6 +2,7 @@ import SwiftUI
 import WebKit
 import UniformTypeIdentifiers
 import AVFoundation
+import CoreText
 
 struct PreviewView: View {
     @Binding var item: ClipboardItem
@@ -599,7 +600,9 @@ struct PreviewView: View {
                 
                 let visibleRange = CTFrameGetVisibleStringRange(frame)
                 
-                remainingText.draw(in: textRect, withAttributes: attributes)
+                // Draw only the visible portion that fits on this page
+                let visibleText = remainingText.substring(to: visibleRange.length)
+                (visibleText as NSString).draw(in: textRect, withAttributes: attributes)
                 
                 if visibleRange.length == remainingText.length {
                     break
