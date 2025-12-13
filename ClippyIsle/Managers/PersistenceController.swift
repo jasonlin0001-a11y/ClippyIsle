@@ -24,7 +24,7 @@ class PersistenceController {
             description.setOption(true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
             
             // Configure CloudKit container options
-            let cloudKitOptions = NSPersistentCloudKitContainerOptions(containerIdentifier: "iCloud.com.shihchieh.clippyisle")
+            let cloudKitOptions = NSPersistentCloudKitContainerOptions(containerIdentifier: "iCloud.J894ABBU74.ClippyIsle")
             description.cloudKitContainerOptions = cloudKitOptions
         }
         
