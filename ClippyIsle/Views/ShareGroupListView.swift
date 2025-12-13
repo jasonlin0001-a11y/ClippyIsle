@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreData
 
 /// Main view for managing ShareGroups (both created and received)
 struct ShareGroupListView: View {

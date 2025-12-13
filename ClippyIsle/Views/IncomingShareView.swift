@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreData
 
 /// View for displaying incoming shared groups and importing them
 struct IncomingShareView: View {
