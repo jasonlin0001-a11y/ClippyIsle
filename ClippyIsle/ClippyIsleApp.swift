@@ -84,8 +84,7 @@ struct ClippyIsleApp: App {
                     
                     for itemData in itemsData {
                         // Parse raw data and create ClipboardItem instances
-                        guard let idString = itemData["id"] as? String,
-                              let content = itemData["content"] as? String,
+                        guard let content = itemData["content"] as? String,
                               let type = itemData["type"] as? String,
                               let timestamp = itemData["timestamp"] as? Timestamp else {
                             print("⚠️ Skipping invalid item data")
