@@ -5,7 +5,7 @@ import MediaPlayer
 import CryptoKit
 
 class SpeechManager: NSObject, ObservableObject, AVSpeechSynthesizerDelegate, AVAudioPlayerDelegate {
-    private let synthesizer = AVSpeechSynthesizer()
+    nonisolated(unsafe) private let synthesizer = AVSpeechSynthesizer()
     private var audioPlayer: AVAudioPlayer?
     private var playerTimer: Timer?
     
@@ -47,7 +47,7 @@ class SpeechManager: NSObject, ObservableObject, AVSpeechSynthesizerDelegate, AV
     
     private func setupAudioSession() {
         do {
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio, options: [.duckOthers, .allowBluetooth])
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio, options: [.duckOthers, .allowBluetoothA2DP])
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
             print("Audio Session Error: \(error)")
@@ -211,7 +211,7 @@ class SpeechManager: NSObject, ObservableObject, AVSpeechSynthesizerDelegate, AV
         
         var output: AVAudioFile?
         return try await withCheckedThrowingContinuation { continuation in
-            synthesizer.write(utterance) { [weak self] buffer in
+            synthesizer.write(utterance) { buffer in
                 guard let pcmBuffer = buffer as? AVAudioPCMBuffer else { return }
                 do {
                     if output == nil {

@@ -70,7 +70,8 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.undoManager) private var undoManager
     
-    init() { 
+    init(isAppReady: Binding<Bool>) {
+        self._isAppReady = isAppReady
         LaunchLogger.log("ContentView.init() - START")
         let manager = ClipboardManager()
         LaunchLogger.log("ContentView.init() - ClipboardManager created")
