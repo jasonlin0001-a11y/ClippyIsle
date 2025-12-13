@@ -2,11 +2,12 @@ import Foundation
 import CoreData
 import CloudKit
 import UIKit
+import Combine
 
 /// ShareGroupManager handles creating share groups for batch sharing
 /// and importing shared items into the local library.
 class ShareGroupManager: ObservableObject {
-    static let shared = ShareGroupManager()
+    @MainActor static let shared = ShareGroupManager()
     
     private let persistenceController: PersistenceController
     private let clipboardManager: ClipboardManager
@@ -14,6 +15,7 @@ class ShareGroupManager: ObservableObject {
     @Published var isProcessing = false
     @Published var lastError: Error?
     
+    @MainActor
     init(persistenceController: PersistenceController = .shared,
          clipboardManager: ClipboardManager = .shared) {
         self.persistenceController = persistenceController
