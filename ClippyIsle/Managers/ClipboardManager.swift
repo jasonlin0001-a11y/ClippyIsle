@@ -247,7 +247,7 @@ class ClipboardManager: ObservableObject {
     
     func moveItemToTrash(item: ClipboardItem) {
         // Prevent deleting the user guide in free version
-        if item.id == userGuideItemID && !UserDefaults.standard.bool(forKey: "isProUser") {
+        if item.id == userGuideItemID && !SubscriptionManager.shared.isPro {
             print("⚠️ 使用說明項目僅限付費版可以刪除")
             return
         }
@@ -264,7 +264,7 @@ class ClipboardManager: ObservableObject {
 
     func permanentlyDeleteItem(item: ClipboardItem) {
         // Prevent deleting the user guide in free version
-        if item.id == userGuideItemID && !UserDefaults.standard.bool(forKey: "isProUser") {
+        if item.id == userGuideItemID && !SubscriptionManager.shared.isPro {
             print("⚠️ 使用說明項目僅限付費版可以刪除")
             return
         }

@@ -71,7 +71,7 @@ The user guide is a built-in special item that always appears at the top of the 
 
 #### Edit Location
 
-File path: `ClipboardManager/Managers/ClipboardManager.swift`
+File path: `ClippyIsle/Managers/ClipboardManager.swift`
 
 In this file, find the `ensureUserGuideExists()` function (approximately lines 72-159).
 
