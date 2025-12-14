@@ -86,26 +86,13 @@ class CloudKitManager: ObservableObject {
         return ClipboardItem(id: id, content: content, type: type, filename: filename, timestamp: timestamp, isPinned: isPinned, displayName: displayName, isTrashed: isTrashed, tags: tags)
     }
     
-    /// Safe item conversion that catches any errors during record-to-item conversion.
-    /// Returns nil for corrupt or zombie data instead of crashing/hanging.
+    /// Safe item conversion wrapper.
+    /// This is a simple wrapper around item(from:) that ensures no exceptions propagate.
+    /// The item(from:) method already handles validation by returning nil for invalid records.
     private func safeItem(from record: CKRecord) -> ClipboardItem? {
-        // Wrap the entire conversion in a defensive block
-        // This handles any unexpected data structures from old app versions
-        do {
-            // Basic validation that required fields exist and are the right type
-            guard record["content"] is String,
-                  record["type"] is String,
-                  record["timestamp"] is Date else {
-                return nil
-            }
-            
-            // Attempt the normal conversion
-            return item(from: record)
-        } catch {
-            // If anything throws unexpectedly, skip this item
-            print("☁️ ⚠️ safeItem caught error: \(error)")
-            return nil
-        }
+        // The item(from:) method already handles validation and returns nil for invalid records
+        // This wrapper exists for semantic clarity when processing potentially corrupt data
+        return item(from: record)
     }
     
     // MARK: - CRUD Operations
