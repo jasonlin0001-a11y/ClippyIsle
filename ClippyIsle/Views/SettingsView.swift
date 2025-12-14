@@ -100,6 +100,11 @@ struct SettingsView: View {
     @State private var importAlertMessage: String?
     @State private var isShowingImportAlert = false
     @State private var isShowingTagExport = false
+    
+    // Firebase Password Settings
+    @AppStorage("firebaseSharePassword") private var firebaseSharePassword: String = ""
+    @State private var passwordInput: String = ""
+    @State private var isPasswordSaved: Bool = false
 
     let countOptions = [50, 100, 200, 0]
     let dayOptions = [7, 30, 90, 0]
@@ -166,6 +171,8 @@ struct SettingsView: View {
                     }
                 }
                 
+                firebasePasswordSection
+                
                 Section(header: Text("General"), footer: Text("When enabled, the app will automatically detect and add new items from the clipboard. When disabled, you must add items manually from the '+' menu on the main screen.")) { Toggle("Auto Add from Clipboard", isOn: $askToAddFromClipboard) }
                 storagePolicySection; appearanceSection; previewSettingsSection; speechSettingsSection; iCloudSection; backupAndRestoreSection; dataManagementSection; appInfoSection
             }
@@ -176,6 +183,7 @@ struct SettingsView: View {
             .onAppear {
                 WebServerManager.shared.clipboardManager = clipboardManager
                 nicknameInput = userNickname
+                passwordInput = firebaseSharePassword
                 clipboardManager.userDefaults.set(customColorRed, forKey: "customColorRed")
                 clipboardManager.userDefaults.set(customColorGreen, forKey: "customColorGreen")
                 clipboardManager.userDefaults.set(customColorBlue, forKey: "customColorBlue")
@@ -334,6 +342,46 @@ struct SettingsView: View {
                 AboutUsView()
             } label: {
                 Text("About Us")
+            }
+        }
+    }
+    
+    private var firebasePasswordSection: some View {
+        Section(header: Text("Firebase Share Settings"), footer: Text("Set a default password for Firebase sharing. This password will be used to encrypt shared items. Leave empty for unencrypted sharing.")) {
+            HStack {
+                Text("Share Password")
+                SecureField("Optional", text: $passwordInput)
+                    .multilineTextAlignment(.trailing)
+                    .submitLabel(.done)
+                    .autocorrectionDisabled(true)
+                    .textContentType(.password)
+                    .onChange(of: passwordInput) { _, _ in isPasswordSaved = false }
+                
+                if passwordInput != firebaseSharePassword || isPasswordSaved {
+                    Button(action: savePassword) {
+                        if isPasswordSaved {
+                            Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
+                        } else {
+                            Text("Save").fontWeight(.bold)
+                        }
+                    }
+                    .buttonStyle(.borderless)
+                    .transition(.scale.combined(with: .opacity))
+                    .animation(.easeInOut, value: isPasswordSaved)
+                }
+            }
+        }
+    }
+    
+    private func savePassword() {
+        firebaseSharePassword = passwordInput
+        isPasswordSaved = true
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            if self.passwordInput == self.firebaseSharePassword {
+                self.isPasswordSaved = false
             }
         }
     }

@@ -44,6 +44,13 @@ struct ContentView: View {
     // Track newly added item for highlighting
     @State private var newlyAddedItemID: UUID?
     
+    // Firebase Share State
+    @State private var isSharing = false
+    @State private var shareURL: String?
+    @State private var isShowingShareAlert = false
+    @State private var shareAlertMessage: String?
+    @AppStorage("firebaseSharePassword") private var firebaseSharePassword: String = ""
+    
     // Track expanded inline preview item
     @State private var expandedPreviewItemID: UUID?
     
@@ -233,6 +240,22 @@ struct ContentView: View {
             Button("Cancel", role: .cancel) {}
         } message: { item in Text("Are you sure you want to move “\(item.displayName ?? item.content.prefix(20).description)...” to the trash?") }
         
+        .alert("Share Result", isPresented: $isShowingShareAlert) {
+            Button("Copy Link") {
+                if let url = shareURL {
+                    UIPasteboard.general.string = url
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(.success)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            if let message = shareAlertMessage {
+                Text(message)
+            } else {
+                Text("Share operation completed")
+            }
+        }
         // **NEW**: Attach Paywall Sheet
         .sheet(isPresented: $showPaywall) {
             PaywallView()
@@ -454,20 +477,64 @@ struct ContentView: View {
         }
     }
     func shareItem(item: ClipboardItem) {
-        var itemsToShare: [Any] = []; var itemToUse = item
-        if itemToUse.fileData == nil, let filename = item.filename { itemToUse.fileData = clipboardManager.loadFileData(filename: filename) }
-        if let data = itemToUse.fileData, item.type == UTType.png.identifier {
-            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(item.filename ?? "SharedFile.png")
-            do { try data.write(to: tempURL, options: [.atomic]); itemsToShare.append(tempURL) } catch { itemsToShare.append(data) }
-        } else if let url = URL(string: item.content), (item.type == UTType.url.identifier || item.content.starts(with: "http")) { itemsToShare.append(url) }
-        else { itemsToShare.append(item.content) }
-        guard !itemsToShare.isEmpty, let sourceView = UIApplication.shared.windows.first?.rootViewController?.view else { return }
-        let activityVC = UIActivityViewController(activityItems: itemsToShare, applicationActivities: nil)
-        if let popover = activityVC.popoverPresentationController {
-            popover.sourceView = sourceView; popover.sourceRect = CGRect(x: sourceView.bounds.midX, y: sourceView.bounds.midY, width: 0, height: 0); popover.permittedArrowDirections = []
+        // Check size limit (900KB = 921,600 bytes)
+        let itemData: Data
+        do {
+            itemData = try JSONSerialization.data(withJSONObject: itemToDictionary(item), options: [])
+        } catch {
+            shareAlertMessage = "Failed to prepare item for sharing.\n\(error.localizedDescription)"
+            isShowingShareAlert = true
+            return
         }
-        sourceView.window?.rootViewController?.present(activityVC, animated: true)
+        
+        if itemData.count > 921_600 {
+            shareAlertMessage = "Item size exceeds 900KB limit.\nPlease use Export function instead."
+            isShowingShareAlert = true
+            return
+        }
+        
+        isSharing = true
+        let password = firebaseSharePassword.isEmpty ? nil : firebaseSharePassword
+        
+        FirebaseManager.shared.shareItems([item], password: password) { result in
+            DispatchQueue.main.async {
+                isSharing = false
+                
+                switch result {
+                case .success(let url):
+                    shareURL = url
+                    shareAlertMessage = "Share link created successfully!\n\n\(url)"
+                    isShowingShareAlert = true
+                    
+                case .failure(let error):
+                    shareAlertMessage = "Failed to create share link.\n\(error.localizedDescription)"
+                    isShowingShareAlert = true
+                }
+            }
+        }
     }
+    
+    private func itemToDictionary(_ item: ClipboardItem) -> [String: Any] {
+        var dict: [String: Any] = [
+            "id": item.id.uuidString,
+            "content": item.content,
+            "type": item.type,
+            "timestamp": item.timestamp.timeIntervalSince1970,
+            "isPinned": item.isPinned,
+            "isTrashed": item.isTrashed
+        ]
+        if let displayName = item.displayName {
+            dict["displayName"] = displayName
+        }
+        if let filename = item.filename {
+            dict["filename"] = filename
+        }
+        if let tags = item.tags {
+            dict["tags"] = tags
+        }
+        return dict
+    }
+    
     func createDragItem(for item: ClipboardItem) -> NSItemProvider {
         if item.type == UTType.png.identifier, let filename = item.filename, let data = clipboardManager.loadFileData(filename: filename), let uiImage = UIImage(data: data) {
             let provider = NSItemProvider(); provider.registerObject(uiImage, visibility: .all)
