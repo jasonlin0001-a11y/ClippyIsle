@@ -41,7 +41,7 @@ struct SettingsModalPresenterView: View {
                 Button("Cancel", role: .cancel) {}
                 Button("Delete", role: .destructive) { clipboardManager.hardResetData(); dismissAction() }.disabled(confirmationText != "DELETE")
             } message: { Text("This action cannot be undone. Please type 'DELETE' in all capital letters to confirm you want to permanently delete all items.") }
-            .alert("Share Result", isPresented: $isShowingShareAlert, presenting: shareAlertMessage) { msg in 
+            .alert("Share Result", isPresented: $isShowingShareAlert) { 
                 Button("OK") {
                     if let url = shareURL {
                         UIPasteboard.general.string = url
@@ -49,7 +49,13 @@ struct SettingsModalPresenterView: View {
                         generator.notificationOccurred(.success)
                     }
                 }
-            } message: { msg in Text(msg) }
+            } message: { 
+                if let message = shareAlertMessage {
+                    Text(message)
+                } else {
+                    Text("Share operation completed")
+                }
+            }
     }
     
     private func handleImport(result: Result<[URL], Error>) {
@@ -403,17 +409,19 @@ struct SettingsView: View {
         }
         
         FirebaseManager.shared.shareItems(itemsToShare, password: password) { result in
-            isSharing = false
-            
-            switch result {
-            case .success(let url):
-                shareURL = url
-                shareAlertMessage = "Share link created successfully!\n\n\(url)\n\nTap OK to copy to clipboard."
-                isShowingShareAlert = true
+            DispatchQueue.main.async {
+                isSharing = false
                 
-            case .failure(let error):
-                shareAlertMessage = "Failed to create share link.\n\(error.localizedDescription)"
-                isShowingShareAlert = true
+                switch result {
+                case .success(let url):
+                    shareURL = url
+                    shareAlertMessage = "Share link created successfully!\n\n\(url)\n\nTap OK to copy to clipboard."
+                    isShowingShareAlert = true
+                    
+                case .failure(let error):
+                    shareAlertMessage = "Failed to create share link.\n\(error.localizedDescription)"
+                    isShowingShareAlert = true
+                }
             }
         }
     }

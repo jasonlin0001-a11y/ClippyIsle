@@ -86,21 +86,23 @@ struct ClippyIsleApp: App {
         
         // Download items from Firebase
         FirebaseManager.shared.downloadItems(shareID: shareID) { result in
-            switch result {
-            case .success(let itemDicts):
-                // Successfully downloaded unencrypted data
-                saveSharedItems(itemDicts)
-                
-            case .failure(let error):
-                if case ShareError.passwordRequired(let encryptedData) = error {
-                    // Password is required, show password prompt
-                    pendingEncryptedData = encryptedData
-                    passwordErrorMessage = nil
-                    showPasswordPrompt = true
-                } else {
-                    // Other error occurred
-                    print("❌ Failed to download shared items: \(error.localizedDescription)")
-                    passwordErrorMessage = error.localizedDescription
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let itemDicts):
+                    // Successfully downloaded unencrypted data
+                    saveSharedItems(itemDicts)
+                    
+                case .failure(let error):
+                    if case ShareError.passwordRequired(let encryptedData) = error {
+                        // Password is required, show password prompt
+                        pendingEncryptedData = encryptedData
+                        passwordErrorMessage = nil
+                        showPasswordPrompt = true
+                    } else {
+                        // Other error occurred
+                        print("❌ Failed to download shared items: \(error.localizedDescription)")
+                        passwordErrorMessage = error.localizedDescription
+                    }
                 }
             }
         }
