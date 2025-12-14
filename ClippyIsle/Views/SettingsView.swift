@@ -106,6 +106,12 @@ struct SettingsView: View {
     @AppStorage("firebasePassword") private var firebasePassword: String = ""
     @State private var passwordInput: String = ""
     @State private var isPasswordSaved: Bool = false
+    
+    // iCloud purge state
+    @State private var isShowingPurgeCloudAlert = false
+    @State private var isPurgingCloud = false
+    @State private var purgeCloudResult: String?
+    @State private var isShowingPurgeResultAlert = false
 
     let countOptions = [50, 100, 200, 0]
     let dayOptions = [7, 30, 90, 0]
@@ -324,6 +330,49 @@ struct SettingsView: View {
             NavigationLink { AudioFileManagerView(clipboardManager: clipboardManager, speechManager: speechManager) } label: { Text("Manage Audio Files") }
             Button("Clear Website Cache", role: .destructive) { isShowingClearCacheAlert = true }
             Button("Clear All Data", role: .destructive) { confirmationText = ""; isShowingHardResetAlert = true }
+            
+            // iCloud Purge Button (Nuclear Option for clearing zombie data)
+            Button(role: .destructive) {
+                isShowingPurgeCloudAlert = true
+            } label: {
+                HStack {
+                    if isPurgingCloud {
+                        ProgressView()
+                    }
+                    Text("Purge iCloud Data")
+                }
+            }
+            .disabled(isPurgingCloud)
+        }
+        .alert("Purge All iCloud Data?", isPresented: $isShowingPurgeCloudAlert) {
+            Button("Cancel", role: .cancel) {}
+            Button("Purge", role: .destructive) {
+                purgeCloudData()
+            }
+        } message: {
+            Text("This will permanently delete ALL clipboard items and tag colors from your iCloud account. This cannot be undone. Use this to clear corrupt or zombie data that's causing sync issues.")
+        }
+        .alert("Purge Result", isPresented: $isShowingPurgeResultAlert) {
+            Button("OK") {}
+        } message: {
+            Text(purgeCloudResult ?? "Unknown result")
+        }
+    }
+    
+    private func purgeCloudData() {
+        isPurgingCloud = true
+        Task {
+            let result = await clipboardManager.purgeAllCloudData()
+            await MainActor.run {
+                isPurgingCloud = false
+                switch result {
+                case .success(let count):
+                    purgeCloudResult = "Successfully deleted \(count) records from iCloud."
+                case .failure(let error):
+                    purgeCloudResult = "Purge failed: \(error.localizedDescription)"
+                }
+                isShowingPurgeResultAlert = true
+            }
         }
     }
     
