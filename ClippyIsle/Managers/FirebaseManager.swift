@@ -9,6 +9,9 @@ class FirebaseManager {
     private let db: Firestore
     private let collectionName = "clipboardItems"
     
+    // Size limit for shared data (in KB)
+    private static let maxShareSizeKB: Double = 900
+    
     private init() {
         self.db = Firestore.firestore()
     }
@@ -188,17 +191,17 @@ class FirebaseManager {
             shareData["password"] = password
         }
         
-        // Check size limit (900KB)
+        // Check size limit
         do {
             let jsonData = try JSONSerialization.data(withJSONObject: shareData, options: [])
             let sizeInKB = Double(jsonData.count) / 1024.0
             
-            if sizeInKB > 900 {
+            if sizeInKB > FirebaseManager.maxShareSizeKB {
                 let error = NSError(
                     domain: "FirebaseManager",
                     code: 413,
                     userInfo: [
-                        NSLocalizedDescriptionKey: "Share data size (\(String(format: "%.1f", sizeInKB))KB) exceeds 900KB limit. Please use JSON export instead."
+                        NSLocalizedDescriptionKey: "Share data size (\(String(format: "%.1f", sizeInKB))KB) exceeds \(Int(FirebaseManager.maxShareSizeKB))KB limit. Please use JSON export instead."
                     ]
                 )
                 completion(.failure(error))

@@ -109,6 +109,10 @@ struct SettingsView: View {
     let dayOptions = [7, 30, 90, 0]
     let colorOptions = ["blue", "green", "orange", "red", "pink", "purple", "black", "white", "retro", "custom"]
     
+    // Firebase password constants
+    private static let minPasswordLength = 6
+    private static let passwordSaveSuccessFeedbackDelay: TimeInterval = 2
+    
     var themeColor: Color {
         if themeColorName == "custom" {
             return Color(red: customColorRed, green: customColorGreen, blue: customColorBlue)
@@ -334,21 +338,21 @@ struct SettingsView: View {
                     }
                 }
                 
-                if !passwordInput.isEmpty && passwordInput.count < 6 {
-                    Text("Password should be at least 6 characters").font(.caption).foregroundColor(.orange)
+                if !passwordInput.isEmpty && passwordInput.count < SettingsView.minPasswordLength {
+                    Text("Password should be at least \(SettingsView.minPasswordLength) characters").font(.caption).foregroundColor(.orange)
                 }
             }
         }
     }
     
     private func savePassword() {
-        guard !passwordInput.isEmpty, passwordInput.count >= 6 else { return }
+        guard !passwordInput.isEmpty, passwordInput.count >= SettingsView.minPasswordLength else { return }
         firebasePassword = passwordInput
         isPasswordSaved = true
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + SettingsView.passwordSaveSuccessFeedbackDelay) { [weak self] in
             guard let self = self else { return }
             if self.passwordInput == self.firebasePassword { 
                 self.isPasswordSaved = false 
