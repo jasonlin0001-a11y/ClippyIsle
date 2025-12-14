@@ -87,15 +87,17 @@ struct ClippyIsleApp: App {
         
         // Download items from Firebase
         FirebaseManager.shared.downloadItems(shareID: shareID) { result in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 switch result {
                 case .success(let itemDicts):
                     // Successfully downloaded unencrypted data
+                    print("📥 Downloaded \(itemDicts.count) items, importing...")
                     saveSharedItems(itemDicts)
                     
                 case .failure(let error):
                     if case ShareError.passwordRequired(let encryptedData) = error {
                         // Password is required, show password prompt
+                        print("🔒 Password required for encrypted share")
                         pendingEncryptedData = encryptedData
                         passwordErrorMessage = nil
                         showPasswordPrompt = true
@@ -115,30 +117,33 @@ struct ClippyIsleApp: App {
             return
         }
         
+        print("🔓 Attempting to decrypt with provided password...")
         let result = FirebaseManager.shared.decryptSharedData(pendingEncryptedData, password: inputPassword)
         
-        switch result {
-        case .success(let itemDicts):
-            // Ensure UI updates happen on main thread
-            DispatchQueue.main.async {
-                self.saveSharedItems(itemDicts)
+        Task { @MainActor in
+            switch result {
+            case .success(let itemDicts):
+                // Successfully decrypted
+                print("✅ Decryption successful, importing \(itemDicts.count) items...")
+                saveSharedItems(itemDicts)
                 // Clear state and close prompt
-                self.showPasswordPrompt = false
-                self.inputPassword = ""
-                self.pendingEncryptedData = ""
-                self.pendingShareID = ""
-                self.passwordErrorMessage = nil
-            }
-            
-        case .failure(let error):
-            // Show error and keep prompt open by updating the error message
-            DispatchQueue.main.async {
-                self.passwordErrorMessage = error.localizedDescription
+                showPasswordPrompt = false
+                inputPassword = ""
+                pendingEncryptedData = ""
+                pendingShareID = ""
+                passwordErrorMessage = nil
+                
+            case .failure(let error):
+                // Show error and keep prompt open
+                print("❌ Decryption failed: \(error.localizedDescription)")
+                passwordErrorMessage = error.localizedDescription
             }
         }
     }
     
+    @MainActor
     private func saveSharedItems(_ itemDicts: [[String: Any]]) {
+        print("🔄 saveSharedItems called with \(itemDicts.count) items")
         let clipboardManager = ClipboardManager.shared
         var addedCount = 0
         
@@ -149,6 +154,7 @@ struct ClippyIsleApp: App {
                   let content = dict["content"] as? String,
                   let type = dict["type"] as? String,
                   let timestampInterval = dict["timestamp"] as? TimeInterval else {
+                print("⚠️ Skipping item due to missing required fields")
                 continue
             }
             
@@ -158,6 +164,8 @@ struct ClippyIsleApp: App {
             let displayName = dict["displayName"] as? String
             let filename = dict["filename"] as? String
             let tags = dict["tags"] as? [String]
+            
+            print("📋 Creating item: \(content.prefix(50))...")
             
             let item = ClipboardItem(
                 id: id,
@@ -175,12 +183,15 @@ struct ClippyIsleApp: App {
             if !clipboardManager.items.contains(where: { $0.id == item.id }) {
                 clipboardManager.items.insert(item, at: 0)
                 addedCount += 1
+                print("➕ Added item with ID: \(item.id)")
+            } else {
+                print("⏭️ Item already exists, skipping: \(item.id)")
             }
         }
         
         if addedCount > 0 {
             clipboardManager.sortAndSave()
-            print("✅ Added \(addedCount) shared items to clipboard")
+            print("✅ Successfully added \(addedCount) shared items to clipboard")
         } else {
             print("ℹ️ No new items were added (all items already exist)")
         }
