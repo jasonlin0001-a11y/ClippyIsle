@@ -6,7 +6,7 @@ import UIKit
 import StoreKit
 
 // MARK: - Extensions for Identifiable URL
-extension URL: Identifiable {
+@retroactive extension URL: Identifiable {
     public var id: String { absoluteString }
 }
 
@@ -41,22 +41,6 @@ struct SettingsModalPresenterView: View {
                 Button("Cancel", role: .cancel) {}
                 Button("Delete", role: .destructive) { clipboardManager.hardResetData(); dismissAction() }.disabled(confirmationText != "DELETE")
             } message: { Text("This action cannot be undone. Please type 'DELETE' in all capital letters to confirm you want to permanently delete all items.") }
-            .alert("Share Result", isPresented: $isShowingShareAlert) { 
-                Button("Copy Link") {
-                    if let url = shareURL {
-                        UIPasteboard.general.string = url
-                        let generator = UINotificationFeedbackGenerator()
-                        generator.notificationOccurred(.success)
-                    }
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: { 
-                if let message = shareAlertMessage {
-                    Text(message)
-                } else {
-                    Text("Share operation completed")
-                }
-            }
     }
     
     private func handleImport(result: Result<[URL], Error>) {
@@ -199,6 +183,22 @@ struct SettingsView: View {
             .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() } } }
             .background(SettingsModalPresenterView(isShowingTrash: $isShowingTrash, exportURL: $exportURL, isImporting: $isImporting, isShowingImportAlert: $isShowingImportAlert, importAlertMessage: $importAlertMessage, isShowingClearCacheAlert: $isShowingClearCacheAlert, isShowingCacheClearedAlert: $isShowingCacheClearedAlert, isShowingHardResetAlert: $isShowingHardResetAlert, confirmationText: $confirmationText, isShowingTagExport: $isShowingTagExport, clipboardManager: clipboardManager, dismissAction: { dismiss() }))
             .sheet(isPresented: $showPaywall) { PaywallView() }
+            .alert("Share Result", isPresented: $isShowingShareAlert) { 
+                Button("Copy Link") {
+                    if let url = shareURL {
+                        UIPasteboard.general.string = url
+                        let generator = UINotificationFeedbackGenerator()
+                        generator.notificationOccurred(.success)
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: { 
+                if let message = shareAlertMessage {
+                    Text(message)
+                } else {
+                    Text("Share operation completed")
+                }
+            }
             .onAppear {
                 WebServerManager.shared.clipboardManager = clipboardManager
                 nicknameInput = userNickname
