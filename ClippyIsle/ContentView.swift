@@ -44,6 +44,14 @@ struct ContentView: View {
     @State private var isSheetPresented = false
     @State private var lastTopItemID: UUID?
     
+    // Firebase sharing state
+    @State private var firebaseShareURL: String?
+    @State private var isShowingFirebaseShareAlert = false
+    @State private var showShareSheet = false
+    @State private var isSharingFirebase = false
+    @State private var shareErrorMessage: String?
+    @State private var isShowingShareError = false
+    
     // Track newly added item for highlighting
     @State private var newlyAddedItemID: UUID?
     
@@ -238,6 +246,33 @@ struct ContentView: View {
             Button("Delete", role: .destructive) { clipboardManager.moveItemToTrash(item: item) }
             Button("Cancel", role: .cancel) {}
         } message: { item in Text("Are you sure you want to move “\(item.displayName ?? item.content.prefix(20).description)...” to the trash?") }
+        
+        // Firebase Share Alert
+        .alert("Share Link Created", isPresented: $isShowingFirebaseShareAlert, presenting: firebaseShareURL) { url in
+            Button("Copy Link") { 
+                UIPasteboard.general.string = url
+                let generator = UINotificationFeedbackGenerator()
+                generator.notificationOccurred(.success)
+            }
+            Button("Share") {
+                showShareSheet = true
+            }
+            Button("OK") {}
+        } message: { url in 
+            Text("Share this link with others to let them import your clipboard items:\n\n\(url)")
+        }
+        .sheet(isPresented: $showShareSheet) {
+            if let urlString = firebaseShareURL {
+                ActivityView(activityItems: [urlString])
+            }
+        }
+        
+        // Share Error Alert
+        .alert("Share Failed", isPresented: $isShowingShareError, presenting: shareErrorMessage) { msg in
+            Button("OK") {}
+        } message: { msg in 
+            Text(msg)
+        }
         
         // **NEW**: Attach Paywall Sheet
         .sheet(isPresented: $showPaywall) {
@@ -460,19 +495,29 @@ struct ContentView: View {
         }
     }
     func shareItem(item: ClipboardItem) {
-        var itemsToShare: [Any] = []; var itemToUse = item
-        if itemToUse.fileData == nil, let filename = item.filename { itemToUse.fileData = clipboardManager.loadFileData(filename: filename) }
-        if let data = itemToUse.fileData, item.type == UTType.png.identifier {
-            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(item.filename ?? "SharedFile.png")
-            do { try data.write(to: tempURL, options: [.atomic]); itemsToShare.append(tempURL) } catch { itemsToShare.append(data) }
-        } else if let url = URL(string: item.content), (item.type == UTType.url.identifier || item.content.starts(with: "http")) { itemsToShare.append(url) }
-        else { itemsToShare.append(item.content) }
-        guard !itemsToShare.isEmpty, let sourceView = UIApplication.shared.windows.first?.rootViewController?.view else { return }
-        let activityVC = UIActivityViewController(activityItems: itemsToShare, applicationActivities: nil)
-        if let popover = activityVC.popoverPresentationController {
-            popover.sourceView = sourceView; popover.sourceRect = CGRect(x: sourceView.bounds.midX, y: sourceView.bounds.midY, width: 0, height: 0); popover.permittedArrowDirections = []
+        // Use Firebase sharing for single items
+        isSharingFirebase = true
+        
+        // Get Firebase password setting if enabled
+        let firebasePassword = FirebaseManager.getSharePassword()
+        
+        FirebaseManager.shared.shareItems([item], password: firebasePassword) { result in
+            // Completion is already called on main thread from FirebaseManager
+            self.isSharingFirebase = false
+            switch result {
+            case .success(let shareURL):
+                self.firebaseShareURL = shareURL
+                self.isShowingFirebaseShareAlert = true
+            case .failure(let error):
+                // Check if it's a size limit error
+                if let nsError = error as NSError?, nsError.code == 413 {
+                    self.shareErrorMessage = nsError.localizedDescription
+                } else {
+                    self.shareErrorMessage = "Firebase share failed: \(error.localizedDescription)"
+                }
+                self.isShowingShareError = true
+            }
         }
-        sourceView.window?.rootViewController?.present(activityVC, animated: true)
     }
     func createDragItem(for item: ClipboardItem) -> NSItemProvider {
         if item.type == UTType.png.identifier, let filename = item.filename, let data = clipboardManager.loadFileData(filename: filename), let uiImage = UIImage(data: data) {
