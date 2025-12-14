@@ -149,7 +149,7 @@ class FirebaseManager {
             // Test mode implementation - store in memory
             let shareID = UUID().uuidString
             testDatabase[shareID] = payload
-            let shareURL = "\(deepLinkScheme)://\(deepLinkShareHost)/\(shareID)"
+            let shareURL = "\(deepLinkScheme)://\(deepLinkImportHost)?id=\(shareID)"
             
             print("📤 Share payload stored in test mode:")
             print("  Share ID: \(shareID)")

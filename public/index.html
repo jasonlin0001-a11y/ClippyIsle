@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CC Isle - Shared Clipboard</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 400px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 20px;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        .error {
+            color: #e74c3c;
+            margin-top: 20px;
+            display: none;
+        }
+        .loading {
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">📋</div>
+        <h1>CC Isle Shared Clipboard</h1>
+        <p class="subtitle">Opening in CC Isle app...</p>
+        <p class="loading" id="loading">Redirecting...</p>
+        <p class="error" id="error">
+            Could not open the app automatically.<br>
+            <a href="#" class="button" id="manual-open">Open CC Isle</a>
+        </p>
+    </div>
+
+    <script>
+        // Get the document ID from the URL path
+        // Expected URL format: https://yourdomain.com/share/DOCUMENT_ID
+        const pathParts = window.location.pathname.split('/').filter(part => part);
+        const docId = pathParts[pathParts.length - 1];
+
+        if (!docId || docId === 'index.html') {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('error').innerHTML = 'Invalid share link.<br>No document ID found.';
+        } else {
+            // Construct the deep link with the strict format: ccisle://import?id={UUID}
+            const deepLink = "ccisle://import?id=" + docId;
+            
+            console.log('Redirecting to:', deepLink);
+            
+            // Try to redirect to the app
+            window.location.href = deepLink;
+            
+            // Set up manual open button in case automatic redirect fails
+            document.getElementById('manual-open').href = deepLink;
+            
+            // Show error message after 2 seconds if still on this page
+            setTimeout(() => {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

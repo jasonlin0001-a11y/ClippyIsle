@@ -68,17 +68,22 @@ struct ClippyIsleApp: App {
     }
     
     private func handleDeepLink(_ url: URL) {
-        // Parse URL format: clippyisle://share/{shareID}
+        // Log the received URL for debugging
+        print("🔗 Received Deep Link: \(url)")
+        
+        // Parse URL format: ccisle://import?id={UUID}
         guard url.scheme == deepLinkScheme,
-              url.host == deepLinkShareHost else {
-            print("⚠️ Invalid deep link format: \(url)")
+              url.host == deepLinkImportHost else {
+            print("⚠️ Invalid deep link format. Expected \(deepLinkScheme)://\(deepLinkImportHost)?id=... but got: \(url)")
             return
         }
         
-        // Extract shareID - get the first path component after host
-        let pathComponents = url.pathComponents.filter { $0 != "/" }
-        guard let shareID = pathComponents.first, !shareID.isEmpty else {
-            print("⚠️ No share ID found in URL: \(url)")
+        // Extract the 'id' query parameter
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let queryItems = components.queryItems,
+              let shareID = queryItems.first(where: { $0.name == "id" })?.value,
+              !shareID.isEmpty else {
+            print("⚠️ No 'id' query parameter found in URL: \(url)")
             return
         }
         

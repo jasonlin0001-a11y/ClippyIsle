@@ -5,8 +5,8 @@ import UniformTypeIdentifiers
 
 // MARK: - Global Constants & Functions
 public let appGroupID = "group.com.shihchieh.clippyisle"
-public let deepLinkScheme = "clippyisle"
-public let deepLinkShareHost = "share"
+public let deepLinkScheme = "ccisle"
+public let deepLinkImportHost = "import"
 
 public func saveFileDataToAppGroup(data: Data, type: String) -> String? {
     guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) else {
