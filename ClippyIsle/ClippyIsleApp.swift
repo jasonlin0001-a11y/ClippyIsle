@@ -120,7 +120,8 @@ struct ClippyIsleApp: App {
         switch result {
         case .success(let itemDicts):
             saveSharedItems(itemDicts)
-            // Clear state
+            // Clear state and close prompt
+            showPasswordPrompt = false
             inputPassword = ""
             pendingEncryptedData = ""
             pendingShareID = ""
