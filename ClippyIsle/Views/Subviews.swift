@@ -220,86 +220,6 @@ struct TagExportSelectionView: View {
     }
 }
 
-struct TagFirebaseShareView: View {
-    @ObservedObject var clipboardManager: ClipboardManager
-    @Binding var firebaseShareURL: String?
-    @Binding var isShowingFirebaseShareAlert: Bool
-    @Binding var isShowingImportAlert: Bool
-    @Binding var importAlertMessage: String?
-    @State private var selectedTags: Set<String> = []
-    @State private var isSharingFirebase = false
-    @Environment(\.dismiss) var dismiss
-
-    var body: some View {
-        NavigationView {
-            Form {
-                Section(header: Text("Select tags to share via Firebase")) {
-                    List(clipboardManager.allTags, id: \.self) { tag in
-                        Button(action: { if selectedTags.contains(tag) { selectedTags.remove(tag) } else { selectedTags.insert(tag) } }) {
-                            HStack { Text(tag); Spacer(); if selectedTags.contains(tag) { Image(systemName: "checkmark").foregroundColor(.accentColor) } }
-                        }.foregroundColor(.primary)
-                    }
-                }
-            }
-            .navigationTitle("Share via Firebase").navigationBarTitleDisplayMode(.inline)
-            .toolbar { 
-                ToolbarItem(placement: .navigationBarTrailing) { 
-                    Button {
-                        shareSelectedTags()
-                    } label: {
-                        if isSharingFirebase {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle())
-                        } else {
-                            Text("Share")
-                        }
-                    }
-                    .disabled(selectedTags.isEmpty || isSharingFirebase)
-                } 
-            }
-        }
-    }
-    
-    private func shareSelectedTags() {
-        print("🔥🔥🔥 shareSelectedTags() CALLED")
-        print("🔥 Selected tags: \(selectedTags)")
-        let filteredItems = clipboardManager.items.filter { item in
-            guard let itemTags = item.tags, !item.isTrashed else { return false }
-            return !selectedTags.isDisjoint(with: itemTags)
-        }
-        print("🔥 Filtered items count: \(filteredItems.count)")
-        
-        guard !filteredItems.isEmpty else {
-            print("🔥 No items found for selected tags")
-            importAlertMessage = "No items found for the selected tags."
-            isShowingImportAlert = true
-            dismiss()
-            return
-        }
-        
-        print("🔥 Calling FirebaseManager.shareItems with \(filteredItems.count) items")
-        isSharingFirebase = true
-        FirebaseManager.shared.shareItems(filteredItems) { result in
-            print("🔥 Firebase callback received")
-            DispatchQueue.main.async {
-                self.isSharingFirebase = false
-                switch result {
-                case .success(let shareURL):
-                    print("🔥 SUCCESS: \(shareURL)")
-                    self.firebaseShareURL = shareURL
-                    self.isShowingFirebaseShareAlert = true
-                    dismiss()
-                case .failure(let error):
-                    print("🔥 ERROR: \(error.localizedDescription)")
-                    self.importAlertMessage = "Firebase share failed.\nError: \(error.localizedDescription)"
-                    self.isShowingImportAlert = true
-                    dismiss()
-                }
-            }
-        }
-    }
-}
-
 struct TagEditView: View {
     @Binding var item: ClipboardItem
     @ObservedObject var clipboardManager: ClipboardManager
@@ -436,7 +356,7 @@ struct TagEditView: View {
     }
 }
 
-// **MODIFIED**: Added tag sharing functionality, replaced Edit button with Share button
+// **MODIFIED**: Added tag sharing functionality, replaced Export button with Share button using Firebase
 struct TagFilterView: View {
     @ObservedObject var clipboardManager: ClipboardManager
     @EnvironmentObject var subscriptionManager: SubscriptionManager
@@ -452,6 +372,12 @@ struct TagFilterView: View {
     @State private var showColorPicker = false
     @State private var showPaywall = false
     @State private var refreshTrigger = false
+    @State private var firebaseShareURL: String?
+    @State private var isShowingFirebaseShareAlert = false
+    @State private var showShareSheet = false
+    @State private var isSharingFirebase = false
+    @State private var shareErrorMessage: String?
+    @State private var isShowingShareError = false
     @Environment(\.dismiss) var dismiss
     
     // Theme Color Support
@@ -550,10 +476,17 @@ struct TagFilterView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if isSelectMode {
-                        Button("Export") {
-                            exportSelectedTags()
+                        Button {
+                            shareSelectedTags()
+                        } label: {
+                            if isSharingFirebase {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle())
+                            } else {
+                                Text("Share")
+                            }
                         }
-                        .disabled(selectedTags.isEmpty)
+                        .disabled(selectedTags.isEmpty || isSharingFirebase)
                     } else {
                         Button("Done") { dismiss() }
                     }
@@ -569,11 +502,34 @@ struct TagFilterView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             }
+            .alert("Share Link Created", isPresented: $isShowingFirebaseShareAlert, presenting: firebaseShareURL) { url in
+                Button("Copy Link") { 
+                    UIPasteboard.general.string = url
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(.success)
+                }
+                Button("Share") {
+                    showShareSheet = true
+                }
+                Button("OK") {}
+            } message: { url in 
+                Text("Share this link with others to let them import your clipboard items:\n\n\(url)")
+            }
+            .alert("Share Failed", isPresented: $isShowingShareError, presenting: shareErrorMessage) { msg in
+                Button("OK") {}
+            } message: { msg in 
+                Text(msg)
+            }
             .onAppear {
                 tags = clipboardManager.allTags
             }
             .sheet(item: $exportURL) { url in
                 ActivityView(activityItems: [url])
+            }
+            .sheet(isPresented: $showShareSheet) {
+                if let urlString = firebaseShareURL {
+                    ActivityView(activityItems: [urlString])
+                }
             }
             .sheet(isPresented: $showColorPicker) {
                 if let tag = tagToColor {
@@ -592,13 +548,42 @@ struct TagFilterView: View {
         .tint(themeColor)
     }
     
-    private func exportSelectedTags() {
-        do {
-            if let url = try clipboardManager.exportData(forTags: selectedTags) {
-                exportURL = url
+    private func shareSelectedTags() {
+        let filteredItems = clipboardManager.items.filter { item in
+            guard let itemTags = item.tags, !item.isTrashed else { return false }
+            return !selectedTags.isDisjoint(with: itemTags)
+        }
+        
+        guard !filteredItems.isEmpty else {
+            shareErrorMessage = "No items found for the selected tags."
+            isShowingShareError = true
+            return
+        }
+        
+        isSharingFirebase = true
+        
+        // Get Firebase password setting if enabled
+        let firebasePassword = UserDefaults.standard.bool(forKey: "firebasePasswordEnabled") 
+            ? UserDefaults.standard.string(forKey: "firebasePassword") 
+            : nil
+        
+        FirebaseManager.shared.shareItems(filteredItems, password: firebasePassword) { result in
+            DispatchQueue.main.async {
+                self.isSharingFirebase = false
+                switch result {
+                case .success(let shareURL):
+                    self.firebaseShareURL = shareURL
+                    self.isShowingFirebaseShareAlert = true
+                case .failure(let error):
+                    // Check if it's a size limit error
+                    if let nsError = error as NSError?, nsError.code == 413 {
+                        self.shareErrorMessage = nsError.localizedDescription
+                    } else {
+                        self.shareErrorMessage = "Firebase share failed: \(error.localizedDescription)"
+                    }
+                    self.isShowingShareError = true
+                }
             }
-        } catch {
-            print("Export failed: \(error.localizedDescription)")
         }
     }
 }

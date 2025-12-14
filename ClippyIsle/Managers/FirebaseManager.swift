@@ -155,8 +155,9 @@ class FirebaseManager {
     /// Creates a shareable link for clipboard items by uploading to Firestore
     /// - Parameters:
     ///   - items: Array of ClipboardItem to share
+    ///   - password: Optional password for share protection
     ///   - completion: Result callback with shareable URL string or error
-    func shareItems(_ items: [ClipboardItem], completion: @escaping (Result<String, Error>) -> Void) {
+    func shareItems(_ items: [ClipboardItem], password: String? = nil, completion: @escaping (Result<String, Error>) -> Void) {
         // Convert items to array of dictionaries
         var itemsData: [[String: Any]] = []
         
@@ -176,11 +177,37 @@ class FirebaseManager {
         }
         
         // Create a new document in sharedClipboards collection
-        let shareData: [String: Any] = [
+        var shareData: [String: Any] = [
             "items": itemsData,
             "createdAt": Timestamp(date: Date()),
             "itemCount": items.count
         ]
+        
+        // Add password if provided
+        if let password = password, !password.isEmpty {
+            shareData["password"] = password
+        }
+        
+        // Check size limit (900KB)
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: shareData, options: [])
+            let sizeInKB = Double(jsonData.count) / 1024.0
+            
+            if sizeInKB > 900 {
+                let error = NSError(
+                    domain: "FirebaseManager",
+                    code: 413,
+                    userInfo: [
+                        NSLocalizedDescriptionKey: "Share data size (\(String(format: "%.1f", sizeInKB))KB) exceeds 900KB limit. Please use JSON export instead."
+                    ]
+                )
+                completion(.failure(error))
+                return
+            }
+        } catch {
+            completion(.failure(error))
+            return
+        }
         
         // Add document and get auto-generated ID
         let docRef = db.collection("sharedClipboards").document()
