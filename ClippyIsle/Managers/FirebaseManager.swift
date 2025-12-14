@@ -168,6 +168,9 @@ class FirebaseManager {
     ///   - password: Optional password for share protection
     ///   - completion: Result callback with shareable URL string or error (called on main thread)
     func shareItems(_ items: [ClipboardItem], password: String? = nil, completion: @escaping (Result<String, Error>) -> Void) {
+        // Capture db reference to avoid issues with self in detached task
+        let database = self.db
+        
         // Perform data processing on background thread to avoid blocking main thread
         Task.detached(priority: .userInitiated) {
             // Convert items to array of dictionaries
@@ -210,36 +213,43 @@ class FirebaseManager {
                 sizeCheckResult = .failure(error)
             }
             
-            // Switch to main actor for Firestore operation and completion
-            await MainActor.run {
-                switch sizeCheckResult {
-                case .success(let sizeInKB):
-                    if sizeInKB > FirebaseManager.maxShareSizeKB {
-                        let error = NSError(
-                            domain: "FirebaseManager",
-                            code: 413,
-                            userInfo: [
-                                NSLocalizedDescriptionKey: "Share data size (\(String(format: "%.1f", sizeInKB))KB) exceeds \(Int(FirebaseManager.maxShareSizeKB))KB limit. Please use JSON export instead."
-                            ]
-                        )
+            // Handle size check result
+            switch sizeCheckResult {
+            case .success(let sizeInKB):
+                if sizeInKB > FirebaseManager.maxShareSizeKB {
+                    let error = NSError(
+                        domain: "FirebaseManager",
+                        code: 413,
+                        userInfo: [
+                            NSLocalizedDescriptionKey: "Share data size (\(String(format: "%.1f", sizeInKB))KB) exceeds \(Int(FirebaseManager.maxShareSizeKB))KB limit. Please use JSON export instead."
+                        ]
+                    )
+                    await MainActor.run {
                         completion(.failure(error))
-                        return
                     }
-                    
-                    // Add document and get auto-generated ID
-                    let docRef = self.db.collection("sharedClipboards").document()
+                    return
+                }
+                
+                // Add document and get auto-generated ID - Firestore operations must be on main thread
+                await MainActor.run {
+                    let docRef = database.collection("sharedClipboards").document()
                     docRef.setData(shareData) { error in
-                        if let error = error {
-                            completion(.failure(error))
-                        } else {
-                            // Generate shareable link with Firebase Hosting URL for Open Graph preview support
-                            let shareId = docRef.documentID
-                            let shareURL = "https://cc-isle.web.app/share?id=\(shareId)"
-                            completion(.success(shareURL))
+                        // Firestore completion may be on background thread, ensure we're on main thread
+                        DispatchQueue.main.async {
+                            if let error = error {
+                                completion(.failure(error))
+                            } else {
+                                // Generate shareable link with Firebase Hosting URL for Open Graph preview support
+                                let shareId = docRef.documentID
+                                let shareURL = "https://cc-isle.web.app/share?id=\(shareId)"
+                                completion(.success(shareURL))
+                            }
                         }
                     }
-                    
-                case .failure(let error):
+                }
+                
+            case .failure(let error):
+                await MainActor.run {
                     completion(.failure(error))
                 }
             }
