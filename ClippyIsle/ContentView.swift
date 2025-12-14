@@ -501,8 +501,8 @@ struct ContentView: View {
         // Get Firebase password setting if enabled
         let firebasePassword = FirebaseManager.getSharePassword()
         
-        FirebaseManager.shared.shareItems([item], password: firebasePassword) { [weak self] result in
-            guard let self = self else { return }
+        FirebaseManager.shared.shareItems([item], password: firebasePassword) { result in
+            // Note: No weak self needed - ContentView is a struct (value type), not a class
             DispatchQueue.main.async {
                 self.isSharingFirebase = false
                 switch result {
