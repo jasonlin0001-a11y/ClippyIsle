@@ -111,7 +111,6 @@ struct ClippyIsleApp: App {
     private func unlockEncryptedShare() {
         guard !inputPassword.isEmpty else {
             passwordErrorMessage = "Please enter a password."
-            showPasswordPrompt = true
             return
         }
         
@@ -127,9 +126,8 @@ struct ClippyIsleApp: App {
             passwordErrorMessage = nil
             
         case .failure(let error):
-            // Show error and keep prompt open
+            // Show error and keep prompt open by updating the error message
             passwordErrorMessage = error.localizedDescription
-            showPasswordPrompt = true
         }
     }
     

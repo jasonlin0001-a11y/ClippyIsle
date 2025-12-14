@@ -388,13 +388,6 @@ struct SettingsView: View {
     }
     
     private func shareAllItems() {
-        // Validate password if encryption is enabled
-        if usePassword && passwordInput.isEmpty {
-            shareAlertMessage = "Please enter a password to encrypt the share."
-            isShowingShareAlert = true
-            return
-        }
-        
         isSharing = true
         let password = usePassword ? passwordInput : nil
         
