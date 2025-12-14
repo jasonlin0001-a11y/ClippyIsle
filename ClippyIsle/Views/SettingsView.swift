@@ -42,13 +42,14 @@ struct SettingsModalPresenterView: View {
                 Button("Delete", role: .destructive) { clipboardManager.hardResetData(); dismissAction() }.disabled(confirmationText != "DELETE")
             } message: { Text("This action cannot be undone. Please type 'DELETE' in all capital letters to confirm you want to permanently delete all items.") }
             .alert("Share Result", isPresented: $isShowingShareAlert) { 
-                Button("OK") {
+                Button("Copy Link") {
                     if let url = shareURL {
                         UIPasteboard.general.string = url
                         let generator = UINotificationFeedbackGenerator()
                         generator.notificationOccurred(.success)
                     }
                 }
+                Button("Cancel", role: .cancel) {}
             } message: { 
                 if let message = shareAlertMessage {
                     Text(message)
@@ -368,7 +369,7 @@ struct SettingsView: View {
             Toggle("Encrypt Share", isOn: $usePassword)
             
             if usePassword {
-                SecureField("Set Password", text: $passwordInput)
+                SecureField("Set Password (min 8 characters)", text: $passwordInput)
                     .autocorrectionDisabled(true)
                     .textContentType(.password)
             }
@@ -383,7 +384,7 @@ struct SettingsView: View {
                         .foregroundColor(isSharing ? .gray : .blue)
                 }
             }
-            .disabled(isSharing || (usePassword && passwordInput.isEmpty))
+            .disabled(isSharing || (usePassword && passwordInput.count < 8))
         }
     }
     
@@ -408,7 +409,7 @@ struct SettingsView: View {
                 switch result {
                 case .success(let url):
                     shareURL = url
-                    shareAlertMessage = "Share link created successfully!\n\n\(url)\n\nTap OK to copy to clipboard."
+                    shareAlertMessage = "Share link created successfully!\n\n\(url)"
                     isShowingShareAlert = true
                     
                 case .failure(let error):

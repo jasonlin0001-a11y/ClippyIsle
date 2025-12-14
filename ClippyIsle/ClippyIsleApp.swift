@@ -69,14 +69,15 @@ struct ClippyIsleApp: App {
     
     private func handleDeepLink(_ url: URL) {
         // Parse URL format: clippyisle://share/{shareID}
-        guard url.scheme == "clippyisle",
-              url.host == "share" else {
+        guard url.scheme == deepLinkScheme,
+              url.host == deepLinkShareHost else {
             print("⚠️ Invalid deep link format: \(url)")
             return
         }
         
-        let shareID = url.pathComponents.dropFirst().joined(separator: "/")
-        guard !shareID.isEmpty else {
+        // Extract shareID - get the first path component after host
+        let pathComponents = url.pathComponents.filter { $0 != "/" }
+        guard let shareID = pathComponents.first, !shareID.isEmpty else {
             print("⚠️ No share ID found in URL: \(url)")
             return
         }

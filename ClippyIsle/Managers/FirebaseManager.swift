@@ -145,7 +145,7 @@ class FirebaseManager: ObservableObject {
             
             // Placeholder implementation
             let shareID = UUID().uuidString
-            let shareURL = "clippyisle://share/\(shareID)"
+            let shareURL = "\(deepLinkScheme)://\(deepLinkShareHost)/\(shareID)"
             
             print("📤 Share payload prepared (Firebase integration pending):")
             print("  Encrypted: \(payload["isEncrypted"] as? Bool ?? false)")
