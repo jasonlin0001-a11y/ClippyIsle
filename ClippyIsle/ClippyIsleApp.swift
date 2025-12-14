@@ -178,6 +178,4 @@ struct ClippyIsleApp: App {
             print("ℹ️ No new items were added (all items already exist)")
         }
     }
-        }
-    }
 }
