@@ -76,7 +76,11 @@ class ClipboardManager: ObservableObject {
         }
         
         let syncedItems = await cloudKitManager.sync(localItems: self.items)
-        await MainActor.run { self.items = syncedItems; self.sortAndSave(skipCloud: true) }
+        await MainActor.run {
+            self.items = syncedItems
+            self.cleanupItems()
+            self.sortAndSave(skipCloud: true)
+        }
         
         // Also sync tag colors (use internal method to get colors regardless of Pro status for backup)
         let localTagColors = getAllTagColorsInternal()
