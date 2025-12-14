@@ -321,17 +321,16 @@ struct SettingsView: View {
                         .submitLabel(.done)
                         .onChange(of: passwordInput) { _, _ in isPasswordSaved = false }
                     
-                    if passwordInput != firebasePassword || isPasswordSaved {
+                    if passwordInput != firebasePassword && !passwordInput.isEmpty {
                         Button(action: savePassword) {
-                            if isPasswordSaved { 
-                                Image(systemName: "checkmark.circle.fill").foregroundColor(.green) 
-                            } else { 
-                                Text("Save").fontWeight(.bold) 
-                            }
+                            Text("Save").fontWeight(.bold)
                         }
                         .buttonStyle(.borderless)
-                        .transition(.scale.combined(with: .opacity))
-                        .animation(.easeInOut, value: isPasswordSaved)
+                    } else if isPasswordSaved {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                            .transition(.scale.combined(with: .opacity))
+                            .animation(.easeInOut, value: isPasswordSaved)
                     }
                 }
                 
@@ -349,7 +348,8 @@ struct SettingsView: View {
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { 
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+            guard let self = self else { return }
             if self.passwordInput == self.firebasePassword { 
                 self.isPasswordSaved = false 
             } 
