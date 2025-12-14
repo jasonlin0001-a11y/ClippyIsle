@@ -60,22 +60,30 @@ class ClipboardManager: ObservableObject {
         cleanupItems()
         LaunchLogger.log("ClipboardManager.initializeData() - cleanupItems() completed")
         if UserDefaults.standard.bool(forKey: "iCloudSyncEnabled") { 
-            Task { 
-                LaunchLogger.log("ClipboardManager.initializeData() - CloudSync Task spawned")
-                await performCloudSync() 
+            // BACKGROUND SYNC: Use Task.detached to run sync off the main thread
+            // This prevents app freeze from "Cloud Sync Storm" with many items
+            Task.detached(priority: .utility) { [weak self] in
+                guard let self = self else { return }
+                LaunchLogger.log("ClipboardManager.initializeData() - CloudSync Task spawned (background)")
+                await self.performCloudSync(initialSync: true)
             }
         }
         LaunchLogger.log("ClipboardManager.initializeData() - END")
     }
     
-    func performCloudSync() async {
+    /// Perform cloud sync with optional initial sync limit
+    /// - Parameter initialSync: If true, limits sync to 20 items to prevent app freeze
+    func performCloudSync(initialSync: Bool = false) async {
         // Check if iCloud sync is enabled before syncing
         guard UserDefaults.standard.bool(forKey: "iCloudSyncEnabled") else {
             print("⚠️ iCloud sync is disabled, skipping sync")
             return
         }
         
-        let syncedItems = await cloudKitManager.sync(localItems: self.items)
+        // Use limit of 20 items for initial sync to prevent "Cloud Sync Storm"
+        let syncLimit = initialSync ? 20 : nil
+        let currentItems = await MainActor.run { self.items }
+        let syncedItems = await cloudKitManager.sync(localItems: currentItems, initialSyncLimit: syncLimit)
         await MainActor.run { self.items = syncedItems; self.sortAndSave(skipCloud: true) }
         
         // Also sync tag colors (use internal method to get colors regardless of Pro status for backup)
@@ -85,6 +93,12 @@ class ClipboardManager: ObservableObject {
         // Always apply synced colors to local storage (for backup purposes)
         // Pro check happens when colors are retrieved for display
         await MainActor.run { setAllTagColors(syncedTagColors, skipCloudSync: true) }
+    }
+    
+    /// Purge all cloud data - "Nuclear" option to wipe corrupt/zombie data
+    /// Call this once from a debug menu or temporary button to clear iCloud completely
+    func purgeAllCloudData() async -> Result<Int, Error> {
+        return await cloudKitManager.purgeAllCloudData()
     }
     
     func hardResetData() {

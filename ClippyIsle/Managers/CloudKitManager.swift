@@ -111,8 +111,8 @@ class CloudKitManager: ObservableObject {
     }
     
     // MARK: - Helpers for Pagination
-    // 修正: 遞迴抓取所有頁面的資料
-    private func fetchAllRecords() async throws -> [CKRecord] {
+    // Fetch records with optional limit for pagination (default: fetch all)
+    private func fetchRecords(limit: Int? = nil) async throws -> [CKRecord] {
         var allRecords: [CKRecord] = []
         let query = CKQuery(recordType: "ClipboardItem", predicate: NSPredicate(value: true))
         query.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]
@@ -129,6 +129,10 @@ class CloudKitManager: ObservableObject {
             for result in matchResults {
                 if case .success(let record) = result.1 {
                     allRecords.append(record)
+                    // Stop early if we've reached the limit
+                    if let limit = limit, allRecords.count >= limit {
+                        return allRecords
+                    }
                 }
             }
         } while cursor != nil
@@ -136,24 +140,37 @@ class CloudKitManager: ObservableObject {
         return allRecords
     }
     
+    // Legacy method for backward compatibility - fetches all records
+    private func fetchAllRecords() async throws -> [CKRecord] {
+        return try await fetchRecords(limit: nil)
+    }
+    
     // MARK: - Synchronization
-    func sync(localItems: [ClipboardItem]) async -> [ClipboardItem] {
+    /// Sync with cloud with optional limit for initial sync (to prevent app freeze)
+    /// - Parameters:
+    ///   - localItems: Local clipboard items to sync
+    ///   - initialSyncLimit: Maximum number of cloud items to fetch on initial sync (nil = fetch all)
+    /// - Returns: Merged items after sync
+    func sync(localItems: [ClipboardItem], initialSyncLimit: Int? = nil) async -> [ClipboardItem] {
         guard iCloudStatus == "Available" else { return localItems }
         
         await MainActor.run { isSyncing = true }
         defer { Task { @MainActor in isSyncing = false; lastSyncDate = Date() } }
         
         do {
-            // 1. 獲取所有雲端資料 (使用修正後的 Helper)
-            let cloudRecords = try await fetchAllRecords()
+            // 1. 獲取雲端資料 (with optional limit for initial sync)
+            let cloudRecords = try await fetchRecords(limit: initialSyncLimit)
             
             var cloudItems: [ClipboardItem] = []
             for record in cloudRecords {
-                if let item = item(from: record) {
+                // Safe decoding: Use optional try to skip corrupt/zombie items
+                if let item = try? item(from: record) {
                     cloudItems.append(item)
+                } else {
+                    print("⚠️ CloudKit: Skipped corrupt/incompatible record: \(record.recordID.recordName)")
                 }
             }
-            print("☁️ Fetched \(cloudItems.count) items from Cloud (Total).")
+            print("☁️ Fetched \(cloudItems.count) items from Cloud (limit: \(initialSyncLimit?.description ?? "none")).")
             
             var mergedItems = localItems
             let cloudIDMap = Dictionary(uniqueKeysWithValues: cloudItems.map { ($0.id, $0) })
@@ -169,29 +186,21 @@ class CloudKitManager: ObservableObject {
                     if cloudItem.timestamp > localItem.timestamp {
                         if let index = mergedItems.firstIndex(where: { $0.id == cloudItem.id }) {
                             mergedItems[index] = cloudItem
-                            // print("☁️ Updated local item \(cloudItem.id) from Cloud.")
                         }
                     } else if localItem.timestamp > cloudItem.timestamp {
                         // 本地比較新，準備上傳
                         recordsToSave.append(createRecord(from: localItem))
-                        // print("☁️ Local item \(localItem.id) is newer, queueing for upload.")
                     }
                 } else {
                     // 本地沒有，直接加入
                     mergedItems.append(cloudItem)
-                    // print("☁️ Added new item \(cloudItem.id) from Cloud.")
                 }
             }
             
             // 3. 比對本地資料 -> 上傳新資料
-            // 注意：這裡很容易產生「復活」問題。
-            // 如果雲端沒有，通常表示它是「新建立的」或者「雲端已刪除」。
-            // 在沒有 Soft Delete (軟刪除) 標記的情況下，我們只能假設本地存在但雲端沒有的是「新資料」。
-            // 為了避免無限復活，建議加上時間閾值，但目前先維持上傳邏輯。
             for localItem in localItems {
                 if cloudIDMap[localItem.id] == nil {
                     recordsToSave.append(createRecord(from: localItem))
-                    // print("☁️ Item \(localItem.id) missing in Cloud, queueing for upload.")
                 }
             }
             
@@ -362,6 +371,76 @@ class CloudKitManager: ObservableObject {
         database.delete(withRecordID: id) { _, error in
             if let error = error { print("☁️ CloudKit Tag Color Delete Error: \(error.localizedDescription)") }
             else { print("☁️ Deleted tag color for '\(tag)' from CloudKit.") }
+        }
+    }
+    
+    // MARK: - Purge All Cloud Data (Nuclear Option)
+    /// Deletes ALL data from iCloud (ClipboardItems and TagColors)
+    /// Use this function once to wipe corrupt/zombie data from the cloud
+    /// - Returns: Number of records deleted, or error message
+    func purgeAllCloudData() async -> Result<Int, Error> {
+        guard iCloudStatus == "Available" else {
+            return .failure(NSError(domain: "CloudKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "iCloud not available"]))
+        }
+        
+        await MainActor.run { isSyncing = true }
+        defer { Task { @MainActor in isSyncing = false } }
+        
+        do {
+            var totalDeleted = 0
+            
+            // 1. Delete all ClipboardItem records
+            let itemRecords = try await fetchAllRecords()
+            if !itemRecords.isEmpty {
+                let itemIDs = itemRecords.map { $0.recordID }
+                print("☁️ PURGE: Deleting \(itemIDs.count) ClipboardItem records...")
+                
+                let deleteItemsOp = CKModifyRecordsOperation(recordsToSave: nil, recordIDsToDelete: itemIDs)
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                    deleteItemsOp.modifyRecordsResultBlock = { result in
+                        switch result {
+                        case .success:
+                            print("☁️ PURGE: ClipboardItem records deleted successfully.")
+                            continuation.resume()
+                        case .failure(let error):
+                            print("☁️ PURGE: Failed to delete ClipboardItem records: \(error)")
+                            continuation.resume(throwing: error)
+                        }
+                    }
+                    database.add(deleteItemsOp)
+                }
+                totalDeleted += itemIDs.count
+            }
+            
+            // 2. Delete all TagColor records
+            let tagColorRecords = try await fetchAllTagColorRecords()
+            if !tagColorRecords.isEmpty {
+                let tagColorIDs = tagColorRecords.map { $0.recordID }
+                print("☁️ PURGE: Deleting \(tagColorIDs.count) TagColor records...")
+                
+                let deleteColorsOp = CKModifyRecordsOperation(recordsToSave: nil, recordIDsToDelete: tagColorIDs)
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                    deleteColorsOp.modifyRecordsResultBlock = { result in
+                        switch result {
+                        case .success:
+                            print("☁️ PURGE: TagColor records deleted successfully.")
+                            continuation.resume()
+                        case .failure(let error):
+                            print("☁️ PURGE: Failed to delete TagColor records: \(error)")
+                            continuation.resume(throwing: error)
+                        }
+                    }
+                    database.add(deleteColorsOp)
+                }
+                totalDeleted += tagColorIDs.count
+            }
+            
+            print("☁️ PURGE COMPLETE: Deleted \(totalDeleted) total records from iCloud.")
+            return .success(totalDeleted)
+            
+        } catch {
+            print("☁️ PURGE FAILED: \(error)")
+            return .failure(error)
         }
     }
 }
