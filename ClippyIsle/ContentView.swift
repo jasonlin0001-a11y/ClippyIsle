@@ -55,6 +55,12 @@ struct ContentView: View {
     
     // State to control Audio Manager sheet
     @State private var isShowingAudioManager = false
+    
+    // Firebase share state
+    @State private var isSharingFirebase = false
+    @State private var firebaseShareURL: String?
+    @State private var showFirebaseShareSheet = false
+    @State private var showFirebaseSizeError = false
 
     @AppStorage("themeColorName") private var themeColorName: String = "blue"
     
@@ -242,6 +248,18 @@ struct ContentView: View {
         // **NEW**: Attach Paywall Sheet
         .sheet(isPresented: $showPaywall) {
             PaywallView()
+        }
+        // Firebase share sheet
+        .sheet(isPresented: $showFirebaseShareSheet) {
+            if let urlString = firebaseShareURL {
+                ActivityView(activityItems: [urlString])
+            }
+        }
+        // Firebase size error alert
+        .alert("Size Limit Exceeded", isPresented: $showFirebaseSizeError) {
+            Button("OK") {}
+        } message: {
+            Text("The item exceeds the 900KB limit for Firebase sharing. Please use JSON export instead.")
         }
     }
     
@@ -460,19 +478,29 @@ struct ContentView: View {
         }
     }
     func shareItem(item: ClipboardItem) {
-        var itemsToShare: [Any] = []; var itemToUse = item
-        if itemToUse.fileData == nil, let filename = item.filename { itemToUse.fileData = clipboardManager.loadFileData(filename: filename) }
-        if let data = itemToUse.fileData, item.type == UTType.png.identifier {
-            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(item.filename ?? "SharedFile.png")
-            do { try data.write(to: tempURL, options: [.atomic]); itemsToShare.append(tempURL) } catch { itemsToShare.append(data) }
-        } else if let url = URL(string: item.content), (item.type == UTType.url.identifier || item.content.starts(with: "http")) { itemsToShare.append(url) }
-        else { itemsToShare.append(item.content) }
-        guard !itemsToShare.isEmpty, let sourceView = UIApplication.shared.windows.first?.rootViewController?.view else { return }
-        let activityVC = UIActivityViewController(activityItems: itemsToShare, applicationActivities: nil)
-        if let popover = activityVC.popoverPresentationController {
-            popover.sourceView = sourceView; popover.sourceRect = CGRect(x: sourceView.bounds.midX, y: sourceView.bounds.midY, width: 0, height: 0); popover.permittedArrowDirections = []
+        // Check size limit (900KB) before Firebase sharing
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .prettyPrinted
+        if let data = try? encoder.encode([item]),
+           data.count > 900 * 1024 {
+            showFirebaseSizeError = true
+            return
         }
-        sourceView.window?.rootViewController?.present(activityVC, animated: true)
+        
+        // Use Firebase sharing instead of JSON
+        isSharingFirebase = true
+        FirebaseManager.shared.shareItems([item]) { result in
+            DispatchQueue.main.async {
+                self.isSharingFirebase = false
+                switch result {
+                case .success(let shareURL):
+                    self.firebaseShareURL = shareURL
+                    self.showFirebaseShareSheet = true
+                case .failure(let error):
+                    print("Firebase share failed: \(error.localizedDescription)")
+                }
+            }
+        }
     }
     func createDragItem(for item: ClipboardItem) -> NSItemProvider {
         if item.type == UTType.png.identifier, let filename = item.filename, let data = clipboardManager.loadFileData(filename: filename), let uiImage = UIImage(data: data) {

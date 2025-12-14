@@ -452,6 +452,10 @@ struct TagFilterView: View {
     @State private var showColorPicker = false
     @State private var showPaywall = false
     @State private var refreshTrigger = false
+    @State private var isSharingFirebase = false
+    @State private var firebaseShareURL: String?
+    @State private var showShareSheet = false
+    @State private var showSizeError = false
     @Environment(\.dismiss) var dismiss
     
     // Theme Color Support
@@ -550,10 +554,17 @@ struct TagFilterView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if isSelectMode {
-                        Button("Export") {
-                            exportSelectedTags()
+                        Button {
+                            shareSelectedTagsViaFirebase()
+                        } label: {
+                            if isSharingFirebase {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle())
+                            } else {
+                                Text("Send")
+                            }
                         }
-                        .disabled(selectedTags.isEmpty)
+                        .disabled(selectedTags.isEmpty || isSharingFirebase)
                     } else {
                         Button("Done") { dismiss() }
                     }
@@ -588,6 +599,16 @@ struct TagFilterView: View {
             .sheet(isPresented: $showPaywall) {
                 PaywallView()
             }
+            .sheet(isPresented: $showShareSheet) {
+                if let urlString = firebaseShareURL {
+                    ActivityView(activityItems: [urlString])
+                }
+            }
+            .alert("Size Limit Exceeded", isPresented: $showSizeError) {
+                Button("OK") {}
+            } message: {
+                Text("The selected items exceed the 900KB limit for Firebase sharing. Please use JSON export instead.")
+            }
         }
         .tint(themeColor)
     }
@@ -599,6 +620,43 @@ struct TagFilterView: View {
             }
         } catch {
             print("Export failed: \(error.localizedDescription)")
+        }
+    }
+    
+    private func shareSelectedTagsViaFirebase() {
+        let filteredItems = clipboardManager.items.filter { item in
+            guard let itemTags = item.tags, !item.isTrashed else { return false }
+            return !selectedTags.isDisjoint(with: itemTags)
+        }
+        
+        guard !filteredItems.isEmpty else {
+            return
+        }
+        
+        // Check size limit (900KB) - estimate using ClipboardItem encoding
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .prettyPrinted
+        if let data = try? encoder.encode(filteredItems),
+           data.count > 900 * 1024 {
+            showSizeError = true
+            return
+        }
+        
+        isSharingFirebase = true
+        FirebaseManager.shared.shareItems(filteredItems) { result in
+            DispatchQueue.main.async {
+                self.isSharingFirebase = false
+                switch result {
+                case .success(let shareURL):
+                    self.firebaseShareURL = shareURL
+                    self.showShareSheet = true
+                    // Exit select mode after successful share
+                    self.isSelectMode = false
+                    self.selectedTags.removeAll()
+                case .failure(let error):
+                    print("Firebase share failed: \(error.localizedDescription)")
+                }
+            }
         }
     }
 }

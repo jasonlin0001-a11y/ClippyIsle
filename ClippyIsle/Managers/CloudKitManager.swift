@@ -120,12 +120,17 @@ class CloudKitManager: ObservableObject {
     }
     
     // MARK: - Helpers for Pagination
+<<<<<<< HEAD
     /// Maximum number of items to fetch during initial sync to prevent sync storms
     private let initialSyncLimit = 20
     
     /// Fetches records with pagination, optionally limiting to a specific count for initial sync
     /// - Parameter limitToInitialSync: If true, only fetches up to `initialSyncLimit` items (sorted by most recent first)
     private func fetchRecords(limitToInitialSync: Bool = false) async throws -> [CKRecord] {
+=======
+    // Fetch records with optional limit for pagination (default: fetch all)
+    private func fetchRecords(limit: Int? = nil) async throws -> [CKRecord] {
+>>>>>>> copilot/replace-export-with-firebase-share
         var allRecords: [CKRecord] = []
         let query = CKQuery(recordType: "ClipboardItem", predicate: NSPredicate(value: true))
         query.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]
@@ -142,10 +147,15 @@ class CloudKitManager: ObservableObject {
             for result in matchResults {
                 if case .success(let record) = result.1 {
                     allRecords.append(record)
+<<<<<<< HEAD
                     
                     // If limiting to initial sync, stop once we have enough records
                     if limitToInitialSync && allRecords.count >= initialSyncLimit {
                         print("☁️ Reached initial sync limit of \(initialSyncLimit) items, stopping fetch.")
+=======
+                    // Stop early if we've reached the limit
+                    if let limit = limit, allRecords.count >= limit {
+>>>>>>> copilot/replace-export-with-firebase-share
                         return allRecords
                     }
                 }
@@ -155,6 +165,7 @@ class CloudKitManager: ObservableObject {
         return allRecords
     }
     
+<<<<<<< HEAD
     // Legacy method maintained for backwards compatibility - fetches all records
     private func fetchAllRecords() async throws -> [CKRecord] {
         return try await fetchRecords(limitToInitialSync: false)
@@ -166,18 +177,38 @@ class CloudKitManager: ObservableObject {
     ///   - localItems: The local clipboard items to sync
     ///   - isInitialSync: If true, limits fetched cloud items to prevent sync storms on app launch
     func sync(localItems: [ClipboardItem], isInitialSync: Bool = false) async -> [ClipboardItem] {
+=======
+    // Legacy method for backward compatibility - fetches all records
+    private func fetchAllRecords() async throws -> [CKRecord] {
+        return try await fetchRecords(limit: nil)
+    }
+    
+    // MARK: - Synchronization
+    /// Sync with cloud with optional limit for initial sync (to prevent app freeze)
+    /// - Parameters:
+    ///   - localItems: Local clipboard items to sync
+    ///   - initialSyncLimit: Maximum number of cloud items to fetch on initial sync (nil = fetch all)
+    /// - Returns: Merged items after sync
+    func sync(localItems: [ClipboardItem], initialSyncLimit: Int? = nil) async -> [ClipboardItem] {
+>>>>>>> copilot/replace-export-with-firebase-share
         guard iCloudStatus == "Available" else { return localItems }
         
         await MainActor.run { isSyncing = true }
         defer { Task { @MainActor in isSyncing = false; lastSyncDate = Date() } }
         
         do {
+<<<<<<< HEAD
             // 1. Fetch cloud records (limited if initial sync to prevent sync storms)
             let cloudRecords = try await fetchRecords(limitToInitialSync: isInitialSync)
+=======
+            // 1. 獲取雲端資料 (with optional limit for initial sync)
+            let cloudRecords = try await fetchRecords(limit: initialSyncLimit)
+>>>>>>> copilot/replace-export-with-firebase-share
             
             var cloudItems: [ClipboardItem] = []
             var skippedCount = 0
             for record in cloudRecords {
+<<<<<<< HEAD
                 // Safe decoding: Use optional conversion to skip corrupt/zombie items silently
                 if let item = safeItem(from: record) {
                     cloudItems.append(item)
@@ -190,6 +221,16 @@ class CloudKitManager: ObservableObject {
                 print("☁️ Skipped \(skippedCount) corrupt/zombie items during sync.")
             }
             print("☁️ Fetched \(cloudItems.count) valid items from Cloud\(isInitialSync ? " (limited to \(initialSyncLimit) for initial sync)" : " (Total)").")
+=======
+                // Safe decoding: Skip corrupt/zombie items silently
+                if let item = item(from: record) {
+                    cloudItems.append(item)
+                } else {
+                    print("⚠️ CloudKit: Skipped corrupt/incompatible record: \(record.recordID.recordName)")
+                }
+            }
+            print("☁️ Fetched \(cloudItems.count) items from Cloud (limit: \(initialSyncLimit?.description ?? "none")).")
+>>>>>>> copilot/replace-export-with-firebase-share
             
             var mergedItems = localItems
             let cloudIDMap = Dictionary(uniqueKeysWithValues: cloudItems.map { ($0.id, $0) })
@@ -205,29 +246,21 @@ class CloudKitManager: ObservableObject {
                     if cloudItem.timestamp > localItem.timestamp {
                         if let index = mergedItems.firstIndex(where: { $0.id == cloudItem.id }) {
                             mergedItems[index] = cloudItem
-                            // print("☁️ Updated local item \(cloudItem.id) from Cloud.")
                         }
                     } else if localItem.timestamp > cloudItem.timestamp {
                         // 本地比較新，準備上傳
                         recordsToSave.append(createRecord(from: localItem))
-                        // print("☁️ Local item \(localItem.id) is newer, queueing for upload.")
                     }
                 } else {
                     // 本地沒有，直接加入
                     mergedItems.append(cloudItem)
-                    // print("☁️ Added new item \(cloudItem.id) from Cloud.")
                 }
             }
             
             // 3. 比對本地資料 -> 上傳新資料
-            // 注意：這裡很容易產生「復活」問題。
-            // 如果雲端沒有，通常表示它是「新建立的」或者「雲端已刪除」。
-            // 在沒有 Soft Delete (軟刪除) 標記的情況下，我們只能假設本地存在但雲端沒有的是「新資料」。
-            // 為了避免無限復活，建議加上時間閾值，但目前先維持上傳邏輯。
             for localItem in localItems {
                 if cloudIDMap[localItem.id] == nil {
                     recordsToSave.append(createRecord(from: localItem))
-                    // print("☁️ Item \(localItem.id) missing in Cloud, queueing for upload.")
                 }
             }
             
@@ -401,6 +434,7 @@ class CloudKitManager: ObservableObject {
         }
     }
     
+<<<<<<< HEAD
     // MARK: - Purge All Cloud Data ("Nuke" Button)
     
     /// Purges ALL data from iCloud (CloudKit private database).
@@ -410,11 +444,21 @@ class CloudKitManager: ObservableObject {
         guard iCloudStatus == "Available" else {
             print("☁️🧹 purgeAllCloudData: iCloud not available, skipping.")
             return
+=======
+    // MARK: - Purge All Cloud Data (Nuclear Option)
+    /// Deletes ALL data from iCloud (ClipboardItems and TagColors)
+    /// Use this function once to wipe corrupt/zombie data from the cloud
+    /// - Returns: Number of records deleted, or error message
+    func purgeAllCloudData() async -> Result<Int, Error> {
+        guard iCloudStatus == "Available" else {
+            return .failure(NSError(domain: "CloudKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "iCloud not available"]))
+>>>>>>> copilot/replace-export-with-firebase-share
         }
         
         await MainActor.run { isSyncing = true }
         defer { Task { @MainActor in isSyncing = false } }
         
+<<<<<<< HEAD
         print("☁️🧹 Starting purgeAllCloudData - wiping all CloudKit data...")
         
         do {
@@ -440,11 +484,38 @@ class CloudKitManager: ObservableObject {
                 }
             } else {
                 print("☁️🧹 No ClipboardItem records to delete.")
+=======
+        do {
+            var totalDeleted = 0
+            
+            // 1. Delete all ClipboardItem records
+            let itemRecords = try await fetchAllRecords()
+            if !itemRecords.isEmpty {
+                let itemIDs = itemRecords.map { $0.recordID }
+                print("☁️ PURGE: Deleting \(itemIDs.count) ClipboardItem records...")
+                
+                let deleteItemsOp = CKModifyRecordsOperation(recordsToSave: nil, recordIDsToDelete: itemIDs)
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                    deleteItemsOp.modifyRecordsResultBlock = { result in
+                        switch result {
+                        case .success:
+                            print("☁️ PURGE: ClipboardItem records deleted successfully.")
+                            continuation.resume()
+                        case .failure(let error):
+                            print("☁️ PURGE: Failed to delete ClipboardItem records: \(error)")
+                            continuation.resume(throwing: error)
+                        }
+                    }
+                    database.add(deleteItemsOp)
+                }
+                totalDeleted += itemIDs.count
+>>>>>>> copilot/replace-export-with-firebase-share
             }
             
             // 2. Delete all TagColor records
             let tagColorRecords = try await fetchAllTagColorRecords()
             if !tagColorRecords.isEmpty {
+<<<<<<< HEAD
                 let tagColorIDsToDelete = tagColorRecords.map { $0.recordID }
                 print("☁️🧹 Deleting \(tagColorIDsToDelete.count) TagColor records...")
                 
@@ -470,6 +541,34 @@ class CloudKitManager: ObservableObject {
             
         } catch {
             print("☁️🧹 purgeAllCloudData failed: \(error.localizedDescription)")
+=======
+                let tagColorIDs = tagColorRecords.map { $0.recordID }
+                print("☁️ PURGE: Deleting \(tagColorIDs.count) TagColor records...")
+                
+                let deleteColorsOp = CKModifyRecordsOperation(recordsToSave: nil, recordIDsToDelete: tagColorIDs)
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                    deleteColorsOp.modifyRecordsResultBlock = { result in
+                        switch result {
+                        case .success:
+                            print("☁️ PURGE: TagColor records deleted successfully.")
+                            continuation.resume()
+                        case .failure(let error):
+                            print("☁️ PURGE: Failed to delete TagColor records: \(error)")
+                            continuation.resume(throwing: error)
+                        }
+                    }
+                    database.add(deleteColorsOp)
+                }
+                totalDeleted += tagColorIDs.count
+            }
+            
+            print("☁️ PURGE COMPLETE: Deleted \(totalDeleted) total records from iCloud.")
+            return .success(totalDeleted)
+            
+        } catch {
+            print("☁️ PURGE FAILED: \(error)")
+            return .failure(error)
+>>>>>>> copilot/replace-export-with-firebase-share
         }
     }
 }
