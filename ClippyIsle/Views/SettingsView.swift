@@ -338,7 +338,6 @@ struct SettingsView: View {
                 HStack {
                     if isPurgingCloud {
                         ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle())
                     }
                     Text("Purge iCloud Data")
                 }

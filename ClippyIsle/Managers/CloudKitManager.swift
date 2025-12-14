@@ -163,8 +163,8 @@ class CloudKitManager: ObservableObject {
             
             var cloudItems: [ClipboardItem] = []
             for record in cloudRecords {
-                // Safe decoding: Use optional try to skip corrupt/zombie items
-                if let item = try? item(from: record) {
+                // Safe decoding: Skip corrupt/zombie items silently
+                if let item = item(from: record) {
                     cloudItems.append(item)
                 } else {
                     print("⚠️ CloudKit: Skipped corrupt/incompatible record: \(record.recordID.recordName)")
