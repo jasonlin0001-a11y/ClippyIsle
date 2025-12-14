@@ -6,7 +6,7 @@ import UIKit
 import StoreKit
 
 // MARK: - Extensions for Identifiable URL
-@retroactive extension URL: Identifiable {
+extension URL: @retroactive Identifiable {
     public var id: String { absoluteString }
 }
 
