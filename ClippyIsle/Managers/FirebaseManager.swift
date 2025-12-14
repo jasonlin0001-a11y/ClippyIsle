@@ -149,12 +149,16 @@ class FirebaseManager {
             // Test mode implementation - store in memory
             let shareID = UUID().uuidString
             testDatabase[shareID] = payload
-            let shareURL = "\(deepLinkScheme)://\(deepLinkImportHost)?id=\(shareID)"
+            
+            // Generate HTTPS URL for Firebase Hosting (for Open Graph previews)
+            // This will redirect to ccisle://import?id={UUID} via index.html
+            let shareURL = "https://cc-isle.web.app/share/\(shareID)"
             
             print("📤 Share payload stored in test mode:")
             print("  Share ID: \(shareID)")
             print("  Encrypted: \(payload["isEncrypted"] as? Bool ?? false)")
-            print("  Share URL: \(shareURL)")
+            print("  Share URL (HTTPS): \(shareURL)")
+            print("  Will redirect to: ccisle://import?id=\(shareID)")
             
             // Simulate async upload
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {

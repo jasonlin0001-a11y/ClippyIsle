@@ -72,10 +72,21 @@
     </div>
 
     <script>
-        // Get the document ID from the URL path
-        // Expected URL format: https://yourdomain.com/share/DOCUMENT_ID
-        const pathParts = window.location.pathname.split('/').filter(part => part);
-        const docId = pathParts[pathParts.length - 1];
+        // Parse the document ID from the HTTPS URL
+        // Expected URL format: https://cc-isle.web.app/share/{UUID}
+        // Can also check query parameter: https://cc-isle.web.app/share?id={UUID}
+        
+        let docId = null;
+        
+        // First try query parameter (https://cc-isle.web.app/share?id={UUID})
+        const urlParams = new URLSearchParams(window.location.search);
+        docId = urlParams.get('id');
+        
+        // If not found, try path-based (https://cc-isle.web.app/share/{UUID})
+        if (!docId) {
+            const pathParts = window.location.pathname.split('/').filter(part => part);
+            docId = pathParts[pathParts.length - 1];
+        }
 
         if (!docId || docId === 'index.html') {
             document.getElementById('loading').style.display = 'none';
@@ -85,6 +96,8 @@
             // Construct the deep link with the strict format: ccisle://import?id={UUID}
             const deepLink = "ccisle://import?id=" + docId;
             
+            console.log('Received HTTPS URL:', window.location.href);
+            console.log('Extracted ID:', docId);
             console.log('Redirecting to:', deepLink);
             
             // Try to redirect to the app
