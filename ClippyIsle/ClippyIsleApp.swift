@@ -119,17 +119,22 @@ struct ClippyIsleApp: App {
         
         switch result {
         case .success(let itemDicts):
-            saveSharedItems(itemDicts)
-            // Clear state and close prompt
-            showPasswordPrompt = false
-            inputPassword = ""
-            pendingEncryptedData = ""
-            pendingShareID = ""
-            passwordErrorMessage = nil
+            // Ensure UI updates happen on main thread
+            DispatchQueue.main.async {
+                self.saveSharedItems(itemDicts)
+                // Clear state and close prompt
+                self.showPasswordPrompt = false
+                self.inputPassword = ""
+                self.pendingEncryptedData = ""
+                self.pendingShareID = ""
+                self.passwordErrorMessage = nil
+            }
             
         case .failure(let error):
             // Show error and keep prompt open by updating the error message
-            passwordErrorMessage = error.localizedDescription
+            DispatchQueue.main.async {
+                self.passwordErrorMessage = error.localizedDescription
+            }
         }
     }
     
