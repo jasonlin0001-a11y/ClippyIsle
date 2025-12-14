@@ -566,22 +566,20 @@ struct TagFilterView: View {
         let firebasePassword = FirebaseManager.getSharePassword()
         
         FirebaseManager.shared.shareItems(filteredItems, password: firebasePassword) { result in
-            // Note: No weak self needed - TagFilterView is a struct (value type), not a class
-            DispatchQueue.main.async {
-                self.isSharingFirebase = false
-                switch result {
-                case .success(let shareURL):
-                    self.firebaseShareURL = shareURL
-                    self.isShowingFirebaseShareAlert = true
-                case .failure(let error):
-                    // Check if it's a size limit error
-                    if let nsError = error as NSError?, nsError.code == 413 {
-                        self.shareErrorMessage = nsError.localizedDescription
-                    } else {
-                        self.shareErrorMessage = "Firebase share failed: \(error.localizedDescription)"
-                    }
-                    self.isShowingShareError = true
+            // Completion is already called on main thread from FirebaseManager
+            self.isSharingFirebase = false
+            switch result {
+            case .success(let shareURL):
+                self.firebaseShareURL = shareURL
+                self.isShowingFirebaseShareAlert = true
+            case .failure(let error):
+                // Check if it's a size limit error
+                if let nsError = error as NSError?, nsError.code == 413 {
+                    self.shareErrorMessage = nsError.localizedDescription
+                } else {
+                    self.shareErrorMessage = "Firebase share failed: \(error.localizedDescription)"
                 }
+                self.isShowingShareError = true
             }
         }
     }

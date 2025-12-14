@@ -166,69 +166,82 @@ class FirebaseManager {
     /// - Parameters:
     ///   - items: Array of ClipboardItem to share
     ///   - password: Optional password for share protection
-    ///   - completion: Result callback with shareable URL string or error
+    ///   - completion: Result callback with shareable URL string or error (called on main thread)
     func shareItems(_ items: [ClipboardItem], password: String? = nil, completion: @escaping (Result<String, Error>) -> Void) {
-        // Convert items to array of dictionaries
-        var itemsData: [[String: Any]] = []
-        
-        for item in items {
-            let itemData: [String: Any] = [
-                "id": item.id.uuidString,
-                "content": item.content,
-                "type": item.type,
-                "timestamp": Timestamp(date: item.timestamp),
-                "isPinned": item.isPinned,
-                "isTrashed": item.isTrashed,
-                "filename": item.filename as Any,
-                "displayName": item.displayName as Any,
-                "tags": item.tags as Any
-            ]
-            itemsData.append(itemData)
-        }
-        
-        // Create a new document in sharedClipboards collection
-        var shareData: [String: Any] = [
-            "items": itemsData,
-            "createdAt": Timestamp(date: Date()),
-            "itemCount": items.count
-        ]
-        
-        // Add password if provided
-        if let password = password, !password.isEmpty {
-            shareData["password"] = password
-        }
-        
-        // Check size limit
-        do {
-            let jsonData = try JSONSerialization.data(withJSONObject: shareData, options: [])
-            let sizeInKB = Double(jsonData.count) / 1024.0
+        // Perform data processing on background thread to avoid blocking main thread
+        Task.detached(priority: .userInitiated) {
+            // Convert items to array of dictionaries
+            var itemsData: [[String: Any]] = []
             
-            if sizeInKB > FirebaseManager.maxShareSizeKB {
-                let error = NSError(
-                    domain: "FirebaseManager",
-                    code: 413,
-                    userInfo: [
-                        NSLocalizedDescriptionKey: "Share data size (\(String(format: "%.1f", sizeInKB))KB) exceeds \(Int(FirebaseManager.maxShareSizeKB))KB limit. Please use JSON export instead."
-                    ]
-                )
-                completion(.failure(error))
-                return
+            for item in items {
+                let itemData: [String: Any] = [
+                    "id": item.id.uuidString,
+                    "content": item.content,
+                    "type": item.type,
+                    "timestamp": Timestamp(date: item.timestamp),
+                    "isPinned": item.isPinned,
+                    "isTrashed": item.isTrashed,
+                    "filename": item.filename as Any,
+                    "displayName": item.displayName as Any,
+                    "tags": item.tags as Any
+                ]
+                itemsData.append(itemData)
             }
-        } catch {
-            completion(.failure(error))
-            return
-        }
-        
-        // Add document and get auto-generated ID
-        let docRef = db.collection("sharedClipboards").document()
-        docRef.setData(shareData) { error in
-            if let error = error {
-                completion(.failure(error))
-            } else {
-                // Generate shareable link with Firebase Hosting URL for Open Graph preview support
-                let shareId = docRef.documentID
-                let shareURL = "https://cc-isle.web.app/share?id=\(shareId)"
-                completion(.success(shareURL))
+            
+            // Create a new document in sharedClipboards collection
+            var shareData: [String: Any] = [
+                "items": itemsData,
+                "createdAt": Timestamp(date: Date()),
+                "itemCount": items.count
+            ]
+            
+            // Add password if provided
+            if let password = password, !password.isEmpty {
+                shareData["password"] = password
+            }
+            
+            // Check size limit (this can be slow for large data, so do it on background thread)
+            let sizeCheckResult: Result<Double, Error>
+            do {
+                let jsonData = try JSONSerialization.data(withJSONObject: shareData, options: [])
+                let sizeInKB = Double(jsonData.count) / 1024.0
+                sizeCheckResult = .success(sizeInKB)
+            } catch {
+                sizeCheckResult = .failure(error)
+            }
+            
+            // Switch to main actor for Firestore operation and completion
+            await MainActor.run {
+                switch sizeCheckResult {
+                case .success(let sizeInKB):
+                    if sizeInKB > FirebaseManager.maxShareSizeKB {
+                        let error = NSError(
+                            domain: "FirebaseManager",
+                            code: 413,
+                            userInfo: [
+                                NSLocalizedDescriptionKey: "Share data size (\(String(format: "%.1f", sizeInKB))KB) exceeds \(Int(FirebaseManager.maxShareSizeKB))KB limit. Please use JSON export instead."
+                            ]
+                        )
+                        completion(.failure(error))
+                        return
+                    }
+                    
+                    // Add document and get auto-generated ID
+                    let docRef = self.db.collection("sharedClipboards").document()
+                    docRef.setData(shareData) { error in
+                        if let error = error {
+                            completion(.failure(error))
+                        } else {
+                            // Generate shareable link with Firebase Hosting URL for Open Graph preview support
+                            let shareId = docRef.documentID
+                            let shareURL = "https://cc-isle.web.app/share?id=\(shareId)"
+                            completion(.success(shareURL))
+                        }
+                    }
+                    
+                case .failure(let error):
+                    completion(.failure(error))
+                }
             }
         }
     }
