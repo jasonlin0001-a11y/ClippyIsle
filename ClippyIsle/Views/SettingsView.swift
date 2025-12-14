@@ -22,10 +22,6 @@ struct SettingsModalPresenterView: View {
     @Binding var isShowingHardResetAlert: Bool
     @Binding var confirmationText: String
     @Binding var isShowingTagExport: Bool
-    @Binding var firebaseShareURL: String?
-    @Binding var isShowingFirebaseShareAlert: Bool
-    @Binding var isShowingTagFirebaseShare: Bool
-    @Binding var showShareSheet: Bool
     @ObservedObject var clipboardManager: ClipboardManager
     let dismissAction: () -> Void
 
@@ -34,7 +30,6 @@ struct SettingsModalPresenterView: View {
             .sheet(isPresented: $isShowingTrash) { TrashView(clipboardManager: clipboardManager) }
             .sheet(item: $exportURL) { url in ActivityView(activityItems: [url]) }
             .sheet(isPresented: $isShowingTagExport) { TagExportSelectionView(clipboardManager: clipboardManager, exportURL: $exportURL, isShowingImportAlert: $isShowingImportAlert, importAlertMessage: $importAlertMessage) }
-            .sheet(isPresented: $isShowingTagFirebaseShare) { TagFirebaseShareView(clipboardManager: clipboardManager, firebaseShareURL: $firebaseShareURL, isShowingFirebaseShareAlert: $isShowingFirebaseShareAlert, isShowingImportAlert: $isShowingImportAlert, importAlertMessage: $importAlertMessage) }
             .fileImporter(isPresented: $isImporting, allowedContentTypes: [.json], allowsMultipleSelection: false) { result in handleImport(result: result) }
             .alert("Import Result", isPresented: $isShowingImportAlert, presenting: importAlertMessage) { msg in Button("OK") {} } message: { msg in Text(msg) }
             .alert("Clear Website Cache?", isPresented: $isShowingClearCacheAlert) {
@@ -105,11 +100,12 @@ struct SettingsView: View {
     @State private var importAlertMessage: String?
     @State private var isShowingImportAlert = false
     @State private var isShowingTagExport = false
-    @State private var firebaseShareURL: String?
-    @State private var isShowingFirebaseShareAlert = false
-    @State private var isShowingTagFirebaseShare = false
-    @State private var showShareSheet = false
-    @State private var isSharingFirebase = false
+    
+    // Firebase password settings
+    @AppStorage("firebasePasswordEnabled") private var firebasePasswordEnabled: Bool = false
+    @AppStorage("firebasePassword") private var firebasePassword: String = ""
+    @State private var passwordInput: String = ""
+    @State private var isPasswordSaved: Bool = false
 
     let countOptions = [50, 100, 200, 0]
     let dayOptions = [7, 30, 90, 0]
@@ -170,39 +166,19 @@ struct SettingsView: View {
                             Text(url).foregroundColor(.blue).onTapGesture {
                                 UIPasteboard.general.string = url
                                 let generator = UINotificationFeedbackGenerator(); generator.notificationOccurred(.success)
-                            }
+                    }
                         }
                         Text("Tap URL to copy").font(.caption).foregroundColor(.secondary)
                     }
                 }
                 
                 Section(header: Text("General"), footer: Text("When enabled, the app will automatically detect and add new items from the clipboard. When disabled, you must add items manually from the '+' menu on the main screen.")) { Toggle("Auto Add from Clipboard", isOn: $askToAddFromClipboard) }
-                storagePolicySection; appearanceSection; previewSettingsSection; speechSettingsSection; iCloudSection; backupAndRestoreSection; dataManagementSection; appInfoSection
+                storagePolicySection; appearanceSection; previewSettingsSection; speechSettingsSection; iCloudSection; backupAndRestoreSection; firebaseSettingsSection; dataManagementSection; appInfoSection
             }
             .navigationTitle("Settings").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() } } }
-            .background(SettingsModalPresenterView(isShowingTrash: $isShowingTrash, exportURL: $exportURL, isImporting: $isImporting, isShowingImportAlert: $isShowingImportAlert, importAlertMessage: $importAlertMessage, isShowingClearCacheAlert: $isShowingClearCacheAlert, isShowingCacheClearedAlert: $isShowingCacheClearedAlert, isShowingHardResetAlert: $isShowingHardResetAlert, confirmationText: $confirmationText, isShowingTagExport: $isShowingTagExport, firebaseShareURL: $firebaseShareURL, isShowingFirebaseShareAlert: $isShowingFirebaseShareAlert, isShowingTagFirebaseShare: $isShowingTagFirebaseShare, showShareSheet: $showShareSheet, clipboardManager: clipboardManager, dismissAction: { dismiss() }))
+            .background(SettingsModalPresenterView(isShowingTrash: $isShowingTrash, exportURL: $exportURL, isImporting: $isImporting, isShowingImportAlert: $isShowingImportAlert, importAlertMessage: $importAlertMessage, isShowingClearCacheAlert: $isShowingClearCacheAlert, isShowingCacheClearedAlert: $isShowingCacheClearedAlert, isShowingHardResetAlert: $isShowingHardResetAlert, confirmationText: $confirmationText, isShowingTagExport: $isShowingTagExport, clipboardManager: clipboardManager, dismissAction: { dismiss() }))
             .sheet(isPresented: $showPaywall) { PaywallView() }
-            .alert("Share Link Created", isPresented: $isShowingFirebaseShareAlert, presenting: firebaseShareURL) { url in
-                Button("Copy Link") { 
-                    print("🔥 Copy Link button pressed")
-                    UIPasteboard.general.string = url
-                }
-                Button("Share") {
-                    print("🔥 Share button pressed, setting showShareSheet = true")
-                    showShareSheet = true
-                }
-                Button("OK") {
-                    print("🔥 OK button pressed")
-                }
-            } message: { url in 
-                Text("Share this link with others to let them import your clipboard items:\n\n\(url)")
-            }
-            .sheet(isPresented: $showShareSheet) {
-                if let urlString = firebaseShareURL {
-                    ActivityView(activityItems: [urlString])
-                }
-            }
             .onAppear {
                 WebServerManager.shared.clipboardManager = clipboardManager
                 nicknameInput = userNickname
@@ -339,47 +315,6 @@ struct SettingsView: View {
             Button { isImporting = true } label: { Text("Import Data") }
             Button(action: exportAllData) { Text("Export All Data") }
             Button { isShowingTagExport = true } label: { Text("Selective Export...") }
-            
-            Button {
-                print("🔥🔥🔥 SHARE ALL BUTTON TAPPED - START")
-                let items = clipboardManager.items.filter { !$0.isTrashed }
-                if items.isEmpty {
-                    print("🔥 No items to share")
-                    importAlertMessage = "No items to share."
-                    isShowingImportAlert = true
-                } else {
-                    print("🔥 Sharing \(items.count) items")
-                    isSharingFirebase = true
-                    FirebaseManager.shared.shareItems(items) { result in
-                        DispatchQueue.main.async {
-                            self.isSharingFirebase = false
-                            switch result {
-                            case .success(let shareURL):
-                                print("🔥 SUCCESS: \(shareURL)")
-                                self.firebaseShareURL = shareURL
-                                self.isShowingFirebaseShareAlert = true
-                            case .failure(let error):
-                                print("🔥 ERROR: \(error)")
-                                self.importAlertMessage = "Firebase share failed.\nError: \(error.localizedDescription)"
-                                self.isShowingImportAlert = true
-                            }
-                        }
-                    }
-                }
-            } label: {
-                HStack {
-                    if isSharingFirebase {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle())
-                    }
-                    Text("Share All via Firebase")
-                }
-            }
-            .disabled(isSharingFirebase)
-            
-            Button { isShowingTagFirebaseShare = true } label: { 
-                Text("Share Selected Tags via Firebase...")
-            }
         }
     }
     
@@ -389,6 +324,49 @@ struct SettingsView: View {
             NavigationLink { AudioFileManagerView(clipboardManager: clipboardManager, speechManager: speechManager) } label: { Text("Manage Audio Files") }
             Button("Clear Website Cache", role: .destructive) { isShowingClearCacheAlert = true }
             Button("Clear All Data", role: .destructive) { confirmationText = ""; isShowingHardResetAlert = true }
+        }
+    }
+    
+    private var firebaseSettingsSection: some View {
+        Section(header: Text("Firebase Share Settings")) {
+            Toggle("Enable Password Protection", isOn: $firebasePasswordEnabled)
+            
+            if firebasePasswordEnabled {
+                HStack {
+                    Text("Password")
+                    SecureField("Enter password", text: $passwordInput)
+                        .multilineTextAlignment(.trailing)
+                        .submitLabel(.done)
+                        .onChange(of: passwordInput) { _, _ in isPasswordSaved = false }
+                        .onAppear { passwordInput = firebasePassword }
+                    if passwordInput != firebasePassword || isPasswordSaved {
+                        Button(action: savePassword) {
+                            if isPasswordSaved { 
+                                Image(systemName: "checkmark.circle.fill").foregroundColor(.green) 
+                            } else { 
+                                Text("Save").fontWeight(.bold) 
+                            }
+                        }
+                        .buttonStyle(.borderless)
+                        .transition(.scale.combined(with: .opacity))
+                        .animation(.easeInOut, value: isPasswordSaved)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func savePassword() {
+        guard !passwordInput.isEmpty else { return }
+        firebasePassword = passwordInput
+        isPasswordSaved = true
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { 
+            if self.passwordInput == self.firebasePassword { 
+                self.isPasswordSaved = false 
+            } 
         }
     }
     
