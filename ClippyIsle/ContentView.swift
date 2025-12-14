@@ -499,9 +499,7 @@ struct ContentView: View {
         isSharingFirebase = true
         
         // Get Firebase password setting if enabled
-        let firebasePassword = UserDefaults.standard.bool(forKey: "firebasePasswordEnabled") 
-            ? UserDefaults.standard.string(forKey: "firebasePassword") 
-            : nil
+        let firebasePassword = FirebaseManager.getSharePassword()
         
         FirebaseManager.shared.shareItems([item], password: firebasePassword) { [weak self] result in
             guard let self = self else { return }

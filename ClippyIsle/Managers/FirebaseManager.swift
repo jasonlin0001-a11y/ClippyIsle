@@ -12,6 +12,13 @@ class FirebaseManager {
     // Size limit for shared data (in KB)
     private static let maxShareSizeKB: Double = 900
     
+    // Helper to get Firebase password from UserDefaults
+    static func getSharePassword() -> String? {
+        return UserDefaults.standard.bool(forKey: "firebasePasswordEnabled")
+            ? UserDefaults.standard.string(forKey: "firebasePassword")
+            : nil
+    }
+    
     private init() {
         self.db = Firestore.firestore()
     }

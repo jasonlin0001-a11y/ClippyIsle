@@ -94,6 +94,7 @@ struct SettingsView: View {
     @AppStorage("firebasePassword") private var firebasePassword: String = ""
     @State private var passwordInput: String = ""
     @State private var isPasswordSaved: Bool = false
+    @State private var passwordSaveWorkItem: DispatchWorkItem?
     @State private var isShowingClearCacheAlert = false
     @State private var isShowingCacheClearedAlert = false
     @State private var isShowingHardResetAlert = false
@@ -352,12 +353,19 @@ struct SettingsView: View {
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-        DispatchQueue.main.asyncAfter(deadline: .now() + SettingsView.passwordSaveSuccessFeedbackDelay) { [weak self] in
+        
+        // Cancel any existing work item to avoid race conditions
+        passwordSaveWorkItem?.cancel()
+        
+        // Create new work item
+        let workItem = DispatchWorkItem { [weak self] in
             guard let self = self else { return }
             if self.passwordInput == self.firebasePassword { 
                 self.isPasswordSaved = false 
-            } 
+            }
         }
+        passwordSaveWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + SettingsView.passwordSaveSuccessFeedbackDelay, execute: workItem)
     }
     
     private var backupAndRestoreSection: some View {
