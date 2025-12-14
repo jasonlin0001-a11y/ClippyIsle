@@ -78,7 +78,7 @@ class ClipboardManager: ObservableObject {
         let syncedItems = await cloudKitManager.sync(localItems: self.items)
         await MainActor.run {
             self.items = syncedItems
-            self.cleanupItems()
+            self.cleanupItems(skipSaving: true)
             self.sortAndSave(skipCloud: true)
         }
         
@@ -295,7 +295,7 @@ class ClipboardManager: ObservableObject {
         return newItemsCount
     }
 
-    func cleanupItems() {
+    func cleanupItems(skipSaving: Bool = false) {
         let clearAfterDays = UserDefaults.standard.integer(forKey: "clearAfterDays")
         let maxItemCount = UserDefaults.standard.integer(forKey: "maxItemCount")
         let isDayCleanupEnabled = (clearAfterDays > 0); let isCountCleanupEnabled = (maxItemCount > 0)
@@ -318,7 +318,10 @@ class ClipboardManager: ObservableObject {
             }
             itemsDidChange = true
         }
-        if itemsDidChange { items = tempItems; sortAndSave(skipCloud: true) }
+        if itemsDidChange {
+            items = tempItems
+            if !skipSaving { sortAndSave(skipCloud: true) }
+        }
     }
 
     func togglePin(for item: ClipboardItem) {
