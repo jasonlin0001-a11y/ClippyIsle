@@ -567,7 +567,8 @@ struct TagFilterView: View {
             ? UserDefaults.standard.string(forKey: "firebasePassword") 
             : nil
         
-        FirebaseManager.shared.shareItems(filteredItems, password: firebasePassword) { result in
+        FirebaseManager.shared.shareItems(filteredItems, password: firebasePassword) { [weak self] result in
+            guard let self = self else { return }
             DispatchQueue.main.async {
                 self.isSharingFirebase = false
                 switch result {
