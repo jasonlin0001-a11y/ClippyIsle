@@ -16,38 +16,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "80"
             endingLineNumber = "80"
-            landmarkName = "performCloudSync()"
+            landmarkName = "performCloudSync(isInitialSync:)"
             landmarkType = "7">
-            <Locations>
-               <Location
-                  uuid = "57678645-1649-4512-8AD3-A76E4CD8C0F3 - 407d92f708211a14"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "(5) suspend resume partial function for ClippyIsle.ClipboardManager.performCloudSync() async -&gt; ()"
-                  moduleName = "ClippyIsle.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/jasonlin/Desktop/ClippyIsle/ClippyIsle/Managers/ClipboardManager.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "82"
-                  endingLineNumber = "82">
-               </Location>
-               <Location
-                  uuid = "57678645-1649-4512-8AD3-A76E4CD8C0F3 - 2b4390db4a75d8bf"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "(1) suspend resume partial function for ClippyIsle.ClipboardManager.performCloudSync(isInitialSync: Swift.Bool) async -&gt; ()"
-                  moduleName = "ClippyIsle.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/jasonlin/Desktop/ClippyIsle/ClippyIsle/Managers/ClipboardManager.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "80"
-                  endingLineNumber = "80">
-               </Location>
-            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>
