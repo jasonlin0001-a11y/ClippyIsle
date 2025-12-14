@@ -32,7 +32,7 @@ enum ShareError: Error, LocalizedError {
 }
 
 // MARK: - Firebase Manager
-class FirebaseManager: ObservableObject {
+class FirebaseManager {
     static let shared = FirebaseManager()
     
     private init() {}

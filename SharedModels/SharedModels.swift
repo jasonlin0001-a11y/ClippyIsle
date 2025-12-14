@@ -4,9 +4,9 @@ import ActivityKit
 import UniformTypeIdentifiers
 
 // MARK: - Global Constants & Functions
-public let appGroupID = "group.com.shihchieh.clippyisle"
-public let deepLinkScheme = "clippyisle"
-public let deepLinkShareHost = "share"
+public nonisolated(unsafe) let appGroupID = "group.com.shihchieh.clippyisle"
+public nonisolated(unsafe) let deepLinkScheme = "clippyisle"
+public nonisolated(unsafe) let deepLinkShareHost = "share"
 
 public func saveFileDataToAppGroup(data: Data, type: String) -> String? {
     guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) else {
