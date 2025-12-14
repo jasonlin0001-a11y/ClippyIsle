@@ -60,22 +60,27 @@ class ClipboardManager: ObservableObject {
         cleanupItems()
         LaunchLogger.log("ClipboardManager.initializeData() - cleanupItems() completed")
         if UserDefaults.standard.bool(forKey: "iCloudSyncEnabled") { 
-            Task { 
-                LaunchLogger.log("ClipboardManager.initializeData() - CloudSync Task spawned")
-                await performCloudSync() 
+            // Use Task.detached to move cloud sync completely off Main Thread
+            Task.detached(priority: .utility) { [weak self] in
+                guard let self = self else { return }
+                LaunchLogger.log("ClipboardManager.initializeData() - CloudSync Task.detached spawned")
+                // Use isInitialSync: true to limit to 20 items and prevent sync storms
+                await self.performCloudSync(isInitialSync: true) 
             }
         }
         LaunchLogger.log("ClipboardManager.initializeData() - END")
     }
     
-    func performCloudSync() async {
+    /// Performs a cloud sync with the specified mode
+    /// - Parameter isInitialSync: If true, limits to 20 most recent items to prevent sync storms on launch
+    func performCloudSync(isInitialSync: Bool = false) async {
         // Check if iCloud sync is enabled before syncing
         guard UserDefaults.standard.bool(forKey: "iCloudSyncEnabled") else {
             print("⚠️ iCloud sync is disabled, skipping sync")
             return
         }
         
-        let syncedItems = await cloudKitManager.sync(localItems: self.items)
+        let syncedItems = await cloudKitManager.sync(localItems: self.items, isInitialSync: isInitialSync)
         await MainActor.run { self.items = syncedItems; self.sortAndSave(skipCloud: true) }
         
         // Also sync tag colors (use internal method to get colors regardless of Pro status for backup)
@@ -110,6 +115,17 @@ class ClipboardManager: ObservableObject {
             } catch { print("❌ 清除 App Group 檔案時出錯: \(error)") }
         }
         print("✅✅✅ 已執行硬重置。"); dataLoadError = nil; objectWillChange.send()
+    }
+    
+    /// Purges ALL data from iCloud (CloudKit private database).
+    /// This is a "nuclear" option to wipe the cloud store completely so you can start fresh.
+    /// Useful for clearing stuck/zombie data that might be causing sync issues.
+    func purgeAllCloudData() {
+        Task.detached(priority: .utility) { [weak self] in
+            guard let self = self else { return }
+            await self.cloudKitManager.purgeAllCloudData()
+            print("☁️🧹 purgeAllCloudData() completed - iCloud store has been wiped.")
+        }
     }
     
     func moveItemToTrash(item: ClipboardItem) {
