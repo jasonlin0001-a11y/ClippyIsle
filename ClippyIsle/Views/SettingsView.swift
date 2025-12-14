@@ -103,6 +103,7 @@ struct SettingsView: View {
     
     // Firebase Password Settings
     @AppStorage("firebaseSharePassword") private var firebaseSharePassword: String = ""
+    @AppStorage("firebaseEncryptionEnabled") private var firebaseEncryptionEnabled: Bool = false
     @State private var passwordInput: String = ""
     @State private var isPasswordSaved: Bool = false
 
@@ -347,27 +348,31 @@ struct SettingsView: View {
     }
     
     private var firebasePasswordSection: some View {
-        Section(header: Text("Firebase Share Settings"), footer: Text("Set a default password for Firebase sharing. This password will be used to encrypt shared items. Leave empty for unencrypted sharing.")) {
-            HStack {
-                Text("Share Password")
-                SecureField("Optional", text: $passwordInput)
-                    .multilineTextAlignment(.trailing)
-                    .submitLabel(.done)
-                    .autocorrectionDisabled(true)
-                    .textContentType(.password)
-                    .onChange(of: passwordInput) { _, _ in isPasswordSaved = false }
-                
-                if passwordInput != firebaseSharePassword || isPasswordSaved {
-                    Button(action: savePassword) {
-                        if isPasswordSaved {
-                            Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
-                        } else {
-                            Text("Save").fontWeight(.bold)
+        Section(header: Text("Firebase Share Settings"), footer: Text("Enable encryption to protect shared items with a password. The password will be required when others open the shared link.")) {
+            Toggle("Enable Encryption", isOn: $firebaseEncryptionEnabled)
+            
+            if firebaseEncryptionEnabled {
+                HStack {
+                    Text("Share Password")
+                    SecureField("Required", text: $passwordInput)
+                        .multilineTextAlignment(.trailing)
+                        .submitLabel(.done)
+                        .autocorrectionDisabled(true)
+                        .textContentType(.password)
+                        .onChange(of: passwordInput) { _, _ in isPasswordSaved = false }
+                    
+                    if passwordInput != firebaseSharePassword || isPasswordSaved {
+                        Button(action: savePassword) {
+                            if isPasswordSaved {
+                                Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
+                            } else {
+                                Text("Save").fontWeight(.bold)
+                            }
                         }
+                        .buttonStyle(.borderless)
+                        .transition(.scale.combined(with: .opacity))
+                        .animation(.easeInOut, value: isPasswordSaved)
                     }
-                    .buttonStyle(.borderless)
-                    .transition(.scale.combined(with: .opacity))
-                    .animation(.easeInOut, value: isPasswordSaved)
                 }
             }
         }

@@ -194,12 +194,16 @@ struct TagExportSelectionView: View {
     @Binding var isShowingImportAlert: Bool
     @Binding var importAlertMessage: String?
     @State private var selectedTags: Set<String> = []
+    @State private var isSharing = false
+    @State private var shareURL: String?
+    @AppStorage("firebaseSharePassword") private var firebaseSharePassword: String = ""
+    @AppStorage("firebaseEncryptionEnabled") private var firebaseEncryptionEnabled: Bool = false
     @Environment(\.dismiss) var dismiss
 
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Select tags to export")) {
+                Section(header: Text("Select tags to share")) {
                     List(clipboardManager.allTags, id: \.self) { tag in
                         Button(action: { if selectedTags.contains(tag) { selectedTags.remove(tag) } else { selectedTags.insert(tag) } }) {
                             HStack { Text(tag); Spacer(); if selectedTags.contains(tag) { Image(systemName: "checkmark").foregroundColor(.accentColor) } }
@@ -207,16 +211,101 @@ struct TagExportSelectionView: View {
                     }
                 }
             }
-            .navigationTitle("Selective Export").navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Export") { exportSelectedTags() }.disabled(selectedTags.isEmpty) } }
+            .navigationTitle("Share by Tags").navigationBarTitleDisplayMode(.inline)
+            .toolbar { 
+                ToolbarItem(placement: .navigationBarTrailing) { 
+                    Button(isSharing ? "Sharing..." : "Share") { 
+                        shareSelectedTags() 
+                    }
+                    .disabled(selectedTags.isEmpty || isSharing) 
+                } 
+            }
         }
     }
-    private func exportSelectedTags() {
+    
+    private func shareSelectedTags() {
+        // Get items with selected tags
+        let itemsToShare = clipboardManager.items.filter { item in
+            guard let tags = item.tags else { return false }
+            return !Set(tags).isDisjoint(with: selectedTags)
+        }
+        
+        if itemsToShare.isEmpty {
+            importAlertMessage = "No items found for the selected tags."
+            isShowingImportAlert = true
+            dismiss()
+            return
+        }
+        
+        // Check total size (900KB limit)
         do {
-            if let url = try clipboardManager.exportData(forTags: selectedTags) { exportURL = url }
-            else { importAlertMessage = "No items found for the selected tags."; isShowingImportAlert = true }
-        } catch { importAlertMessage = "Export failed.\nError: \(error.localizedDescription)"; isShowingImportAlert = true }
-        dismiss()
+            let itemDicts = itemsToShare.map { itemToDictionary($0) }
+            let data = try JSONSerialization.data(withJSONObject: itemDicts, options: [])
+            
+            if data.count > 921_600 {
+                importAlertMessage = "Selected items exceed 900KB limit.\nPlease select fewer tags or use Export function."
+                isShowingImportAlert = true
+                dismiss()
+                return
+            }
+        } catch {
+            importAlertMessage = "Failed to prepare items.\n\(error.localizedDescription)"
+            isShowingImportAlert = true
+            dismiss()
+            return
+        }
+        
+        isSharing = true
+        let password = (firebaseEncryptionEnabled && !firebaseSharePassword.isEmpty) ? firebaseSharePassword : nil
+        
+        FirebaseManager.shared.shareItems(itemsToShare, password: password) { result in
+            DispatchQueue.main.async {
+                isSharing = false
+                
+                switch result {
+                case .success(let url):
+                    shareURL = url
+                    // Show native iOS share sheet
+                    dismiss()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        guard let sourceView = UIApplication.shared.windows.first?.rootViewController?.view else { return }
+                        let activityVC = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+                        if let popover = activityVC.popoverPresentationController {
+                            popover.sourceView = sourceView
+                            popover.sourceRect = CGRect(x: sourceView.bounds.midX, y: sourceView.bounds.midY, width: 0, height: 0)
+                            popover.permittedArrowDirections = []
+                        }
+                        sourceView.window?.rootViewController?.present(activityVC, animated: true)
+                    }
+                    
+                case .failure(let error):
+                    importAlertMessage = "Failed to create share link.\n\(error.localizedDescription)"
+                    isShowingImportAlert = true
+                    dismiss()
+                }
+            }
+        }
+    }
+    
+    private func itemToDictionary(_ item: ClipboardItem) -> [String: Any] {
+        var dict: [String: Any] = [
+            "id": item.id.uuidString,
+            "content": item.content,
+            "type": item.type,
+            "timestamp": item.timestamp.timeIntervalSince1970,
+            "isPinned": item.isPinned,
+            "isTrashed": item.isTrashed
+        ]
+        if let displayName = item.displayName {
+            dict["displayName"] = displayName
+        }
+        if let filename = item.filename {
+            dict["filename"] = filename
+        }
+        if let tags = item.tags {
+            dict["tags"] = tags
+        }
+        return dict
     }
 }
 

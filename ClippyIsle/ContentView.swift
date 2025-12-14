@@ -50,6 +50,7 @@ struct ContentView: View {
     @State private var isShowingShareAlert = false
     @State private var shareAlertMessage: String?
     @AppStorage("firebaseSharePassword") private var firebaseSharePassword: String = ""
+    @AppStorage("firebaseEncryptionEnabled") private var firebaseEncryptionEnabled: Bool = false
     
     // Track expanded inline preview item
     @State private var expandedPreviewItemID: UUID?
@@ -494,7 +495,7 @@ struct ContentView: View {
         }
         
         isSharing = true
-        let password = firebaseSharePassword.isEmpty ? nil : firebaseSharePassword
+        let password = (firebaseEncryptionEnabled && !firebaseSharePassword.isEmpty) ? firebaseSharePassword : nil
         
         FirebaseManager.shared.shareItems([item], password: password) { result in
             DispatchQueue.main.async {
@@ -502,9 +503,16 @@ struct ContentView: View {
                 
                 switch result {
                 case .success(let url):
+                    // Show native iOS share sheet with the Firebase link
                     shareURL = url
-                    shareAlertMessage = "Share link created successfully!\n\n\(url)"
-                    isShowingShareAlert = true
+                    guard let sourceView = UIApplication.shared.windows.first?.rootViewController?.view else { return }
+                    let activityVC = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+                    if let popover = activityVC.popoverPresentationController {
+                        popover.sourceView = sourceView
+                        popover.sourceRect = CGRect(x: sourceView.bounds.midX, y: sourceView.bounds.midY, width: 0, height: 0)
+                        popover.permittedArrowDirections = []
+                    }
+                    sourceView.window?.rootViewController?.present(activityVC, animated: true)
                     
                 case .failure(let error):
                     shareAlertMessage = "Failed to create share link.\n\(error.localizedDescription)"
