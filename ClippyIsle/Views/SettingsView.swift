@@ -358,8 +358,9 @@ struct SettingsView: View {
         passwordSaveWorkItem?.cancel()
         
         // Create new work item
-        let workItem = DispatchWorkItem { [weak self] in
-            guard let self = self else { return }
+        let workItem = DispatchWorkItem {
+            // Note: No weak self needed - SettingsView is a struct (value type), not a class
+            // The work item only captures the current values, not creating a retain cycle
             if self.passwordInput == self.firebasePassword { 
                 self.isPasswordSaved = false 
             }
