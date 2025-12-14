@@ -100,14 +100,6 @@ struct SettingsView: View {
     @State private var importAlertMessage: String?
     @State private var isShowingImportAlert = false
     @State private var isShowingTagExport = false
-    
-    // Firebase Sharing State
-    @State private var usePassword = false
-    @State private var passwordInput = ""
-    @State private var isSharing = false
-    @State private var shareURL: String?
-    @State private var isShowingShareAlert = false
-    @State private var shareAlertMessage: String?
 
     let countOptions = [50, 100, 200, 0]
     let dayOptions = [7, 30, 90, 0]
@@ -174,8 +166,6 @@ struct SettingsView: View {
                     }
                 }
                 
-                firebaseSharingSection
-                
                 Section(header: Text("General"), footer: Text("When enabled, the app will automatically detect and add new items from the clipboard. When disabled, you must add items manually from the '+' menu on the main screen.")) { Toggle("Auto Add from Clipboard", isOn: $askToAddFromClipboard) }
                 storagePolicySection; appearanceSection; previewSettingsSection; speechSettingsSection; iCloudSection; backupAndRestoreSection; dataManagementSection; appInfoSection
             }
@@ -183,22 +173,6 @@ struct SettingsView: View {
             .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() } } }
             .background(SettingsModalPresenterView(isShowingTrash: $isShowingTrash, exportURL: $exportURL, isImporting: $isImporting, isShowingImportAlert: $isShowingImportAlert, importAlertMessage: $importAlertMessage, isShowingClearCacheAlert: $isShowingClearCacheAlert, isShowingCacheClearedAlert: $isShowingCacheClearedAlert, isShowingHardResetAlert: $isShowingHardResetAlert, confirmationText: $confirmationText, isShowingTagExport: $isShowingTagExport, clipboardManager: clipboardManager, dismissAction: { dismiss() }))
             .sheet(isPresented: $showPaywall) { PaywallView() }
-            .alert("Share Result", isPresented: $isShowingShareAlert) { 
-                Button("Copy Link") {
-                    if let url = shareURL {
-                        UIPasteboard.general.string = url
-                        let generator = UINotificationFeedbackGenerator()
-                        generator.notificationOccurred(.success)
-                    }
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: { 
-                if let message = shareAlertMessage {
-                    Text(message)
-                } else {
-                    Text("Share operation completed")
-                }
-            }
             .onAppear {
                 WebServerManager.shared.clipboardManager = clipboardManager
                 nicknameInput = userNickname
@@ -364,61 +338,6 @@ struct SettingsView: View {
         }
     }
     
-    private var firebaseSharingSection: some View {
-        Section(header: Text("Share All via Firebase"), footer: Text("Share all your clipboard items with others via a secure link. Enable encryption to protect your data with a password.")) {
-            Toggle("Encrypt Share", isOn: $usePassword)
-            
-            if usePassword {
-                SecureField("Set Password (min 8 characters)", text: $passwordInput)
-                    .autocorrectionDisabled(true)
-                    .textContentType(.password)
-            }
-            
-            Button(action: shareAllItems) {
-                HStack {
-                    if isSharing {
-                        ProgressView()
-                            .padding(.trailing, 5)
-                    }
-                    Text(isSharing ? "Sharing..." : "Share All Items")
-                        .foregroundColor(isSharing ? .gray : .blue)
-                }
-            }
-            .disabled(isSharing || (usePassword && passwordInput.count < 8))
-        }
-    }
-    
-    private func shareAllItems() {
-        isSharing = true
-        let password = usePassword ? passwordInput : nil
-        
-        // Get all non-trashed items
-        let itemsToShare = clipboardManager.items.filter { !$0.isTrashed }
-        
-        if itemsToShare.isEmpty {
-            shareAlertMessage = "No items to share."
-            isShowingShareAlert = true
-            isSharing = false
-            return
-        }
-        
-        FirebaseManager.shared.shareItems(itemsToShare, password: password) { result in
-            DispatchQueue.main.async {
-                isSharing = false
-                
-                switch result {
-                case .success(let url):
-                    shareURL = url
-                    shareAlertMessage = "Share link created successfully!\n\n\(url)"
-                    isShowingShareAlert = true
-                    
-                case .failure(let error):
-                    shareAlertMessage = "Failed to create share link.\n\(error.localizedDescription)"
-                    isShowingShareAlert = true
-                }
-            }
-        }
-    }
     
     private func exportAllData() {
         do { exportURL = try clipboardManager.exportData() } catch { importAlertMessage = "Export failed.\nError: \(error.localizedDescription)"; isShowingImportAlert = true }
