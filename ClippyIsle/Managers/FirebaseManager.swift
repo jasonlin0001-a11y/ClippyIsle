@@ -35,6 +35,9 @@ enum ShareError: Error, LocalizedError {
 class FirebaseManager {
     static let shared = FirebaseManager()
     
+    // Test mode storage - simulates Firebase database
+    private var testDatabase: [String: [String: Any]] = [:]
+    
     private init() {}
     
     // MARK: - Private Encryption Helper Functions
@@ -137,17 +140,19 @@ class FirebaseManager {
             }
             
             // TODO: Upload payload to Firebase Firestore
-            // For now, return a placeholder share ID
+            // For now, using test mode with in-memory storage
             // Once Firebase is integrated, this should:
             // 1. Create a new document in Firestore
             // 2. Get the document ID
             // 3. Return a deep link URL with the document ID
             
-            // Placeholder implementation
+            // Test mode implementation - store in memory
             let shareID = UUID().uuidString
+            testDatabase[shareID] = payload
             let shareURL = "\(deepLinkScheme)://\(deepLinkShareHost)/\(shareID)"
             
-            print("📤 Share payload prepared (Firebase integration pending):")
+            print("📤 Share payload stored in test mode:")
+            print("  Share ID: \(shareID)")
             print("  Encrypted: \(payload["isEncrypted"] as? Bool ?? false)")
             print("  Share URL: \(shareURL)")
             
@@ -167,19 +172,44 @@ class FirebaseManager {
     ///   - completion: Completion handler with result
     func downloadItems(shareID: String, completion: @escaping (Result<[[String: Any]], Error>) -> Void) {
         // TODO: Download document from Firebase Firestore using shareID
-        // For now, return a placeholder error
+        // For now, using test mode with in-memory storage
         // Once Firebase is integrated, this should:
         // 1. Fetch the document from Firestore using shareID
         // 2. Check the isEncrypted flag
         // 3. If encrypted, return passwordRequired error with encryptedData
         // 4. If not encrypted, parse and return the items
         
-        print("📥 Download requested for share ID: \(shareID) (Firebase integration pending)")
+        print("📥 Download requested for share ID: \(shareID)")
         
-        // Placeholder: simulate password required scenario
+        // Test mode: retrieve from in-memory storage
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            // This is a placeholder - in real implementation, check Firestore document
-            completion(.failure(ShareError.noDataFound))
+            guard let payload = self.testDatabase[shareID] else {
+                print("❌ Share ID not found in test database")
+                completion(.failure(ShareError.noDataFound))
+                return
+            }
+            
+            let isEncrypted = payload["isEncrypted"] as? Bool ?? false
+            
+            if isEncrypted {
+                // Return password required error with encrypted data
+                guard let encryptedData = payload["encryptedData"] as? String else {
+                    completion(.failure(ShareError.downloadFailed))
+                    return
+                }
+                print("🔒 Encrypted share - password required")
+                completion(.failure(ShareError.passwordRequired(encryptedData: encryptedData)))
+            } else {
+                // Parse and return unencrypted data
+                guard let dataString = payload["data"] as? String,
+                      let jsonData = dataString.data(using: .utf8),
+                      let itemDicts = try? JSONSerialization.jsonObject(with: jsonData, options: []) as? [[String: Any]] else {
+                    completion(.failure(ShareError.downloadFailed))
+                    return
+                }
+                print("✅ Unencrypted share - returning \(itemDicts.count) items")
+                completion(.success(itemDicts))
+            }
         }
     }
     

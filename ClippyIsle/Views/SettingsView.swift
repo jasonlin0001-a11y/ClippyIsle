@@ -317,7 +317,7 @@ struct SettingsView: View {
         Section("Backup and Restore") {
             Button { isImporting = true } label: { Text("Import Data") }
             Button(action: exportAllData) { Text("Export All Data") }
-            Button { isShowingTagExport = true } label: { Text("Selective Export...") }
+            Button { isShowingTagExport = true } label: { Text("Share by Tags...") }
         }
     }
     
