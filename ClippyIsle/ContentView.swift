@@ -239,14 +239,14 @@ struct ContentView: View {
         // iPhone preview: always sheet
         .sheet(isPresented: .init(
             get: { isSheetPresented && (horizontalSizeClass == .compact || !isPreviewFullscreen) },
-            set: { if !$0 { isSheetPresented = false; previewState = .idle; isPreviewFullscreen = false } }
-        ), onDismiss: { isSheetPresented = false; previewState = .idle; isPreviewFullscreen = false }) {
+            set: { if !$0 { dismissPreview() } }
+        ), onDismiss: dismissPreview) {
             previewSheetContent(isFullscreen: false, onToggleFullscreen: { isPreviewFullscreen = true })
         }
         .fullScreenCover(isPresented: .init(
             get: { isSheetPresented && horizontalSizeClass == .regular && isPreviewFullscreen },
-            set: { if !$0 { isSheetPresented = false; previewState = .idle; isPreviewFullscreen = false } }
-        ), onDismiss: { isSheetPresented = false; previewState = .idle; isPreviewFullscreen = false }) {
+            set: { if !$0 { dismissPreview() } }
+        ), onDismiss: dismissPreview) {
             previewSheetContent(isFullscreen: true, onToggleFullscreen: { isPreviewFullscreen = false })
         }
         .alert("Rename Item", isPresented: $isShowingRenameAlert) {
@@ -412,6 +412,13 @@ struct ContentView: View {
     }
     
     private func highlightAndScroll(to id: UUID) { newlyAddedItemID = id }
+    
+    // Helper method to handle preview dismissal
+    private func dismissPreview() {
+        isSheetPresented = false
+        previewState = .idle
+        isPreviewFullscreen = false
+    }
 
     private var bottomToolbar: some View {
         HStack(spacing: 0) {
