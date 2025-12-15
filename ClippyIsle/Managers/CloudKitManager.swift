@@ -184,7 +184,7 @@ class CloudKitManager: ObservableObject {
                     print("☁️ ⚠️ Skipped corrupt/undecodable cloud record: \(record.recordID.recordName)")
                 }
             }
-            print("☁️ Fetched \(cloudItems.count) valid items from Cloud\(isInitialSync ? " (limited to \(initialSyncLimit) for initial sync)" : " (Total)").")
+            print("☁️ Fetched \(cloudItems.count) valid items from Cloud\(isInitialSync ? " (limited to \(self.initialSyncLimit) for initial sync)" : " (Total)").")
             
             var mergedItems = localItems
             let cloudIDMap = Dictionary(uniqueKeysWithValues: cloudItems.map { ($0.id, $0) })

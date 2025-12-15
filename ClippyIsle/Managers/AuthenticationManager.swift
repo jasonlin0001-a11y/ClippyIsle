@@ -260,18 +260,25 @@ class AuthenticationManager: ObservableObject {
     /// - Parameter uid: The user's UID
     /// - Returns: The user's nickname or a default value
     func getNickname(for uid: String) async -> String {
-        let docRef = db.collection(usersCollection).document(uid)
+        // Input validation: Check for empty or invalid UID
+        let trimmedUID = uid.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedUID.isEmpty else {
+            print("🔐 Invalid UID provided to getNickname: empty string")
+            return "Unknown User"
+        }
+        
+        let docRef = db.collection(usersCollection).document(trimmedUID)
         
         do {
             let snapshot = try await docRef.getDocument()
-            if let nickname = snapshot.data()?["nickname"] as? String {
+            if let nickname = snapshot.data()?["nickname"] as? String, !nickname.isEmpty {
                 return nickname
             }
         } catch {
-            print("🔐 Failed to get nickname for \(uid): \(error.localizedDescription)")
+            print("🔐 Failed to get nickname for \(trimmedUID): \(error.localizedDescription)")
         }
         
-        return "User_\(String(uid.suffix(4)))"
+        return "User_\(String(trimmedUID.suffix(4)))"
     }
     
     // MARK: - Current User UID
