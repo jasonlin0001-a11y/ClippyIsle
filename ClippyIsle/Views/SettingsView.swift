@@ -243,14 +243,20 @@ struct SettingsView: View {
                 }
             }
             
-            // Show User ID for debugging/support (last 8 characters)
+            // Show User ID (full, long press to copy)
             HStack {
                 Text("User ID")
                 Spacer()
                 if let uid = authManager.currentUID ?? authManager.userProfile?.uid {
-                    Text("...\(String(uid.suffix(8)))")
+                    Text(uid)
                         .foregroundColor(.secondary)
                         .font(.caption)
+                        .textSelection(.enabled)
+                        .onLongPressGesture {
+                            UIPasteboard.general.string = uid
+                            let generator = UINotificationFeedbackGenerator()
+                            generator.notificationOccurred(.success)
+                        }
                 } else if authManager.isLoading {
                     ProgressView()
                         .scaleEffect(0.7)
