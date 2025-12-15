@@ -244,11 +244,18 @@ struct SettingsView: View {
             }
             
             // Show User ID for debugging/support (last 8 characters)
-            if let uid = authManager.currentUID {
-                HStack {
-                    Text("User ID")
-                    Spacer()
+            HStack {
+                Text("User ID")
+                Spacer()
+                if let uid = authManager.currentUID ?? authManager.userProfile?.uid {
                     Text("...\(String(uid.suffix(8)))")
+                        .foregroundColor(.secondary)
+                        .font(.caption)
+                } else if authManager.isLoading {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                } else {
+                    Text("Not signed in")
                         .foregroundColor(.secondary)
                         .font(.caption)
                 }
