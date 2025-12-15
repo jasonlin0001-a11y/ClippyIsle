@@ -26,6 +26,7 @@ struct ContentView: View {
     // **NEW**: IAP Manager
     @EnvironmentObject var subscriptionManager: SubscriptionManager
     @EnvironmentObject var pendingShareManager: PendingShareManager
+    @EnvironmentObject var authManager: AuthenticationManager
     @State private var showPaywall = false
 
     @State private var previewState: PreviewState = .idle
@@ -212,9 +213,11 @@ struct ContentView: View {
         .sheet(isPresented: $isShowingTagSheet) { TagFilterView(clipboardManager: clipboardManager, selectedTag: $selectedTagFilter) }
         .sheet(isPresented: .init(get: { horizontalSizeClass == .compact && isShowingSettings }, set: { isShowingSettings = $0 })) {
             SettingsView(themeColorName: $themeColorName, speechManager: speechManager, clipboardManager: clipboardManager)
+                .environmentObject(authManager)
         }
         .fullScreenCover(isPresented: .init(get: { horizontalSizeClass == .regular && isShowingSettings }, set: { isShowingSettings = $0 })) {
             SettingsView(themeColorName: $themeColorName, speechManager: speechManager, clipboardManager: clipboardManager)
+                .environmentObject(authManager)
         }
         .sheet(isPresented: $isShowingAudioManager) {
             NavigationView {

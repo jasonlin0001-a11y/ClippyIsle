@@ -175,12 +175,25 @@ class FirebaseManager {
             itemsData.append(itemData)
         }
         
+        // Get current user info for "Shared by" feature
+        let authManager = AuthenticationManager.shared
+        let sharerUID = authManager.currentUID
+        let sharerNickname = authManager.userProfile?.nickname
+        
         // Create a new document in sharedClipboards collection
-        let shareData: [String: Any] = [
+        var shareData: [String: Any] = [
             "items": itemsData,
             "createdAt": Timestamp(date: Date()),
             "itemCount": items.count
         ]
+        
+        // Add sharer info if available
+        if let uid = sharerUID {
+            shareData["sharerUID"] = uid
+        }
+        if let nickname = sharerNickname {
+            shareData["sharerNickname"] = nickname
+        }
         
         // Add document and get auto-generated ID
         let docRef = db.collection("sharedClipboards").document()

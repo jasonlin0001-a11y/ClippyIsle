@@ -10,6 +10,7 @@
 		EA4DE7DE2EEDBF3700E3E475 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = EA4DE7DD2EEDBF3700E3E475 /* FirebaseAnalytics */; };
 		EA4DE7E02EEDBF3700E3E475 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = EA4DE7DF2EEDBF3700E3E475 /* FirebaseFirestore */; };
 		EA4DE7E22EEDBF3700E3E475 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = EA4DE7E12EEDBF3700E3E475 /* FirebaseStorage */; };
+		EA4DE7E42EEDBF3700E3E475 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = EA4DE7E32EEDBF3700E3E475 /* FirebaseAuth */; };
 		EA62494E2EB3959800B5E33D /* AVFAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EA62494C2EB3946900B5E33D /* AVFAudio.framework */; };
 		EA6249522EB3C07A00B5E33D /* UniformTypeIdentifiers.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EA6249512EB3C07A00B5E33D /* UniformTypeIdentifiers.framework */; };
 		EAF2527E2EAD209600BE2A3A /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EAF2527D2EAD209600BE2A3A /* WidgetKit.framework */; };
@@ -151,6 +152,7 @@
 				EA62494E2EB3959800B5E33D /* AVFAudio.framework in Frameworks */,
 				EA4DE7E22EEDBF3700E3E475 /* FirebaseStorage in Frameworks */,
 				EA4DE7DE2EEDBF3700E3E475 /* FirebaseAnalytics in Frameworks */,
+				EA4DE7E42EEDBF3700E3E475 /* FirebaseAuth in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -234,6 +236,7 @@
 				EA4DE7DD2EEDBF3700E3E475 /* FirebaseAnalytics */,
 				EA4DE7DF2EEDBF3700E3E475 /* FirebaseFirestore */,
 				EA4DE7E12EEDBF3700E3E475 /* FirebaseStorage */,
+				EA4DE7E32EEDBF3700E3E475 /* FirebaseAuth */,
 			);
 			productName = ClippyIsle;
 			productReference = EAF252682EAD1F8600BE2A3A /* ClippyIsle.app */;
@@ -793,6 +796,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = EA4DE7DC2EEDBF3700E3E475 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseStorage;
+		};
+		EA4DE7E32EEDBF3700E3E475 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EA4DE7DC2EEDBF3700E3E475 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

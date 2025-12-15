@@ -1,12 +1,14 @@
 import SwiftUI
 import FirebaseCore
 import FirebaseFirestore
+import FirebaseAuth
 
 @main
 struct ClippyIsleApp: App {
     // 1. 初始化 Singleton (因為 init 是空的，這裡幾乎不耗時)
     @StateObject private var subscriptionManager = SubscriptionManager.shared
     @StateObject private var pendingShareManager = PendingShareManager.shared
+    @StateObject private var authManager = AuthenticationManager.shared
     @State private var showSplash = true
     @State private var isAppReady = false
     
@@ -25,11 +27,22 @@ struct ClippyIsleApp: App {
                     // 2. 注入環境變數供全 App 使用
                     .environmentObject(subscriptionManager)
                     .environmentObject(pendingShareManager)
+                    .environmentObject(authManager)
                     // 3. 關鍵效能優化：在背景 Task 啟動監聽，完全不阻塞 Main Thread
                     .task(priority: .background) {
                         LaunchLogger.log("SubscriptionManager.start() - Task BEGIN")
                         subscriptionManager.start()
                         LaunchLogger.log("SubscriptionManager.start() - Task END")
+                    }
+                    // 4. Anonymous Authentication on launch
+                    .task(priority: .userInitiated) {
+                        LaunchLogger.log("AuthenticationManager.signInAnonymously() - Task BEGIN")
+                        do {
+                            try await authManager.signInAnonymously()
+                            LaunchLogger.log("AuthenticationManager.signInAnonymously() - Task END (success)")
+                        } catch {
+                            LaunchLogger.log("AuthenticationManager.signInAnonymously() - Task END (error: \(error.localizedDescription))")
+                        }
                     }
                     .onAppear {
                         LaunchLogger.log("ClippyIsleApp.body.WindowGroup - onAppear")

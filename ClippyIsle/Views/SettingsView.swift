@@ -64,6 +64,7 @@ struct SettingsModalPresenterView: View {
 struct SettingsView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var subscriptionManager: SubscriptionManager
+    @EnvironmentObject var authManager: AuthenticationManager
     @State private var showPaywall = false
     
     @Binding var themeColorName: String
@@ -72,10 +73,11 @@ struct SettingsView: View {
     // Web Server State
     @StateObject private var webServer = WebServerManager.shared
     
-    // User Nickname Storage
+    // User Nickname Storage (local backup + UI state)
     @AppStorage("userNickname") private var userNickname: String = ""
     @State private var nicknameInput: String = ""
     @State private var isNicknameSaved: Bool = false
+    @State private var isSavingNickname: Bool = false
     
     // Custom Color Storage
     @AppStorage("customColorRed") private var customColorRed: Double = 0.0
@@ -187,10 +189,17 @@ struct SettingsView: View {
             .sheet(isPresented: $showPaywall) { PaywallView() }
             .onAppear {
                 WebServerManager.shared.clipboardManager = clipboardManager
-                nicknameInput = userNickname
+                // Initialize nickname from AuthenticationManager or fallback to local storage
+                nicknameInput = authManager.userProfile?.nickname ?? userNickname
                 clipboardManager.userDefaults.set(customColorRed, forKey: "customColorRed")
                 clipboardManager.userDefaults.set(customColorGreen, forKey: "customColorGreen")
                 clipboardManager.userDefaults.set(customColorBlue, forKey: "customColorBlue")
+            }
+            // Update nicknameInput when userProfile changes (e.g., after sign-in completes)
+            .onChange(of: authManager.userProfile?.nickname) { _, newNickname in
+                if let nickname = newNickname, nicknameInput.isEmpty || nicknameInput == userNickname {
+                    nicknameInput = nickname
+                }
             }
         }.tint(themeColor).id(themeColorName).preferredColorScheme(preferredColorScheme)
     }
@@ -208,17 +217,40 @@ struct SettingsView: View {
     }
 
     private var nicknameSection: some View {
-        Section(header: Text("User Profile")) {
+        Section(header: Text("User Profile"), footer: Text("Your nickname will be displayed when sharing items (e.g., 'Shared by Alex').")) {
             HStack {
                 Text("Nickname")
-                TextField("Enter your name", text: $nicknameInput).multilineTextAlignment(.trailing).submitLabel(.done)
+                TextField("Enter your name", text: $nicknameInput)
+                    .multilineTextAlignment(.trailing)
+                    .submitLabel(.done)
                     .onChange(of: nicknameInput) { _, _ in isNicknameSaved = false }
-                if nicknameInput != userNickname || isNicknameSaved {
+                    .disabled(isSavingNickname)
+                
+                if isSavingNickname {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                } else if nicknameInput != (authManager.userProfile?.nickname ?? userNickname) || isNicknameSaved {
                     Button(action: saveNickname) {
-                        if isNicknameSaved { Image(systemName: "checkmark.circle.fill").foregroundColor(.green) }
-                        else { Text("Save").fontWeight(.bold) }
+                        if isNicknameSaved { 
+                            Image(systemName: "checkmark.circle.fill").foregroundColor(.green) 
+                        } else { 
+                            Text("Save").fontWeight(.bold) 
+                        }
                     }
-                    .buttonStyle(.borderless).transition(.scale.combined(with: .opacity)).animation(.easeInOut, value: isNicknameSaved)
+                    .buttonStyle(.borderless)
+                    .transition(.scale.combined(with: .opacity))
+                    .animation(.easeInOut, value: isNicknameSaved)
+                }
+            }
+            
+            // Show User ID for debugging/support (last 8 characters)
+            if let uid = authManager.currentUID {
+                HStack {
+                    Text("User ID")
+                    Spacer()
+                    Text("...\(String(uid.suffix(8)))")
+                        .foregroundColor(.secondary)
+                        .font(.caption)
                 }
             }
         }
@@ -226,11 +258,42 @@ struct SettingsView: View {
     
     private func saveNickname() {
         guard !nicknameInput.isEmpty else { return }
-        userNickname = nicknameInput
-        isNicknameSaved = true
-        let generator = UINotificationFeedbackGenerator(); generator.notificationOccurred(.success)
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { if self.nicknameInput == self.userNickname { self.isNicknameSaved = false } }
+        
+        isSavingNickname = true
+        
+        Task {
+            do {
+                // Save to Firestore via AuthenticationManager
+                try await authManager.updateNickname(nicknameInput)
+                
+                // Also save locally as backup
+                await MainActor.run {
+                    userNickname = nicknameInput
+                    isNicknameSaved = true
+                    isSavingNickname = false
+                    
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(.success)
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+                
+                // Reset the saved indicator after 2 seconds
+                try? await Task.sleep(for: .seconds(2))
+                await MainActor.run {
+                    if self.nicknameInput == (authManager.userProfile?.nickname ?? userNickname) {
+                        self.isNicknameSaved = false
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    isSavingNickname = false
+                    // Show error feedback
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(.error)
+                    print("❌ Failed to save nickname: \(error.localizedDescription)")
+                }
+            }
+        }
     }
 
     private var storagePolicySection: some View {
