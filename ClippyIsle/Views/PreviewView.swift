@@ -17,6 +17,8 @@ struct PreviewView: View {
     // iPad fullscreen support
     var isFullscreen: Bool = false
     var onToggleFullscreen: (() -> Void)? = nil
+    // Pass iPad status from parent since horizontalSizeClass may not propagate correctly to sheets
+    var isIPad: Bool = false
     
     // **NEW**: IAP Manager
     @EnvironmentObject var subscriptionManager: SubscriptionManager
@@ -95,7 +97,7 @@ struct PreviewView: View {
         .toolbar {
             // Leading toolbar: dismiss button when in fullscreen on iPad
             ToolbarItemGroup(placement: .navigationBarLeading) {
-                if horizontalSizeClass == .regular && isFullscreen {
+                if isIPad && isFullscreen {
                     Button(action: {
                         stopMediaAndCleanup()
                         if let draft = draftItem, hasContentChanged(draft: draft, original: item) { item = draft; clipboardManager.updateAndSync(item: item) }
@@ -110,8 +112,8 @@ struct PreviewView: View {
                     let urlToOpen = currentWebURL ?? URL(string: item.content)
                     if let url = urlToOpen { Button(action: { UIApplication.shared.open(url) }) { Image(systemName: "safari") } }
                 }
-                // Fullscreen toggle button - only shown on iPad
-                if horizontalSizeClass == .regular {
+                // Fullscreen toggle button - only shown on iPad (use isIPad parameter since horizontalSizeClass may not propagate correctly to sheets)
+                if isIPad {
                     Button(action: { onToggleFullscreen?() }) {
                         Image(systemName: isFullscreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
                     }

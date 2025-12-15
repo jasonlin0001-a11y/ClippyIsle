@@ -463,7 +463,7 @@ struct ContentView: View {
     @ViewBuilder private func previewSheetContent(isFullscreen: Bool, onToggleFullscreen: @escaping () -> Void) -> some View {
         if case .loaded = previewState {
             NavigationView {
-                PreviewView(item: loadedItemBinding, clipboardManager: clipboardManager, speechManager: speechManager, fontSize: $previewFontSize, isFullscreen: isFullscreen, onToggleFullscreen: onToggleFullscreen)
+                PreviewView(item: loadedItemBinding, clipboardManager: clipboardManager, speechManager: speechManager, fontSize: $previewFontSize, isFullscreen: isFullscreen, onToggleFullscreen: onToggleFullscreen, isIPad: horizontalSizeClass == .regular)
                     .background(Color(UIColor.systemBackground))
             }
             .navigationViewStyle(.stack)
