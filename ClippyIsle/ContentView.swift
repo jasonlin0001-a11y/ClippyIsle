@@ -237,16 +237,38 @@ struct ContentView: View {
         .sheet(item: $itemToTag) { item in TagEditView(item: Binding(get: { item }, set: { itemToTag = $0 }), clipboardManager: clipboardManager) }
         // iPad preview: sheet in normal mode, fullScreenCover in fullscreen mode
         // iPhone preview: always sheet
+        // Note: onDismiss handles user-initiated dismissal (swipe down, etc.)
+        // The setter should only dismiss when not transitioning between presentation styles
         .sheet(isPresented: .init(
             get: { isSheetPresented && (horizontalSizeClass == .compact || !isPreviewFullscreen) },
-            set: { if !$0 { dismissPreview() } }
-        ), onDismiss: dismissPreview) {
+            set: { newValue in
+                // Only dismiss if user actually dismissed (not transitioning to fullscreen)
+                if !newValue && !isPreviewFullscreen {
+                    dismissPreview()
+                }
+            }
+        ), onDismiss: {
+            // Only dismiss if not transitioning to fullscreen
+            if !isPreviewFullscreen {
+                dismissPreview()
+            }
+        }) {
             previewSheetContent(isFullscreen: false, onToggleFullscreen: { isPreviewFullscreen = true })
         }
         .fullScreenCover(isPresented: .init(
             get: { isSheetPresented && horizontalSizeClass == .regular && isPreviewFullscreen },
-            set: { if !$0 { dismissPreview() } }
-        ), onDismiss: dismissPreview) {
+            set: { newValue in
+                // Only dismiss if user actually dismissed (not transitioning back to sheet)
+                if !newValue && isPreviewFullscreen {
+                    dismissPreview()
+                }
+            }
+        ), onDismiss: {
+            // Only dismiss if still in fullscreen mode (user dismissed fullscreen)
+            if isPreviewFullscreen {
+                dismissPreview()
+            }
+        }) {
             previewSheetContent(isFullscreen: true, onToggleFullscreen: { isPreviewFullscreen = false })
         }
         .alert("Rename Item", isPresented: $isShowingRenameAlert) {
