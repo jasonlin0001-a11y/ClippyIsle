@@ -12,6 +12,11 @@ struct PreviewView: View {
     @Binding var fontSize: Double
     @State private var draftItem: ClipboardItem?
     @Environment(\.dismiss) var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    
+    // iPad fullscreen support
+    var isFullscreen: Bool = false
+    var onToggleFullscreen: (() -> Void)? = nil
     
     // **NEW**: IAP Manager
     @EnvironmentObject var subscriptionManager: SubscriptionManager
@@ -88,10 +93,28 @@ struct PreviewView: View {
             UIApplication.shared.isIdleTimerDisabled = false
         }
         .toolbar {
+            // Leading toolbar: dismiss button when in fullscreen on iPad
+            ToolbarItemGroup(placement: .navigationBarLeading) {
+                if horizontalSizeClass == .regular && isFullscreen {
+                    Button(action: {
+                        stopMediaAndCleanup()
+                        if let draft = draftItem, hasContentChanged(draft: draft, original: item) { item = draft; clipboardManager.updateAndSync(item: item) }
+                        dismiss()
+                    }) {
+                        Image(systemName: "chevron.down")
+                    }
+                }
+            }
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 if isYouTubeItem || isFacebookItem || isTwitterItem || isWebItem {
                     let urlToOpen = currentWebURL ?? URL(string: item.content)
                     if let url = urlToOpen { Button(action: { UIApplication.shared.open(url) }) { Image(systemName: "safari") } }
+                }
+                // Fullscreen toggle button - only shown on iPad
+                if horizontalSizeClass == .regular {
+                    Button(action: { onToggleFullscreen?() }) {
+                        Image(systemName: isFullscreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                    }
                 }
                 Button("Done") {
                     stopMediaAndCleanup()

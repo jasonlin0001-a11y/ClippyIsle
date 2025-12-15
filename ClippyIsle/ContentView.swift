@@ -61,6 +61,9 @@ struct ContentView: View {
     @State private var firebaseShareURL: String?
     @State private var showFirebaseShareSheet = false
     @State private var showFirebaseSizeError = false
+    
+    // iPad fullscreen preview state
+    @State private var isPreviewFullscreen = false
 
     @AppStorage("themeColorName") private var themeColorName: String = "blue"
     
@@ -232,8 +235,19 @@ struct ContentView: View {
         }
         
         .sheet(item: $itemToTag) { item in TagEditView(item: Binding(get: { item }, set: { itemToTag = $0 }), clipboardManager: clipboardManager) }
-        .sheet(isPresented: $isSheetPresented, onDismiss: { isSheetPresented = false; previewState = .idle }) {
-            previewSheetContent()
+        // iPad preview: sheet in normal mode, fullScreenCover in fullscreen mode
+        // iPhone preview: always sheet
+        .sheet(isPresented: .init(
+            get: { isSheetPresented && (horizontalSizeClass == .compact || !isPreviewFullscreen) },
+            set: { if !$0 { isSheetPresented = false; previewState = .idle; isPreviewFullscreen = false } }
+        ), onDismiss: { isSheetPresented = false; previewState = .idle; isPreviewFullscreen = false }) {
+            previewSheetContent(isFullscreen: false, onToggleFullscreen: { isPreviewFullscreen = true })
+        }
+        .fullScreenCover(isPresented: .init(
+            get: { isSheetPresented && horizontalSizeClass == .regular && isPreviewFullscreen },
+            set: { if !$0 { isSheetPresented = false; previewState = .idle; isPreviewFullscreen = false } }
+        ), onDismiss: { isSheetPresented = false; previewState = .idle; isPreviewFullscreen = false }) {
+            previewSheetContent(isFullscreen: true, onToggleFullscreen: { isPreviewFullscreen = false })
         }
         .alert("Rename Item", isPresented: $isShowingRenameAlert) {
             TextField("Enter new name", text: $newName).submitLabel(.done)
@@ -439,10 +453,10 @@ struct ContentView: View {
         }.frame(height: 46).background(.ultraThinMaterial).clipShape(Capsule()).shadow(color: .black.opacity(0.15), radius: 5, y: 2).padding(.horizontal, 22)
     }
     
-    @ViewBuilder private func previewSheetContent() -> some View {
+    @ViewBuilder private func previewSheetContent(isFullscreen: Bool, onToggleFullscreen: @escaping () -> Void) -> some View {
         if case .loaded = previewState {
             NavigationView {
-                PreviewView(item: loadedItemBinding, clipboardManager: clipboardManager, speechManager: speechManager, fontSize: $previewFontSize)
+                PreviewView(item: loadedItemBinding, clipboardManager: clipboardManager, speechManager: speechManager, fontSize: $previewFontSize, isFullscreen: isFullscreen, onToggleFullscreen: onToggleFullscreen)
                     .background(Color(UIColor.systemBackground))
             }
             .navigationViewStyle(.stack)
