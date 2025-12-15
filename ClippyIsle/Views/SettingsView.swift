@@ -255,10 +255,30 @@ struct SettingsView: View {
                     ProgressView()
                         .scaleEffect(0.7)
                 } else {
-                    Text("Not signed in")
-                        .foregroundColor(.secondary)
-                        .font(.caption)
+                    // Show error or retry option
+                    Button(action: {
+                        Task {
+                            try? await authManager.signInAnonymously()
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            Text("Tap to sign in")
+                                .foregroundColor(.blue)
+                                .font(.caption)
+                            Image(systemName: "arrow.clockwise")
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                        }
+                    }
+                    .buttonStyle(.borderless)
                 }
+            }
+            
+            // Show auth error if any
+            if let error = authManager.authError {
+                Text("Error: \(error)")
+                    .foregroundColor(.red)
+                    .font(.caption2)
             }
         }
     }
