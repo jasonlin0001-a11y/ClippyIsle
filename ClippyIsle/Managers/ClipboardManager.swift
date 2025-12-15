@@ -63,7 +63,7 @@ class ClipboardManager: ObservableObject {
             // Use Task.detached to move cloud sync completely off Main Thread
             Task.detached(priority: .utility) { [weak self] in
                 guard let self = self else { return }
-                LaunchLogger.log("ClipboardManager.initializeData() - CloudSync Task.detached spawned")
+                await MainActor.run { LaunchLogger.log("ClipboardManager.initializeData() - CloudSync Task.detached spawned") }
                 // Use isInitialSync: true to limit to 20 items and prevent sync storms
                 await self.performCloudSync(isInitialSync: true) 
             }
