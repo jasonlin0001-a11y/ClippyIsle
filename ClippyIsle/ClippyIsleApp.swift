@@ -6,6 +6,7 @@ import FirebaseFirestore
 struct ClippyIsleApp: App {
     // 1. 初始化 Singleton (因為 init 是空的，這裡幾乎不耗時)
     @StateObject private var subscriptionManager = SubscriptionManager.shared
+    @StateObject private var pendingShareManager = PendingShareManager.shared
     @State private var showSplash = true
     @State private var isAppReady = false
     
@@ -23,6 +24,7 @@ struct ClippyIsleApp: App {
                 ContentView(isAppReady: $isAppReady)
                     // 2. 注入環境變數供全 App 使用
                     .environmentObject(subscriptionManager)
+                    .environmentObject(pendingShareManager)
                     // 3. 關鍵效能優化：在背景 Task 啟動監聽，完全不阻塞 Main Thread
                     .task(priority: .background) {
                         LaunchLogger.log("SubscriptionManager.start() - Task BEGIN")
@@ -72,16 +74,15 @@ struct ClippyIsleApp: App {
             return
         }
         
-        print("📥 Importing shared items with ID: \(shareId)")
+        print("📥 Loading shared items with ID: \(shareId)")
         
         // Download raw items data from Firebase
         FirebaseManager.shared.downloadItems(byShareId: shareId) { result in
             switch result {
             case .success(let itemsData):
                 DispatchQueue.main.async {
-                    // Import items while preserving their metadata
-                    let clipboardManager = ClipboardManager.shared
-                    var importedCount = 0
+                    // Parse items data and create ClipboardItem instances for preview
+                    var pendingItems: [ClipboardItem] = []
                     
                     for itemData in itemsData {
                         // Parse raw data and create ClipboardItem instances
@@ -92,31 +93,32 @@ struct ClippyIsleApp: App {
                             continue
                         }
                         
-                        // Create new item with fresh ID and timestamp for import
-                        let importedItem = ClipboardItem(
+                        // Create item for preview (will create new ID on actual import)
+                        let item = ClipboardItem(
                             content: content,
                             type: type,
                             filename: itemData["filename"] as? String,
-                            timestamp: Date(), // Use current time for import
-                            isPinned: false, // Don't preserve pinned status on import
+                            timestamp: Date(),
+                            isPinned: itemData["isPinned"] as? Bool ?? false,
                             displayName: itemData["displayName"] as? String,
                             isTrashed: false, // Don't import trashed items
                             tags: itemData["tags"] as? [String],
-                            fileData: nil // File data handled by ClipboardManager if present
+                            fileData: nil
                         )
                         
-                        // Insert at beginning
-                        clipboardManager.items.insert(importedItem, at: 0)
-                        importedCount += 1
+                        pendingItems.append(item)
                     }
                     
-                    // Save all changes at once
-                    clipboardManager.sortAndSave()
-                    
-                    print("✅ Successfully imported \(importedCount) item(s)")
+                    if pendingItems.isEmpty {
+                        print("⚠️ No valid items found in shared data")
+                    } else {
+                        print("📥 Loaded \(pendingItems.count) shared item(s), showing selection dialog")
+                        // Show selection dialog instead of auto-importing
+                        self.pendingShareManager.setPendingItems(pendingItems)
+                    }
                 }
             case .failure(let error):
-                print("❌ Failed to import items: \(error.localizedDescription)")
+                print("❌ Failed to load shared items: \(error.localizedDescription)")
             }
         }
     }

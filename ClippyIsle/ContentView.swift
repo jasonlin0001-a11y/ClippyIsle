@@ -25,6 +25,7 @@ struct ContentView: View {
     
     // **NEW**: IAP Manager
     @EnvironmentObject var subscriptionManager: SubscriptionManager
+    @EnvironmentObject var pendingShareManager: PendingShareManager
     @State private var showPaywall = false
 
     @State private var previewState: PreviewState = .idle
@@ -260,6 +261,17 @@ struct ContentView: View {
             Button("OK") {}
         } message: {
             Text("The item exceeds the 900KB limit for Firebase sharing. Please use JSON export instead.")
+        }
+        // Shared items import dialog
+        .sheet(isPresented: $pendingShareManager.showImportDialog) {
+            SharedItemsImportView(
+                clipboardManager: clipboardManager,
+                pendingItems: pendingShareManager.pendingItems,
+                isPresented: $pendingShareManager.showImportDialog
+            )
+            .onDisappear {
+                pendingShareManager.clearPendingItems()
+            }
         }
     }
     

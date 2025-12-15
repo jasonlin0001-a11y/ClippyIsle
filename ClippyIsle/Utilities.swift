@@ -15,6 +15,32 @@ func itemIcon(for type: String) -> String {
     }
 }
 
+// MARK: - Pending Share Manager
+/// Manages pending shared items received from Firebase share links
+/// Used to communicate between ClippyIsleApp (which handles deep links) and ContentView (which shows the import dialog)
+class PendingShareManager: ObservableObject {
+    static let shared = PendingShareManager()
+    
+    @Published var pendingItems: [ClipboardItem] = []
+    @Published var showImportDialog: Bool = false
+    
+    private init() {}
+    
+    /// Sets pending items and triggers the import dialog
+    func setPendingItems(_ items: [ClipboardItem]) {
+        DispatchQueue.main.async {
+            self.pendingItems = items
+            self.showImportDialog = true
+        }
+    }
+    
+    /// Clears pending items after import or dismissal
+    func clearPendingItems() {
+        pendingItems = []
+        showImportDialog = false
+    }
+}
+
 // MARK: - Enums
 
 enum AppearanceMode: Int, CaseIterable, Identifiable {
