@@ -921,7 +921,6 @@ struct SharedItemsImportView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
-                        isPresented = false
                         dismiss()
                     }
                 }
@@ -983,7 +982,6 @@ struct SharedItemsImportView: View {
         
         print("✅ Successfully imported \(itemsToImport.count) item(s)")
         
-        isPresented = false
         dismiss()
     }
     
