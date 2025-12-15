@@ -62,6 +62,9 @@ struct ContentView: View {
     @State private var firebaseShareURL: String?
     @State private var showFirebaseShareSheet = false
     @State private var showFirebaseSizeError = false
+    
+    // iPad fullscreen preview state
+    @State private var isPreviewFullscreen = false
 
     @AppStorage("themeColorName") private var themeColorName: String = "blue"
     
@@ -233,8 +236,41 @@ struct ContentView: View {
         }
         
         .sheet(item: $itemToTag) { item in TagEditView(item: Binding(get: { item }, set: { itemToTag = $0 }), clipboardManager: clipboardManager) }
-        .sheet(isPresented: $isSheetPresented, onDismiss: { isSheetPresented = false; previewState = .idle }) {
-            previewSheetContent()
+        // iPad preview: sheet in normal mode, fullScreenCover in fullscreen mode
+        // iPhone preview: always sheet
+        // Note: onDismiss handles user-initiated dismissal (swipe down, etc.)
+        // The setter should only dismiss when not transitioning between presentation styles
+        .sheet(isPresented: .init(
+            get: { isSheetPresented && (horizontalSizeClass == .compact || !isPreviewFullscreen) },
+            set: { newValue in
+                // Only dismiss if user actually dismissed (not transitioning to fullscreen)
+                if !newValue && !isPreviewFullscreen {
+                    dismissPreview()
+                }
+            }
+        ), onDismiss: {
+            // Only dismiss if not transitioning to fullscreen
+            if !isPreviewFullscreen {
+                dismissPreview()
+            }
+        }) {
+            previewSheetContent(isFullscreen: false, onToggleFullscreen: { isPreviewFullscreen = true })
+        }
+        .fullScreenCover(isPresented: .init(
+            get: { isSheetPresented && horizontalSizeClass == .regular && isPreviewFullscreen },
+            set: { newValue in
+                // Only dismiss if user actually dismissed (not transitioning back to sheet)
+                if !newValue && isPreviewFullscreen {
+                    dismissPreview()
+                }
+            }
+        ), onDismiss: {
+            // Only dismiss if still in fullscreen mode (user dismissed fullscreen)
+            if isPreviewFullscreen {
+                dismissPreview()
+            }
+        }) {
+            previewSheetContent(isFullscreen: true, onToggleFullscreen: { isPreviewFullscreen = false })
         }
         .alert("Rename Item", isPresented: $isShowingRenameAlert) {
             TextField("Enter new name", text: $newName).submitLabel(.done)
@@ -410,6 +446,13 @@ struct ContentView: View {
     }
     
     private func highlightAndScroll(to id: UUID) { newlyAddedItemID = id }
+    
+    // Helper method to handle preview dismissal
+    private func dismissPreview() {
+        isSheetPresented = false
+        previewState = .idle
+        isPreviewFullscreen = false
+    }
 
     private var bottomToolbar: some View {
         HStack(spacing: 0) {
@@ -451,10 +494,10 @@ struct ContentView: View {
         }.frame(height: 46).background(.ultraThinMaterial).clipShape(Capsule()).shadow(color: .black.opacity(0.15), radius: 5, y: 2).padding(.horizontal, 22)
     }
     
-    @ViewBuilder private func previewSheetContent() -> some View {
+    @ViewBuilder private func previewSheetContent(isFullscreen: Bool, onToggleFullscreen: @escaping () -> Void) -> some View {
         if case .loaded = previewState {
             NavigationView {
-                PreviewView(item: loadedItemBinding, clipboardManager: clipboardManager, speechManager: speechManager, fontSize: $previewFontSize)
+                PreviewView(item: loadedItemBinding, clipboardManager: clipboardManager, speechManager: speechManager, fontSize: $previewFontSize, isFullscreen: isFullscreen, onToggleFullscreen: onToggleFullscreen, isIPad: horizontalSizeClass == .regular)
                     .background(Color(UIColor.systemBackground))
             }
             .navigationViewStyle(.stack)

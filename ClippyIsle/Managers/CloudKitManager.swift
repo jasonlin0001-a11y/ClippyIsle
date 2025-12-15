@@ -120,12 +120,17 @@ class CloudKitManager: ObservableObject {
     }
     
     // MARK: - Helpers for Pagination
+<<<<<<< HEAD
     /// Maximum number of items to fetch during initial sync to prevent sync storms
     private let initialSyncLimit = 20
     
     /// Fetches records with pagination, optionally limiting to a specific count for initial sync
     /// - Parameter limitToInitialSync: If true, only fetches up to `initialSyncLimit` items (sorted by most recent first)
     private func fetchRecords(limitToInitialSync: Bool = false) async throws -> [CKRecord] {
+=======
+    // Fetch records with optional limit for pagination (default: fetch all)
+    private func fetchRecords(limit: Int? = nil) async throws -> [CKRecord] {
+>>>>>>> copilot/add-fullscreen-button-ipad
         var allRecords: [CKRecord] = []
         let query = CKQuery(recordType: "ClipboardItem", predicate: NSPredicate(value: true))
         query.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]
@@ -142,10 +147,15 @@ class CloudKitManager: ObservableObject {
             for result in matchResults {
                 if case .success(let record) = result.1 {
                     allRecords.append(record)
+<<<<<<< HEAD
                     
                     // If limiting to initial sync, stop once we have enough records
                     if limitToInitialSync && allRecords.count >= initialSyncLimit {
                         print("☁️ Reached initial sync limit of \(initialSyncLimit) items, stopping fetch.")
+=======
+                    // Stop early if we've reached the limit
+                    if let limit = limit, allRecords.count >= limit {
+>>>>>>> copilot/add-fullscreen-button-ipad
                         return allRecords
                     }
                 }
@@ -155,6 +165,7 @@ class CloudKitManager: ObservableObject {
         return allRecords
     }
     
+<<<<<<< HEAD
     // Legacy method maintained for backwards compatibility - fetches all records
     private func fetchAllRecords() async throws -> [CKRecord] {
         return try await fetchRecords(limitToInitialSync: false)
@@ -166,18 +177,37 @@ class CloudKitManager: ObservableObject {
     ///   - localItems: The local clipboard items to sync
     ///   - isInitialSync: If true, limits fetched cloud items to prevent sync storms on app launch
     func sync(localItems: [ClipboardItem], isInitialSync: Bool = false) async -> [ClipboardItem] {
+=======
+    // Legacy method for backward compatibility - fetches all records
+    private func fetchAllRecords() async throws -> [CKRecord] {
+        return try await fetchRecords(limit: nil)
+    }
+    
+    // MARK: - Synchronization
+    /// Sync with cloud with optional limit for initial sync (to prevent app freeze)
+    /// - Parameters:
+    ///   - localItems: Local clipboard items to sync
+    ///   - initialSyncLimit: Maximum number of cloud items to fetch on initial sync (nil = fetch all)
+    /// - Returns: Merged items after sync
+    func sync(localItems: [ClipboardItem], initialSyncLimit: Int? = nil) async -> [ClipboardItem] {
+>>>>>>> copilot/add-fullscreen-button-ipad
         guard iCloudStatus == "Available" else { return localItems }
         
         await MainActor.run { isSyncing = true }
         defer { Task { @MainActor in isSyncing = false; lastSyncDate = Date() } }
         
         do {
+<<<<<<< HEAD
             // 1. Fetch cloud records (limited if initial sync to prevent sync storms)
             let cloudRecords = try await fetchRecords(limitToInitialSync: isInitialSync)
+=======
+            // 1. 獲取雲端資料 (with optional limit for initial sync)
+            let cloudRecords = try await fetchRecords(limit: initialSyncLimit)
+>>>>>>> copilot/add-fullscreen-button-ipad
             
             var cloudItems: [ClipboardItem] = []
-            var skippedCount = 0
             for record in cloudRecords {
+<<<<<<< HEAD
                 // Safe decoding: Use optional conversion to skip corrupt/zombie items silently
                 if let item = safeItem(from: record) {
                     cloudItems.append(item)
@@ -190,6 +220,16 @@ class CloudKitManager: ObservableObject {
                 print("☁️ Skipped \(skippedCount) corrupt/zombie items during sync.")
             }
             print("☁️ Fetched \(cloudItems.count) valid items from Cloud\(isInitialSync ? " (limited to \(initialSyncLimit) for initial sync)" : " (Total)").")
+=======
+                // Safe decoding: Skip corrupt/zombie items silently
+                if let item = item(from: record) {
+                    cloudItems.append(item)
+                } else {
+                    print("⚠️ CloudKit: Skipped corrupt/incompatible record: \(record.recordID.recordName)")
+                }
+            }
+            print("☁️ Fetched \(cloudItems.count) items from Cloud (limit: \(initialSyncLimit?.description ?? "none")).")
+>>>>>>> copilot/add-fullscreen-button-ipad
             
             var mergedItems = localItems
             let cloudIDMap = Dictionary(uniqueKeysWithValues: cloudItems.map { ($0.id, $0) })

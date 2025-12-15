@@ -60,27 +60,49 @@ class ClipboardManager: ObservableObject {
         cleanupItems()
         LaunchLogger.log("ClipboardManager.initializeData() - cleanupItems() completed")
         if UserDefaults.standard.bool(forKey: "iCloudSyncEnabled") { 
+<<<<<<< HEAD
             // Use Task.detached to move cloud sync completely off Main Thread
             Task.detached(priority: .utility) { [weak self] in
                 guard let self = self else { return }
                 await MainActor.run { LaunchLogger.log("ClipboardManager.initializeData() - CloudSync Task.detached spawned") }
                 // Use isInitialSync: true to limit to 20 items and prevent sync storms
                 await self.performCloudSync(isInitialSync: true) 
+=======
+            // BACKGROUND SYNC: Use Task.detached to run sync off the main thread
+            // This prevents app freeze from "Cloud Sync Storm" with many items
+            Task.detached(priority: .utility) { [weak self] in
+                guard let self = self else { return }
+                LaunchLogger.log("ClipboardManager.initializeData() - CloudSync Task spawned (background)")
+                await self.performCloudSync(initialSync: true)
+>>>>>>> copilot/add-fullscreen-button-ipad
             }
         }
         LaunchLogger.log("ClipboardManager.initializeData() - END")
     }
     
+<<<<<<< HEAD
     /// Performs a cloud sync with the specified mode
     /// - Parameter isInitialSync: If true, limits to 20 most recent items to prevent sync storms on launch
     func performCloudSync(isInitialSync: Bool = false) async {
+=======
+    /// Perform cloud sync with optional initial sync limit
+    /// - Parameter initialSync: If true, limits sync to 20 items to prevent app freeze
+    func performCloudSync(initialSync: Bool = false) async {
+>>>>>>> copilot/add-fullscreen-button-ipad
         // Check if iCloud sync is enabled before syncing
         guard UserDefaults.standard.bool(forKey: "iCloudSyncEnabled") else {
             print("⚠️ iCloud sync is disabled, skipping sync")
             return
         }
         
+<<<<<<< HEAD
         let syncedItems = await cloudKitManager.sync(localItems: self.items, isInitialSync: isInitialSync)
+=======
+        // Use limit of 20 items for initial sync to prevent "Cloud Sync Storm"
+        let syncLimit = initialSync ? 20 : nil
+        let currentItems = await MainActor.run { self.items }
+        let syncedItems = await cloudKitManager.sync(localItems: currentItems, initialSyncLimit: syncLimit)
+>>>>>>> copilot/add-fullscreen-button-ipad
         await MainActor.run { self.items = syncedItems; self.sortAndSave(skipCloud: true) }
         
         // Also sync tag colors (use internal method to get colors regardless of Pro status for backup)
