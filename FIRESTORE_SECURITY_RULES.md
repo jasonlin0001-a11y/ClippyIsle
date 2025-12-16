@@ -53,6 +53,26 @@ service cloud.firestore {
     match /clipboardItems/{itemId} {
       allow read, write: if request.auth != null;
     }
+    
+    // Cloud Notes - Email mapping collection
+    match /email_mapping/{email} {
+      // Allow authenticated users to create/update their email binding
+      allow read, write: if request.auth != null;
+    }
+    
+    // Cloud Notes - User inbox subcollection
+    match /users/{userId}/inbox/{messageId} {
+      // Allow users to read their own inbox
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // Allow users to update isProcessed status on their own messages
+      allow update: if request.auth != null && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isProcessed']);
+      
+      // Cloud Functions can write to inbox (requires admin SDK)
+      // Users cannot create or delete inbox items directly
+      allow create, delete: if false;
+    }
   }
 }
 ```
@@ -76,6 +96,22 @@ service cloud.firestore {
 2. **UID is immutable** - Once set, the uid field cannot be changed.
 3. **created_at is immutable** - The creation timestamp cannot be modified.
 4. **Public nickname access** - For web sharing features, nickname can be read publicly.
+
+### Email Mapping Collection (`/email_mapping/{email}`)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `uid` | String | Firebase Auth UID of the user who bound this email |
+
+### User Inbox Subcollection (`/users/{uid}/inbox/{messageId}`)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `content` | String | Email body content |
+| `subject` | String | Email subject line |
+| `from` | String | Sender email address |
+| `receivedAt` | Timestamp | When the email was received |
+| `isProcessed` | Boolean | Whether the item has been archived |
 
 ## Implementation Details
 

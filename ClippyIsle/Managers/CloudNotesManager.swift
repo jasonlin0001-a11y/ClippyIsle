@@ -161,9 +161,10 @@ class CloudNotesManager: ObservableObject {
         
         let inboxRef = db.collection("users").document(uid).collection("inbox")
         
+        // Use a simple query without ordering to avoid requiring a composite index
+        // We'll sort the results client-side
         inboxListener = inboxRef
             .whereField("isProcessed", isEqualTo: false)
-            .order(by: "receivedAt", descending: true)
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self = self else { return }
                 
@@ -181,9 +182,12 @@ class CloudNotesManager: ObservableObject {
                         return
                     }
                     
-                    self.inboxItems = documents.compactMap { doc in
+                    // Parse items and sort client-side by receivedAt descending
+                    var items = documents.compactMap { doc in
                         CloudInboxItem(documentID: doc.documentID, data: doc.data())
                     }
+                    items.sort { $0.receivedAt > $1.receivedAt }
+                    self.inboxItems = items
                     
                     print("📬 Inbox updated: \(self.inboxItems.count) items")
                 }
@@ -215,14 +219,17 @@ class CloudNotesManager: ObservableObject {
         
         do {
             let inboxRef = db.collection("users").document(uid).collection("inbox")
+            // Use a simple query without ordering to avoid requiring a composite index
             let snapshot = try await inboxRef
                 .whereField("isProcessed", isEqualTo: false)
-                .order(by: "receivedAt", descending: true)
                 .getDocuments()
             
-            inboxItems = snapshot.documents.compactMap { doc in
+            // Parse items and sort client-side by receivedAt descending
+            var items = snapshot.documents.compactMap { doc in
                 CloudInboxItem(documentID: doc.documentID, data: doc.data())
             }
+            items.sort { $0.receivedAt > $1.receivedAt }
+            inboxItems = items
             
             isLoading = false
             print("📬 Fetched \(inboxItems.count) inbox items")
