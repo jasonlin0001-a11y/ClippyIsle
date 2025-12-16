@@ -81,7 +81,9 @@ class CloudNotesManager: ObservableObject {
     private init() {}
     
     deinit {
-        stopListening()
+        // Directly remove listener instead of calling stopListening()
+        // since deinit is a nonisolated context and cannot call @MainActor methods
+        inboxListener?.remove()
     }
     
     // MARK: - Email Binding
