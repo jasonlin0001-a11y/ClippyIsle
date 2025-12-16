@@ -49,3 +49,83 @@ struct ClippyIsleWidgetEntryView : View {
         .padding()
     }
 }
+
+// MARK: - Lock Screen Widget (AccessoryRectangular)
+
+@available(iOS 16.0, *)
+struct ClippyIsleLockScreenWidget: Widget {
+    let kind: String = "ClippyIsleLockScreenWidget"
+    
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: Provider()) { entry in
+            LockScreenWidgetEntryView(entry: entry)
+        }
+        .configurationDisplayName("CC Isle")
+        .description("Quick access to your clipboard.")
+        .supportedFamilies([.accessoryRectangular])
+    }
+}
+
+@available(iOS 16.0, *)
+struct LockScreenWidgetEntryView: View {
+    var entry: Provider.Entry
+    
+    private var hasContent: Bool {
+        entry.latestClippedText != nil && !entry.latestClippedText!.isEmpty
+    }
+    
+    var body: some View {
+        if hasContent {
+            contentStateView
+        } else {
+            emptyStateView
+        }
+    }
+    
+    // MARK: - Empty State View
+    private var emptyStateView: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 4) {
+                Image(systemName: "tray")
+                    .font(.system(size: 12))
+                Text("Nothing here yet...")
+                    .font(.system(size: 12))
+            }
+            .foregroundStyle(.secondary)
+            
+            Link(destination: URL(string: "ccisle://")!) {
+                HStack(spacing: 4) {
+                    Image(systemName: "square.and.arrow.down")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("Click & CC me!")
+                        .font(.system(size: 12, weight: .bold))
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    
+    // MARK: - Content State View
+    private var contentStateView: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 4) {
+                Image(systemName: "doc.on.clipboard")
+                    .font(.system(size: 12))
+                Text(entry.latestClippedText ?? "")
+                    .font(.system(size: 12))
+                    .lineLimit(2)
+            }
+            .foregroundStyle(.primary)
+            
+            Link(destination: URL(string: "ccisle://play")!) {
+                HStack(spacing: 4) {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 10, weight: .semibold))
+                    Text("Play")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
