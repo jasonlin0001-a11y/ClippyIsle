@@ -1,32 +1,71 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * import {onCall} from "firebase-functions/v2/https";
- * import {onDocumentWritten} from "firebase-functions/v2/firestore";
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
+import * as functions from "firebase-functions";
+import * as admin from "firebase-admin";
 
-import {setGlobalOptions} from "firebase-functions";
-import {onRequest} from "firebase-functions/https";
-import * as logger from "firebase-functions/logger";
+const Busboy = require("busboy");
+const EmailReplyParser = require("node-email-reply-parser");
 
-// Start writing functions
-// https://firebase.google.com/docs/functions/typescript
+if (admin.apps.length === 0) {
+  admin.initializeApp();
+}
+const db = admin.firestore();
 
-// For cost control, you can set the maximum number of containers that can be
-// running at the same time. This helps mitigate the impact of unexpected
-// traffic spikes by instead downgrading performance. This limit is a
-// per-function limit. You can override the limit for each function using the
-// `maxInstances` option in the function's options, e.g.
-// `onRequest({ maxInstances: 5 }, (req, res) => { ... })`.
-// NOTE: setGlobalOptions does not apply to functions using the v1 API. V1
-// functions should each use functions.runWith({ maxInstances: 10 }) instead.
-// In the v1 API, each function can only serve one request per container, so
-// this will be the maximum concurrent request count.
-setGlobalOptions({ maxInstances: 10 });
+export const receiveEmail = functions.https.onRequest((req, res) => {
+  if (req.method !== "POST") {
+    res.status(405).send("Method Not Allowed");
+    return;
+  }
 
-// export const helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+  const busboy = Busboy({ headers: req.headers });
+  const fields: { [key: string]: string } = {};
+
+  busboy.on("field", (fieldname: string, val: string) => {
+    fields[fieldname] = val;
+  });
+
+  busboy.on("finish", async () => {
+    try {
+      const fromLine = fields["from"] || ""; 
+      const subject = fields["subject"] || "(無標題)";
+      const originalText = fields["text"] || ""; 
+      // 這裡原本有一行 html 的定義，已經刪除，修正 TS6133 錯誤
+
+      const emailMatch = fromLine.match(/<(.+)>/);
+      const senderEmail = emailMatch ? emailMatch[1] : fromLine.trim();
+
+      // ★ 清洗內容 ★
+      const cleanText = EmailReplyParser(originalText, true);
+      const finalText = cleanText.length > 0 ? cleanText : originalText;
+
+      console.log(`收到信件: ${senderEmail}, 清洗前長度: ${originalText.length}, 清洗後: ${finalText.length}`);
+
+      const mappingSnap = await db.collection("email_mapping").doc(senderEmail).get();
+
+      if (mappingSnap.exists) {
+        const userId = mappingSnap.data()?.uid;
+        
+        await db.collection("users").doc(userId).collection("inbox").add({
+          subject: subject,
+          content: finalText, 
+          originalContent: originalText, 
+          from: senderEmail,
+          receivedAt: admin.firestore.FieldValue.serverTimestamp(),
+          isProcessed: false, 
+          source: "email"
+        });
+
+        console.log(`✅ 已存入使用者 ${userId} 的收件匣`);
+        res.status(200).send("Saved");
+      } else {
+        console.log(`⚠️ 找不到使用者: ${senderEmail}`);
+        res.status(200).send("Ignored");
+      }
+
+    } catch (error) {
+      console.error("❌ Error:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+
+  // @ts-ignore
+  busboy.end(req.rawBody);
+});
