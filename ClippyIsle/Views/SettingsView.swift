@@ -181,6 +181,7 @@ struct SettingsView: View {
                 }
                 
                 Section(header: Text("General"), footer: Text("When enabled, the app will automatically detect and add new items from the clipboard. When disabled, you must add items manually from the '+' menu on the main screen.")) { Toggle("Auto Add from Clipboard", isOn: $askToAddFromClipboard) }
+                CloudNotesSettingsSection()
                 storagePolicySection; appearanceSection; previewSettingsSection; speechSettingsSection; iCloudSection; backupAndRestoreSection; firebaseSettingsSection; dataManagementSection; appInfoSection
             }
             .navigationTitle("Settings").navigationBarTitleDisplayMode(.inline)
