@@ -71,7 +71,8 @@ struct LockScreenWidgetEntryView: View {
     var entry: Provider.Entry
     
     private var hasContent: Bool {
-        entry.latestClippedText != nil && !entry.latestClippedText!.isEmpty
+        guard let text = entry.latestClippedText else { return false }
+        return !text.isEmpty
     }
     
     var body: some View {
@@ -93,12 +94,14 @@ struct LockScreenWidgetEntryView: View {
             }
             .foregroundStyle(.secondary)
             
-            Link(destination: URL(string: "ccisle://")!) {
-                HStack(spacing: 4) {
-                    Image(systemName: "square.and.arrow.down")
-                        .font(.system(size: 12, weight: .semibold))
-                    Text("Click & CC me!")
-                        .font(.system(size: 12, weight: .bold))
+            if let url = URL(string: "ccisle://") {
+                Link(destination: url) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "square.and.arrow.down")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text("Click & CC me!")
+                            .font(.system(size: 12, weight: .bold))
+                    }
                 }
             }
         }
@@ -117,12 +120,14 @@ struct LockScreenWidgetEntryView: View {
             }
             .foregroundStyle(.primary)
             
-            Link(destination: URL(string: "ccisle://play")!) {
-                HStack(spacing: 4) {
-                    Image(systemName: "play.fill")
-                        .font(.system(size: 10, weight: .semibold))
-                    Text("Play")
-                        .font(.system(size: 11, weight: .semibold))
+            if let url = URL(string: "ccisle://play") {
+                Link(destination: url) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 10, weight: .semibold))
+                        Text("Play")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
                 }
             }
         }

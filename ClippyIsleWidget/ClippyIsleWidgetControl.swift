@@ -24,10 +24,11 @@ struct Provider: TimelineProvider {
         let itemCount = items?.count ?? 0
         let themeColorName = userDefaults?.string(forKey: "themeColorName") ?? "blue"
         
-        // Get the latest text item for lock screen widget
-        let latestTextItem = items?.first { item in
-            item.type == UTType.text.identifier || item.type == UTType.url.identifier
-        }
+        // Get the latest text item for lock screen widget, sorted by timestamp (most recent first)
+        let latestTextItem = items?
+            .filter { $0.type == UTType.text.identifier || $0.type == UTType.url.identifier }
+            .sorted { $0.timestamp > $1.timestamp }
+            .first
         let latestClippedText = latestTextItem?.displayName ?? latestTextItem?.content
         let latestItemID = latestTextItem?.id
 
