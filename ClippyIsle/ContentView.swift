@@ -66,6 +66,9 @@ struct ContentView: View {
     
     // iPad fullscreen preview state
     @State private var isPreviewFullscreen = false
+    
+    // Cloud Inbox state
+    @State private var isShowingCloudInbox = false
 
     @AppStorage("themeColorName") private var themeColorName: String = "blue"
     
@@ -237,6 +240,11 @@ struct ContentView: View {
             }
             .tint(themeColor)
         }
+        .sheet(isPresented: $isShowingCloudInbox) {
+            CloudInboxView()
+                .environmentObject(subscriptionManager)
+                .environmentObject(authManager)
+        }
         
         .sheet(item: $itemToTag) { item in TagEditView(item: Binding(get: { item }, set: { itemToTag = $0 }), clipboardManager: clipboardManager) }
         // iPad preview: sheet in normal mode, fullScreenCover in fullscreen mode
@@ -335,6 +343,13 @@ struct ContentView: View {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 Button { isShowingTagSheet = true } label: {
                     Image(systemName: "tag.circle.fill")
+                        .font(.system(size: 20, weight: .bold))
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                
+                Button { isShowingCloudInbox = true } label: {
+                    Image(systemName: "envelope.circle.fill")
                         .font(.system(size: 20, weight: .bold))
                         .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
