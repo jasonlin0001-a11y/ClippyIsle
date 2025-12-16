@@ -241,7 +241,7 @@ struct ContentView: View {
             .tint(themeColor)
         }
         .sheet(isPresented: $isShowingCloudInbox) {
-            CloudInboxView()
+            CloudInboxView(clipboardManager: clipboardManager, speechManager: speechManager)
                 .environmentObject(subscriptionManager)
                 .environmentObject(authManager)
         }

@@ -124,6 +124,13 @@ class CloudNotesManager: ObservableObject {
         }
     }
     
+    /// Resets the binding state to allow binding a new email
+    func resetBindingState() {
+        boundEmail = nil
+        bindingSuccess = false
+        bindingError = nil
+    }
+    
     /// Checks if an email is already bound to the current user
     /// - Parameters:
     ///   - email: The email to check

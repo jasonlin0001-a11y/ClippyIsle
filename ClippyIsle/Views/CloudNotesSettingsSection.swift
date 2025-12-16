@@ -15,6 +15,7 @@ struct CloudNotesSettingsSection: View {
     @StateObject private var cloudNotesManager = CloudNotesManager.shared
     @State private var emailInput: String = ""
     @State private var showPaywall = false
+    @State private var showChangeEmailAlert = false
     
     // Computed property for trimmed email
     private var trimmedEmail: String {
@@ -33,6 +34,15 @@ struct CloudNotesSettingsSection: View {
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView()
+        }
+        .alert("Change Email?", isPresented: $showChangeEmailAlert) {
+            Button("Change", role: .destructive) {
+                // Reset binding state to allow new binding
+                cloudNotesManager.resetBindingState()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will unbind your current email '\(cloudNotesManager.boundEmail ?? "")' and allow you to bind a new one.")
         }
     }
     
@@ -93,33 +103,49 @@ struct CloudNotesSettingsSection: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
             
-            // Email binding input
-            HStack {
-                Text("Your Email")
-                TextField("Enter your email", text: $emailInput)
-                    .multilineTextAlignment(.trailing)
-                    .keyboardType(.emailAddress)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled(true)
-                    .disabled(cloudNotesManager.isBindingEmail)
-            }
-            
-            // Bind button
-            Button(action: bindEmail) {
+            // Show bound email if already bound
+            if cloudNotesManager.bindingSuccess, let boundEmail = cloudNotesManager.boundEmail {
                 HStack {
-                    if cloudNotesManager.isBindingEmail {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                    } else if cloudNotesManager.bindingSuccess {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                    }
-                    
-                    Text(cloudNotesManager.bindingSuccess ? "Email Bound" : "Bind Email")
-                        .fontWeight(.medium)
+                    Text("Bound Email")
+                    Spacer()
+                    Text(boundEmail)
+                        .foregroundColor(.secondary)
                 }
+                
+                // Change email button
+                Button(action: { showChangeEmailAlert = true }) {
+                    HStack {
+                        Image(systemName: "pencil")
+                        Text("Change Email")
+                    }
+                }
+                .foregroundColor(.blue)
+            } else {
+                // Email binding input
+                HStack {
+                    Text("Your Email")
+                    TextField("Enter your email", text: $emailInput)
+                        .multilineTextAlignment(.trailing)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled(true)
+                        .disabled(cloudNotesManager.isBindingEmail)
+                }
+                
+                // Bind button
+                Button(action: bindEmail) {
+                    HStack {
+                        if cloudNotesManager.isBindingEmail {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        }
+                        
+                        Text("Bind Email")
+                            .fontWeight(.medium)
+                    }
+                }
+                .disabled(trimmedEmail.isEmpty || cloudNotesManager.isBindingEmail)
             }
-            .disabled(trimmedEmail.isEmpty || cloudNotesManager.isBindingEmail)
             
             // Error message
             if let error = cloudNotesManager.bindingError {

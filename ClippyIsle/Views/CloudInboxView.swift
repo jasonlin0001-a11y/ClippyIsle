@@ -7,14 +7,23 @@
 
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 // MARK: - Cloud Inbox View
 struct CloudInboxView: View {
     @EnvironmentObject var subscriptionManager: SubscriptionManager
     @EnvironmentObject var authManager: AuthenticationManager
     @StateObject private var cloudNotesManager = CloudNotesManager.shared
+    @ObservedObject var clipboardManager: ClipboardManager
+    @ObservedObject var speechManager: SpeechManager
     @State private var showPaywall = false
     @Environment(\.dismiss) var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    
+    // Preview state for opening items
+    @State private var selectedItem: ClipboardItem?
+    @State private var isShowingPreview = false
+    @AppStorage("previewFontSize") private var previewFontSize: Double = 17.0
     
     // Theme Color Support
     @AppStorage("themeColorName") private var themeColorName: String = "blue"
@@ -51,6 +60,23 @@ struct CloudInboxView: View {
         .tint(themeColor)
         .sheet(isPresented: $showPaywall) {
             PaywallView()
+        }
+        .sheet(isPresented: $isShowingPreview) {
+            if let item = selectedItem {
+                NavigationView {
+                    PreviewView(
+                        item: Binding(
+                            get: { item },
+                            set: { newItem in selectedItem = newItem }
+                        ),
+                        clipboardManager: clipboardManager,
+                        speechManager: speechManager,
+                        fontSize: $previewFontSize,
+                        isIPad: horizontalSizeClass == .regular
+                    )
+                }
+                .tint(themeColor)
+            }
         }
         .onAppear {
             if subscriptionManager.isPro, let uid = authManager.currentUID {
@@ -168,7 +194,21 @@ struct CloudInboxView: View {
     private var inboxListView: some View {
         List {
             ForEach(cloudNotesManager.inboxItems) { item in
-                CloudInboxItemRow(item: item, themeColor: themeColor)
+                CloudInboxItemRow(
+                    item: item,
+                    themeColor: themeColor,
+                    isSpeaking: speechManager.isSpeaking && speechManager.currentItemID?.uuidString == item.id,
+                    onPreview: {
+                        // Convert CloudInboxItem to ClipboardItem for preview
+                        let clipboardItem = convertToClipboardItem(item)
+                        selectedItem = clipboardItem
+                        isShowingPreview = true
+                    },
+                    onSpeak: {
+                        // Start or stop speech for this item
+                        toggleSpeech(for: item)
+                    }
+                )
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
                             markItemAsProcessed(item)
@@ -184,12 +224,9 @@ struct CloudInboxView: View {
                         }
                         .tint(themeColor)
                     }
-                    .onTapGesture {
-                        copyToClipboard(item.content)
-                    }
                     .accessibilityLabel(item.subject.isEmpty ? "Note, no subject" : "Note: \(item.subject)")
                     .accessibilityValue("From \(item.from)")
-                    .accessibilityHint("Double tap to copy content")
+                    .accessibilityHint("Tap to preview, double tap to speak")
             }
         }
         .listStyle(.insetGrouped)
@@ -224,43 +261,119 @@ struct CloudInboxView: View {
             }
         }
     }
+    
+    /// Converts a CloudInboxItem to a ClipboardItem for preview
+    private func convertToClipboardItem(_ item: CloudInboxItem) -> ClipboardItem {
+        // Use the inbox item's id as UUID (or generate a new one if conversion fails)
+        let uuid = UUID(uuidString: item.id) ?? UUID()
+        return ClipboardItem(
+            id: uuid,
+            content: item.content,
+            type: UTType.text.identifier,
+            filename: nil,
+            timestamp: item.receivedAt,
+            isPinned: false,
+            displayName: item.subject.isEmpty ? nil : item.subject,
+            isTrashed: false,
+            tags: nil,
+            fileData: nil
+        )
+    }
+    
+    /// Toggles speech for the given item
+    private func toggleSpeech(for item: CloudInboxItem) {
+        let itemUUID = UUID(uuidString: item.id) ?? UUID()
+        
+        // If this item is currently speaking, stop it
+        if speechManager.currentItemID?.uuidString == item.id {
+            if speechManager.isSpeaking {
+                speechManager.pause()
+            } else if speechManager.isPaused {
+                speechManager.resume()
+            } else {
+                // Start fresh
+                speechManager.play(
+                    text: item.content,
+                    title: item.subject.isEmpty ? "Cloud Note" : item.subject,
+                    itemID: itemUUID,
+                    url: nil,
+                    fromLocation: nil
+                )
+            }
+        } else {
+            // Stop any current speech and start this item
+            speechManager.stop()
+            speechManager.play(
+                text: item.content,
+                title: item.subject.isEmpty ? "Cloud Note" : item.subject,
+                itemID: itemUUID,
+                url: nil,
+                fromLocation: nil
+            )
+        }
+    }
 }
 
 // MARK: - Cloud Inbox Item Row
 struct CloudInboxItemRow: View {
     let item: CloudInboxItem
     let themeColor: Color
+    var isSpeaking: Bool = false
+    var onPreview: () -> Void = {}
+    var onSpeak: () -> Void = {}
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Subject line
-            Text(item.subject.isEmpty ? "(No Subject)" : item.subject)
-                .font(.headline)
-                .lineLimit(1)
+        HStack(spacing: 12) {
+            // Preview button (left side)
+            Button(action: onPreview) {
+                Image(systemName: "doc.text")
+                    .font(.system(size: 20))
+                    .foregroundColor(themeColor)
+                    .frame(width: 36, height: 36)
+            }
+            .buttonStyle(.plain)
             
-            // Content preview
-            Text(item.content)
-                .font(.body)
-                .foregroundColor(.secondary)
-                .lineLimit(2)
-            
-            // Metadata
-            HStack {
-                // From
-                Text(item.from)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+            // Content area
+            VStack(alignment: .leading, spacing: 6) {
+                // Subject line
+                Text(item.subject.isEmpty ? "(No Subject)" : item.subject)
+                    .font(.headline)
                     .lineLimit(1)
                 
-                Spacer()
-                
-                // Time
-                Text(item.receivedAt.timeAgoDisplay())
-                    .font(.caption)
+                // Content preview
+                Text(item.content)
+                    .font(.body)
                     .foregroundColor(.secondary)
+                    .lineLimit(2)
+                
+                // Metadata
+                HStack {
+                    // From
+                    Text(item.from)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                    
+                    Spacer()
+                    
+                    // Time
+                    Text(item.receivedAt.timeAgoDisplay())
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
+            .contentShape(Rectangle())
+            .onTapGesture(perform: onPreview)
+            
+            // Speak button (right side)
+            Button(action: onSpeak) {
+                Image(systemName: isSpeaking ? "speaker.wave.2.fill" : "speaker.wave.2")
+                    .font(.system(size: 18))
+                    .foregroundColor(isSpeaking ? themeColor : .secondary)
+                    .frame(width: 36, height: 36)
+            }
+            .buttonStyle(.plain)
         }
         .padding(.vertical, 4)
-        .contentShape(Rectangle())
     }
 }
