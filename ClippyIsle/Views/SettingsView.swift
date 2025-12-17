@@ -118,6 +118,7 @@ struct SettingsView: View {
     let countOptions = [50, 100, 200, 0]
     let dayOptions = [7, 30, 90, 0]
     let colorOptions = ["blue", "green", "orange", "red", "pink", "purple", "black", "white", "retro", "custom"]
+    private let defaultColorName = "blue"
     
     var themeColor: Color {
         if themeColorName == "custom" {
@@ -340,7 +341,17 @@ struct SettingsView: View {
     private var appearanceSection: some View {
         Section("Appearance") {
             Picker("Display Mode", selection: $appearanceMode) { ForEach(AppearanceMode.allCases) { Text($0.name).tag($0.rawValue) } }.pickerStyle(.segmented)
-            Picker("Theme Color", selection: $themeColorName) {
+            Picker("Theme Color", selection: Binding(
+                get: { themeColorName },
+                set: { newValue in
+                    // If non-Pro user tries to select custom, show paywall instead
+                    if newValue == "custom" && !subscriptionManager.isPro {
+                        showPaywall = true
+                    } else {
+                        themeColorName = newValue
+                    }
+                }
+            )) {
                 ForEach(colorOptions, id: \.self) { colorName in
                     let colorToShow: Color = (colorName == "custom") ? Color(red: customColorRed, green: customColorGreen, blue: customColorBlue) : ClippyIsleAttributes.ColorUtility.color(forName: colorName)
                     HStack {
@@ -352,10 +363,18 @@ struct SettingsView: View {
                     }.tag(colorName).tint(colorToShow)
                 }
             }
-            if themeColorName == "custom" {
-                if subscriptionManager.isPro { ColorPicker("Custom Color", selection: customColorBinding, supportsOpacity: false) }
-                else { Button(action: { showPaywall = true }) { HStack { Text("Unlock Custom Color"); Spacer(); Image(systemName: "lock.fill").foregroundColor(.orange) } } }
+            if themeColorName == "custom" && subscriptionManager.isPro {
+                ColorPicker("Custom Color", selection: customColorBinding, supportsOpacity: false)
             }
+        }
+        .onAppear { resetCustomColorIfNeeded() }
+        .onChange(of: subscriptionManager.isPro) { _, _ in resetCustomColorIfNeeded() }
+    }
+    
+    /// Resets theme color to default if non-Pro user has custom color selected
+    private func resetCustomColorIfNeeded() {
+        if themeColorName == "custom" && !subscriptionManager.isPro {
+            themeColorName = defaultColorName
         }
     }
     
