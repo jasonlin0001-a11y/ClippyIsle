@@ -79,10 +79,19 @@ struct SettingsView: View {
     @State private var isNicknameSaved: Bool = false
     @State private var isSavingNickname: Bool = false
     
-    // Custom Color Storage
+    // Custom Theme Color Storage
     @AppStorage("customColorRed") private var customColorRed: Double = 0.0
     @AppStorage("customColorGreen") private var customColorGreen: Double = 0.478
     @AppStorage("customColorBlue") private var customColorBlue: Double = 1.0
+    
+    // Custom Background Color Storage (Pro feature)
+    @AppStorage("customBackgroundEnabled") private var customBackgroundEnabled: Bool = false
+    @AppStorage("customLightBgRed") private var customLightBgRed: Double = 1.0
+    @AppStorage("customLightBgGreen") private var customLightBgGreen: Double = 1.0
+    @AppStorage("customLightBgBlue") private var customLightBgBlue: Double = 1.0
+    @AppStorage("customDarkBgRed") private var customDarkBgRed: Double = 0.0
+    @AppStorage("customDarkBgGreen") private var customDarkBgGreen: Double = 0.0
+    @AppStorage("customDarkBgBlue") private var customDarkBgBlue: Double = 0.0
     
     @AppStorage("askToAddFromClipboard") private var askToAddFromClipboard: Bool = true
     @AppStorage("maxItemCount") private var maxItemCount: Int = 100
@@ -145,6 +154,34 @@ struct SettingsView: View {
                 if clipboardManager.isLiveActivityOn && themeColorName == "custom" {
                     clipboardManager.updateActivity(newColorName: "custom")
                 }
+            }
+        )
+    }
+    
+    var customLightBgBinding: Binding<Color> {
+        Binding(
+            get: { Color(red: customLightBgRed, green: customLightBgGreen, blue: customLightBgBlue) },
+            set: {
+                let uiColor = UIColor($0)
+                var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+                uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+                customLightBgRed = Double(r)
+                customLightBgGreen = Double(g)
+                customLightBgBlue = Double(b)
+            }
+        )
+    }
+    
+    var customDarkBgBinding: Binding<Color> {
+        Binding(
+            get: { Color(red: customDarkBgRed, green: customDarkBgGreen, blue: customDarkBgBlue) },
+            set: {
+                let uiColor = UIColor($0)
+                var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+                uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+                customDarkBgRed = Double(r)
+                customDarkBgGreen = Double(g)
+                customDarkBgBlue = Double(b)
             }
         )
     }
@@ -355,6 +392,37 @@ struct SettingsView: View {
             if themeColorName == "custom" {
                 if subscriptionManager.isPro { ColorPicker("Custom Color", selection: customColorBinding, supportsOpacity: false) }
                 else { Button(action: { showPaywall = true }) { HStack { Text("Unlock Custom Color"); Spacer(); Image(systemName: "lock.fill").foregroundColor(.orange) } } }
+            }
+            
+            // Custom Background Color (Pro feature)
+            Toggle(isOn: Binding(
+                get: { customBackgroundEnabled },
+                set: { newValue in
+                    if newValue && !subscriptionManager.isPro {
+                        showPaywall = true
+                    } else {
+                        customBackgroundEnabled = newValue
+                    }
+                }
+            )) {
+                HStack {
+                    Text("Custom Background")
+                    if !subscriptionManager.isPro {
+                        Spacer()
+                        Image(systemName: "lock.fill").font(.caption).foregroundColor(.secondary)
+                    }
+                }
+            }
+            
+            if customBackgroundEnabled && subscriptionManager.isPro {
+                ColorPicker("Light Mode Background", selection: customLightBgBinding, supportsOpacity: false)
+                ColorPicker("Dark Mode Background", selection: customDarkBgBinding, supportsOpacity: false)
+            }
+        }
+        .onChange(of: subscriptionManager.isPro) { _, isPro in
+            // Reset custom background if user loses Pro status
+            if !isPro && customBackgroundEnabled {
+                customBackgroundEnabled = false
             }
         }
     }

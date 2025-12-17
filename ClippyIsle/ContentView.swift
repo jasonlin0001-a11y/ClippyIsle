@@ -69,10 +69,19 @@ struct ContentView: View {
 
     @AppStorage("themeColorName") private var themeColorName: String = "blue"
     
-    // Custom Color Storage
+    // Custom Theme Color Storage
     @AppStorage("customColorRed") private var customColorRed: Double = 0.0
     @AppStorage("customColorGreen") private var customColorGreen: Double = 0.478
     @AppStorage("customColorBlue") private var customColorBlue: Double = 1.0
+    
+    // Custom Background Color Storage (Pro feature)
+    @AppStorage("customBackgroundEnabled") private var customBackgroundEnabled: Bool = false
+    @AppStorage("customLightBgRed") private var customLightBgRed: Double = 1.0
+    @AppStorage("customLightBgGreen") private var customLightBgGreen: Double = 1.0
+    @AppStorage("customLightBgBlue") private var customLightBgBlue: Double = 1.0
+    @AppStorage("customDarkBgRed") private var customDarkBgRed: Double = 0.0
+    @AppStorage("customDarkBgGreen") private var customDarkBgGreen: Double = 0.0
+    @AppStorage("customDarkBgBlue") private var customDarkBgBlue: Double = 0.0
     
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode.RawValue = AppearanceMode.system.rawValue
     @AppStorage("previewFontSize") private var previewFontSize: Double = 17.0
@@ -80,6 +89,7 @@ struct ContentView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.undoManager) private var undoManager
+    @Environment(\.colorScheme) private var colorScheme
     
     init(isAppReady: Binding<Bool>) {
         self._isAppReady = isAppReady
@@ -97,6 +107,15 @@ struct ContentView: View {
             return Color(red: customColorRed, green: customColorGreen, blue: customColorBlue)
         }
         return ClippyIsleAttributes.ColorUtility.color(forName: themeColorName)
+    }
+    
+    var customBackgroundColor: Color? {
+        guard customBackgroundEnabled else { return nil }
+        if colorScheme == .dark {
+            return Color(red: customDarkBgRed, green: customDarkBgGreen, blue: customDarkBgBlue)
+        } else {
+            return Color(red: customLightBgRed, green: customLightBgGreen, blue: customLightBgBlue)
+        }
     }
     
     var preferredColorScheme: ColorScheme? { AppearanceMode(rawValue: appearanceMode)?.colorScheme }
@@ -326,6 +345,7 @@ struct ContentView: View {
             if clipboardManager.dataLoadError != nil { dataErrorView }
             else { ZStack(alignment: .bottom) { listContent; bottomToolbar.padding(.bottom, 8) } }
         }
+        .background(customBackgroundColor ?? Color(UIColor.systemGroupedBackground))
         .navigationTitle(navigationTitle).navigationBarTitleDisplayMode(selectedTagFilter == nil ? .large : .inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
@@ -433,7 +453,7 @@ struct ContentView: View {
                     }
                 }
             )
-            .listStyle(.insetGrouped).ignoresSafeArea(.keyboard, edges: .bottom).refreshable { await clipboardManager.performCloudSync() }
+            .listStyle(.insetGrouped).scrollContentBackground(customBackgroundEnabled ? .hidden : .automatic).ignoresSafeArea(.keyboard, edges: .bottom).refreshable { await clipboardManager.performCloudSync() }
             .onChange(of: filteredItems) { items in if let first = items.first, first.id != lastTopItemID { withAnimation { proxy.scrollTo(first.id, anchor: .top) }; lastTopItemID = first.id } }
             .onChange(of: newlyAddedItemID) { oldID, newID in
                 if let id = newID {
