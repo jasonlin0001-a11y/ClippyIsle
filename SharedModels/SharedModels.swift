@@ -126,6 +126,32 @@ public struct ExportableClipboardItem: Codable {
 }
 
 
+// MARK: - Notification Item (for Message Center)
+public struct NotificationItem: Identifiable, Codable, Equatable {
+    public var id: UUID
+    public var items: [ClipboardItem]  // The shared clipboard items
+    public var timestamp: Date         // When the notification was received
+    public var isRead: Bool            // Whether the user has viewed this notification
+    public var source: NotificationSource  // Where the notification came from
+    
+    public enum NotificationSource: String, Codable {
+        case appShare      // From app share extension
+        case deepLink      // From URL deep link
+    }
+    
+    public init(id: UUID = UUID(), items: [ClipboardItem], timestamp: Date = Date(), isRead: Bool = false, source: NotificationSource) {
+        self.id = id
+        self.items = items
+        self.timestamp = timestamp
+        self.isRead = isRead
+        self.source = source
+    }
+    
+    public static func == (lhs: NotificationItem, rhs: NotificationItem) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+
 // MARK: - Live Activity Attributes
 public struct ClippyIsleAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
