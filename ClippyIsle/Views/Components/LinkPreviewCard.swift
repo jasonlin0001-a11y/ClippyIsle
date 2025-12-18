@@ -90,7 +90,9 @@ struct LinkPreviewCard: View {
     
     // MARK: - Content View
     private func contentView(metadata: LPLinkMetadata) -> some View {
-        ScrollView {
+        let shadowConfig = ThemeColors.cardShadow(for: colorScheme)
+        
+        return ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 // Card
                 VStack(alignment: .leading, spacing: 12) {
@@ -109,6 +111,7 @@ struct LinkPreviewCard: View {
                             .font(.title2)
                             .fontWeight(.bold)
                             .lineLimit(3)
+                            .foregroundColor(ThemeColors.primaryText(for: colorScheme))
                     }
                     
                     // URL as subtitle
@@ -116,10 +119,10 @@ struct LinkPreviewCard: View {
                         HStack(spacing: 6) {
                             Image(systemName: "link")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(ThemeColors.secondaryText(for: colorScheme))
                             Text(url.absoluteString)
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(ThemeColors.secondaryText(for: colorScheme))
                                 .lineLimit(2)
                         }
                     }
@@ -127,14 +130,24 @@ struct LinkPreviewCard: View {
                 .padding()
                 .background(
                     RoundedRectangle(cornerRadius: 16)
-                        .fill(Color(.systemGray6))
-                        .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
+                        .fill(ThemeColors.cardBackground(for: colorScheme))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(ThemeColors.cardBorder(for: colorScheme), lineWidth: colorScheme == .dark ? 0.5 : 0)
+                )
+                .shadow(
+                    color: shadowConfig.color,
+                    radius: shadowConfig.radius,
+                    x: shadowConfig.x,
+                    y: shadowConfig.y
                 )
                 .padding(.horizontal)
                 
                 Spacer()
             }
         }
+        .background(ThemeColors.background(for: colorScheme))
     }
 }
 

@@ -177,8 +177,135 @@ public extension ClippyIsleAttributes {
             case "black": return .black
             case "white": return .white
             case "retro": return Color(red: 214/255, green: 196/255, blue: 169/255) // 復古牛皮紙色
+            // New accent colors for dark mode (neon/glowing)
+            case "electricBlue": return ThemeColors.electricBlue
+            case "neonGreen": return ThemeColors.neonGreen
+            case "vibrantOrange": return ThemeColors.vibrantOrange
+            // New accent colors for light mode (deeper for contrast)
+            case "deepPurple": return ThemeColors.deepPurple
+            case "royalBlue": return ThemeColors.royalBlue
+            case "coralRed": return ThemeColors.coralRed
             default: return .blue
             }
         }
+    }
+}
+
+// MARK: - Theme Colors
+/// Adaptive colors for modern iOS design following Apple's HIG
+/// Dark Mode: Uses different grey depths for layering, neon accent colors
+/// Light Mode: Off-white background (#F2F2F7), pure white cards with soft shadows
+public struct ThemeColors {
+    
+    // MARK: - Base Color Constants
+    
+    /// iOS off-white background color (#F2F2F7 - Apple's systemGray6)
+    private static let offWhite = Color(red: 242/255, green: 242/255, blue: 247/255)
+    
+    /// Neutral black for dark mode backgrounds
+    private static let neutralBlack = Color(red: 0.0, green: 0.0, blue: 0.0)
+    
+    /// Deep grey for dark mode layering
+    private static let deepGrey = Color(red: 28/255, green: 28/255, blue: 30/255)
+    
+    /// Dark grey for dark mode cards
+    private static let darkGrey = Color(red: 44/255, green: 44/255, blue: 46/255)
+    
+    /// Lighter grey for dark mode elevated surfaces
+    private static let lighterGrey = Color(red: 58/255, green: 58/255, blue: 60/255)
+    
+    // MARK: - Background Colors
+    
+    /// Main background color
+    /// Light: Soft off-white (#F2F2F7 - Apple's systemGray6)
+    /// Dark: Neutral black
+    public static func background(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark ? neutralBlack : offWhite
+    }
+    
+    /// Secondary background for grouped content
+    /// Light: System background
+    /// Dark: Deep grey for layering
+    public static func secondaryBackground(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark ? deepGrey : offWhite
+    }
+    
+    // MARK: - Card/Surface Colors
+    
+    /// Floating card background
+    /// Light: Pure white with soft shadows
+    /// Dark: Sleek dark grey panel
+    public static func cardBackground(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark ? darkGrey : Color.white
+    }
+    
+    /// Elevated surface (for modals, sheets)
+    /// Light: White
+    /// Dark: Lighter grey for elevation
+    public static func elevatedSurface(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark ? lighterGrey : Color.white
+    }
+    
+    // MARK: - Text Colors
+    
+    /// Primary text color
+    /// Light: Dark grey for clean typography
+    /// Dark: High contrast white
+    public static func primaryText(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark
+            ? Color.white
+            : Color(red: 0.1, green: 0.1, blue: 0.1) // Dark grey
+    }
+    
+    /// Secondary text color
+    public static func secondaryText(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark
+            ? Color(red: 0.6, green: 0.6, blue: 0.6)
+            : Color(red: 0.4, green: 0.4, blue: 0.4)
+    }
+    
+    // MARK: - Accent Colors for Dark Mode (Neon/Glowing)
+    
+    /// Electric Blue - neon accent for dark mode
+    public static let electricBlue = Color(red: 0/255, green: 199/255, blue: 255/255)
+    
+    /// Neon Green - glowing accent for dark mode
+    public static let neonGreen = Color(red: 57/255, green: 255/255, blue: 20/255)
+    
+    /// Vibrant Orange - warm neon accent for dark mode
+    public static let vibrantOrange = Color(red: 255/255, green: 149/255, blue: 0/255)
+    
+    // MARK: - Accent Colors for Light Mode (Deeper for contrast)
+    
+    /// Deep Purple - strong contrast for light mode
+    public static let deepPurple = Color(red: 88/255, green: 86/255, blue: 214/255)
+    
+    /// Royal Blue - classic accent for light mode
+    public static let royalBlue = Color(red: 0/255, green: 122/255, blue: 255/255)
+    
+    /// Coral Red - warm accent for light mode
+    public static let coralRed = Color(red: 255/255, green: 69/255, blue: 58/255)
+    
+    // MARK: - Shadow Configuration
+    
+    /// Card shadow for light mode (soft drop shadow)
+    public static func cardShadow(for colorScheme: ColorScheme) -> (color: Color, radius: CGFloat, x: CGFloat, y: CGFloat) {
+        colorScheme == .dark
+            ? (Color.clear, 0, 0, 0) // No shadow in dark mode - use grey depth instead
+            : (Color.black.opacity(0.08), 8, 0, 4) // Soft drop shadow for light mode
+    }
+    
+    // MARK: - Inner Glow for Dark Mode
+    
+    /// Soft inner glow color for dark mode cards
+    public static func innerGlow(for colorScheme: ColorScheme, accent: Color) -> Color {
+        colorScheme == .dark ? accent.opacity(0.15) : Color.clear
+    }
+    
+    // MARK: - Border Colors
+    
+    /// Subtle border for cards
+    public static func cardBorder(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark ? lighterGrey : Color.clear
     }
 }

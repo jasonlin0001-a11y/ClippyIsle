@@ -105,3 +105,58 @@ struct AppVersion {
         return "\(version) (\(build))"
     }
 }
+
+// MARK: - Theme-Aware Card View Modifier
+/// A view modifier that applies modern iOS card styling based on color scheme
+/// Dark Mode: Uses grey depth layering with optional inner glow
+/// Light Mode: Pure white cards with soft drop shadows
+struct ThemedCardModifier: ViewModifier {
+    @Environment(\.colorScheme) var colorScheme
+    var cornerRadius: CGFloat = 16
+    var accentColor: Color? = nil
+    
+    func body(content: Content) -> some View {
+        let shadowConfig = ThemeColors.cardShadow(for: colorScheme)
+        
+        content
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .fill(ThemeColors.cardBackground(for: colorScheme))
+            )
+            .overlay(
+                // Inner glow for dark mode
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .stroke(
+                        ThemeColors.innerGlow(for: colorScheme, accent: accentColor ?? .blue),
+                        lineWidth: colorScheme == .dark ? 1 : 0
+                    )
+            )
+            .overlay(
+                // Border for dark mode
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .stroke(ThemeColors.cardBorder(for: colorScheme), lineWidth: colorScheme == .dark ? 0.5 : 0)
+            )
+            .shadow(
+                color: shadowConfig.color,
+                radius: shadowConfig.radius,
+                x: shadowConfig.x,
+                y: shadowConfig.y
+            )
+    }
+}
+
+// MARK: - View Extension for Theme Cards
+extension View {
+    /// Applies modern iOS card styling that adapts to light/dark mode
+    /// - Parameters:
+    ///   - cornerRadius: Corner radius of the card (default: 16)
+    ///   - accentColor: Optional accent color for dark mode inner glow
+    func themedCard(cornerRadius: CGFloat = 16, accentColor: Color? = nil) -> some View {
+        modifier(ThemedCardModifier(cornerRadius: cornerRadius, accentColor: accentColor))
+    }
+    
+    /// Applies themed background color based on color scheme
+    func themedBackground(_ colorScheme: ColorScheme) -> some View {
+        self.background(ThemeColors.background(for: colorScheme))
+    }
+}
