@@ -15,6 +15,10 @@ import AudioToolbox
 // MARK: - Main ContentView
 struct ContentView: View {
     enum PreviewState: Equatable { case idle, loading(ClipboardItem), loaded(ClipboardItem) }
+    
+    // Constants for consistent UI sizing
+    private let bottomToolbarHeight: CGFloat = 50
+    private var bottomToolbarPadding: CGFloat { bottomToolbarHeight + 30 } // toolbar height + margin
 
     @StateObject private var clipboardManager: ClipboardManager
     @StateObject private var speechManager = SpeechManager()
@@ -526,7 +530,7 @@ struct ContentView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
-                .padding(.bottom, 80) // Extra padding for bottom toolbar
+                .padding(.bottom, bottomToolbarPadding)
             }
             .simultaneousGesture(
                 DragGesture().onChanged { _ in
@@ -615,7 +619,7 @@ struct ContentView: View {
             }
             .padding(.trailing, 12)
         }
-        .frame(height: 50)
+        .frame(height: bottomToolbarHeight)
         .background(
             Capsule()
                 .fill(

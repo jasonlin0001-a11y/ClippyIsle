@@ -171,7 +171,7 @@ struct ClipboardItemRow: View {
         .contentShape(Rectangle())
         .padding(.vertical, 4)
         .onDrag(createDragItem)
-        // Pin indicator overlay
+        // Pin indicator overlay - uses red for semantic visibility (pinned = important)
         .overlay(Group { if item.isPinned { CornerTriangleShape().fill(Color.red).frame(width: 12, height: 12).padding([.top, .trailing], 4) } }, alignment: .topTrailing)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
