@@ -472,7 +472,7 @@ class ClipboardManager: ObservableObject {
             if !isLiveActivityOn { isLiveActivityOn = true; UserDefaults.standard.set(true, forKey: "isLiveActivityOn") }
             return
         }
-        let themeColorName = UserDefaults.standard.string(forKey: "themeColorName") ?? "blue"
+        let themeColorName = UserDefaults.standard.string(forKey: "themeColorName") ?? "green"
         let activeItemCount = items.filter { !$0.isTrashed }.count
         let attributes = ClippyIsleAttributes()
         let contentState = ClippyIsleAttributes.ContentState(itemCount: activeItemCount, themeColorName: themeColorName, itemsLabel: String(localized: "items"))
@@ -487,7 +487,7 @@ class ClipboardManager: ObservableObject {
 
     func updateActivity(newColorName: String? = nil) {
         guard let activity, activity.activityState == .active else { return }
-        let themeColorName = newColorName ?? (UserDefaults.standard.string(forKey: "themeColorName") ?? "blue")
+        let themeColorName = newColorName ?? (UserDefaults.standard.string(forKey: "themeColorName") ?? "green")
         let activeItemCount = items.filter { !$0.isTrashed }.count
         let contentState = ClippyIsleAttributes.ContentState(itemCount: activeItemCount, themeColorName: themeColorName, itemsLabel: String(localized: "items"))
         let content = ActivityContent(state: contentState, staleDate: nil)

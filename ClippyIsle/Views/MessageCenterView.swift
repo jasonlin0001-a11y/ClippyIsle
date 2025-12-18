@@ -12,7 +12,7 @@ struct MessageCenterView: View {
     @Environment(\.dismiss) var dismiss
     
     // Theme Color Support
-    @AppStorage("themeColorName") private var themeColorName: String = "blue"
+    @AppStorage("themeColorName") private var themeColorName: String = "green"
     @AppStorage("customColorRed") private var customColorRed: Double = 0.0
     @AppStorage("customColorGreen") private var customColorGreen: Double = 0.478
     @AppStorage("customColorBlue") private var customColorBlue: Double = 1.0
@@ -177,7 +177,7 @@ struct MessageCenterImportView: View {
     @Environment(\.dismiss) var dismiss
     
     // Theme Color Support
-    @AppStorage("themeColorName") private var themeColorName: String = "blue"
+    @AppStorage("themeColorName") private var themeColorName: String = "green"
     @AppStorage("customColorRed") private var customColorRed: Double = 0.0
     @AppStorage("customColorGreen") private var customColorGreen: Double = 0.478
     @AppStorage("customColorBlue") private var customColorBlue: Double = 1.0

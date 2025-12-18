@@ -71,7 +71,7 @@ struct ContentView: View {
     @State private var isShowingMessageCenter = false
     @StateObject private var notificationManager = NotificationManager.shared
 
-    @AppStorage("themeColorName") private var themeColorName: String = "blue"
+    @AppStorage("themeColorName") private var themeColorName: String = "green"
     
     // Custom Color Storage
     @AppStorage("customColorRed") private var customColorRed: Double = 0.0
@@ -336,24 +336,53 @@ struct ContentView: View {
     }
     
     private var mainContent: some View {
-        VStack(spacing: 0) {
-            if clipboardManager.dataLoadError != nil { dataErrorView }
-            else { ZStack(alignment: .bottom) { listContent; bottomToolbar.padding(.bottom, 8) } }
+        ZStack {
+            // Global gradient background
+            LinearGradient(
+                gradient: Gradient(colors: [themeColor.opacity(0.4), Color.black]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                if clipboardManager.dataLoadError != nil { dataErrorView }
+                else { ZStack(alignment: .bottom) { listContent; bottomToolbar.padding(.bottom, 8) } }
+            }
         }
         .navigationTitle(navigationTitle).navigationBarTitleDisplayMode(selectedTagFilter == nil ? .large : .inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                if selectedTagFilter != nil { Button { selectedTagFilter = nil } label: { Image(systemName: "xmark.circle.fill") } }
-                else { Button { clipboardManager.isLiveActivityOn.toggle() } label: { Image(systemName: "c.circle.fill").font(.system(size: 20, weight: .bold)).foregroundColor(clipboardManager.isLiveActivityOn ? Color.green : Color.red) }.disabled(!areActivitiesEnabled) }
+                if selectedTagFilter != nil { 
+                    Button { selectedTagFilter = nil } label: { 
+                        Text("Clear")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(themeColor)
+                            .clipShape(Capsule())
+                    }
+                }
+                else { 
+                    Button { clipboardManager.isLiveActivityOn.toggle() } label: { 
+                        Image(systemName: "c.circle.fill")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(clipboardManager.isLiveActivityOn ? Color.green : Color.red) 
+                    }
+                    .disabled(!areActivitiesEnabled) 
+                }
             }
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 // Message Center button with badge
                 Button { isShowingMessageCenter = true } label: {
                     ZStack(alignment: .topTrailing) {
-                        Image(systemName: "tray.circle.fill")
-                            .font(.system(size: 20, weight: .bold))
-                            .frame(width: 44, height: 44)
-                            .contentShape(Rectangle())
+                        Image(systemName: "tray.fill")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(width: 32, height: 32)
+                            .background(themeColor)
+                            .clipShape(Capsule())
                         
                         // Badge for unread count
                         if notificationManager.unreadCount > 0 {
@@ -369,24 +398,30 @@ struct ContentView: View {
                 }
                 
                 Button { isShowingTagSheet = true } label: {
-                    Image(systemName: "tag.circle.fill")
-                        .font(.system(size: 20, weight: .bold))
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
+                    Image(systemName: "tag.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 32, height: 32)
+                        .background(themeColor)
+                        .clipShape(Capsule())
                 }
                 
                 Button { isShowingAudioManager = true } label: {
-                    Image(systemName: "waveform.circle.fill")
-                        .font(.system(size: 20, weight: .bold))
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
+                    Image(systemName: "waveform")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 32, height: 32)
+                        .background(themeColor)
+                        .clipShape(Capsule())
                 }
                 
                 Button { isShowingSettings = true } label: {
-                    Image(systemName: "gearshape.circle.fill")
-                        .font(.system(size: 20, weight: .bold))
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
+                    Image(systemName: "gearshape.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 32, height: 32)
+                        .background(themeColor)
+                        .clipShape(Capsule())
                 }
             }
         }
@@ -403,63 +438,95 @@ struct ContentView: View {
     
     private var listContent: some View {
         ScrollViewReader { proxy in
-            List {
-                ForEach(filteredItems) { item in
-                    VStack(spacing: 0) {
-                        ClipboardItemRow(
-                            item: item,
-                            themeColor: themeColor,
-                            isHighlighted: item.id == newlyAddedItemID,
-                            clipboardManager: clipboardManager,
-                            copyAction: { copyItemToClipboard(item: item) }, 
-                            previewAction: { previewState = .loading(item) },
-                            createDragItem: { createDragItem(for: item) }, 
-                            togglePinAction: { clipboardManager.togglePin(for: item) },
-                            deleteAction: { itemToDelete = item; isShowingDeleteConfirm = true },
-                            renameAction: { itemToRename = item; newName = item.displayName ?? ""; isShowingRenameAlert = true },
-                            // **MODIFIED**: Tag Limit Logic
-                            tagAction: {
-                                // Check if user is Pro OR if total unique tags < 10
+            ScrollView {
+                LazyVStack(spacing: 16) {
+                    ForEach(filteredItems) { item in
+                        VStack(spacing: 0) {
+                            ClipboardItemRow(
+                                item: item,
+                                themeColor: themeColor,
+                                isHighlighted: item.id == newlyAddedItemID,
+                                clipboardManager: clipboardManager,
+                                copyAction: { copyItemToClipboard(item: item) }, 
+                                previewAction: { previewState = .loading(item) },
+                                createDragItem: { createDragItem(for: item) }, 
+                                togglePinAction: { clipboardManager.togglePin(for: item) },
+                                deleteAction: { itemToDelete = item; isShowingDeleteConfirm = true },
+                                renameAction: { itemToRename = item; newName = item.displayName ?? ""; isShowingRenameAlert = true },
+                                // **MODIFIED**: Tag Limit Logic
+                                tagAction: {
+                                    // Check if user is Pro OR if total unique tags < 10
+                                    if subscriptionManager.isPro || clipboardManager.allTags.count < 10 {
+                                        itemToTag = item
+                                    } else {
+                                        showPaywall = true
+                                    }
+                                },
+                                shareAction: { shareItem(item: item) },
+                                linkPreviewAction: {
+                                    // Toggle inline preview for URL items
+                                    if item.type == UTType.url.identifier, URL(string: item.content) != nil {
+                                        withAnimation(.easeInOut(duration: 0.3)) {
+                                            if expandedPreviewItemID == item.id {
+                                                expandedPreviewItemID = nil
+                                            } else {
+                                                expandedPreviewItemID = item.id
+                                            }
+                                        }
+                                    }
+                                },
+                                onTagLongPress: { tag in
+                                    // Toggle filter: if the tag is already filtered, clear it; otherwise, set it
+                                    if selectedTagFilter == tag {
+                                        selectedTagFilter = nil
+                                    } else {
+                                        selectedTagFilter = tag
+                                    }
+                                }
+                            )
+                            
+                            // Show inline preview if this item is expanded
+                            if expandedPreviewItemID == item.id, 
+                               item.type == UTType.url.identifier,
+                               let url = URL(string: item.content) {
+                                InlineLinkPreview(url: url)
+                                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                            }
+                        }
+                        // Card styling
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color(.systemGray6))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .fill(themeColor.opacity(0.15))
+                                )
+                        )
+                        .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 2)
+                        .id(item.id)
+                        // Swipe actions using context menu as fallback for ScrollView
+                        .contextMenu {
+                            Button { shareItem(item: item) } label: { Label("Share", systemImage: "square.and.arrow.up") }
+                            Button { clipboardManager.togglePin(for: item) } label: { Label(item.isPinned ? "Unpin" : "Pin", systemImage: item.isPinned ? "pin.slash" : "pin") }
+                            Divider()
+                            Button { itemToRename = item; newName = item.displayName ?? ""; isShowingRenameAlert = true } label: { Label("Rename", systemImage: "pencil") }
+                            Button {
                                 if subscriptionManager.isPro || clipboardManager.allTags.count < 10 {
                                     itemToTag = item
                                 } else {
                                     showPaywall = true
                                 }
-                            },
-                            shareAction: { shareItem(item: item) },
-                            linkPreviewAction: {
-                                // Toggle inline preview for URL items
-                                if item.type == UTType.url.identifier, URL(string: item.content) != nil {
-                                    withAnimation(.easeInOut(duration: 0.3)) {
-                                        if expandedPreviewItemID == item.id {
-                                            expandedPreviewItemID = nil
-                                        } else {
-                                            expandedPreviewItemID = item.id
-                                        }
-                                    }
-                                }
-                            },
-                            onTagLongPress: { tag in
-                                // Toggle filter: if the tag is already filtered, clear it; otherwise, set it
-                                if selectedTagFilter == tag {
-                                    selectedTagFilter = nil
-                                } else {
-                                    selectedTagFilter = tag
-                                }
-                            }
-                        )
-                        
-                        // Show inline preview if this item is expanded
-                        if expandedPreviewItemID == item.id, 
-                           item.type == UTType.url.identifier,
-                           let url = URL(string: item.content) {
-                            InlineLinkPreview(url: url)
-                                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                            } label: { Label("Tag", systemImage: "tag") }
+                            Divider()
+                            Button(role: .destructive) { itemToDelete = item; isShowingDeleteConfirm = true } label: { Label("Delete", systemImage: "trash") }
                         }
                     }
-                    .id(item.id)
                 }
-                .onDelete { indexSet in indexSet.map { filteredItems[$0] }.forEach { clipboardManager.moveItemToTrash(item: $0) } }
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 80) // Extra padding for bottom toolbar
             }
             .simultaneousGesture(
                 DragGesture().onChanged { _ in
@@ -468,7 +535,8 @@ struct ContentView: View {
                     }
                 }
             )
-            .listStyle(.insetGrouped).ignoresSafeArea(.keyboard, edges: .bottom).refreshable { await clipboardManager.performCloudSync() }
+            .ignoresSafeArea(.keyboard, edges: .bottom)
+            .refreshable { await clipboardManager.performCloudSync() }
             .onChange(of: filteredItems) { items in if let first = items.first, first.id != lastTopItemID { withAnimation { proxy.scrollTo(first.id, anchor: .top) }; lastTopItemID = first.id } }
             .onChange(of: newlyAddedItemID) { oldID, newID in
                 if let id = newID {
@@ -494,9 +562,18 @@ struct ContentView: View {
 
     private var bottomToolbar: some View {
         HStack(spacing: 0) {
-            Image(systemName: "magnifyingglass").foregroundColor(.secondary).padding(.leading, 12)
-            TextField("Search...", text: $searchText).padding(.horizontal, 8).submitLabel(.search)
-            if !searchText.isEmpty { Button { searchText = ""; hideKeyboard() } label: { Image(systemName: "xmark.circle.fill").foregroundColor(Color(.systemGray3)) }.padding(.trailing, 8) }
+            Image(systemName: "magnifyingglass").foregroundColor(.white.opacity(0.7)).padding(.leading, 12)
+            TextField("Search...", text: $searchText)
+                .padding(.horizontal, 8)
+                .submitLabel(.search)
+                .foregroundColor(.white)
+            if !searchText.isEmpty { 
+                Button { searchText = ""; hideKeyboard() } label: { 
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.white.opacity(0.6)) 
+                }
+                .padding(.trailing, 8) 
+            }
             
             Button {
                 if isTranscribing {
@@ -507,11 +584,11 @@ struct ContentView: View {
                 }
             } label: {
                 Image(systemName: "mic.fill")
-                    .foregroundColor(isTranscribing ? .red : .secondary)
+                    .foregroundColor(isTranscribing ? .red : .white.opacity(0.7))
             }
             .padding(.trailing, 8)
             
-            Rectangle().frame(width: 1, height: 20).foregroundColor(.gray.opacity(0.3)).padding(.horizontal, 4)
+            Rectangle().frame(width: 1, height: 20).foregroundColor(.white.opacity(0.3)).padding(.horizontal, 4)
             Menu {
                 Button {
                     let oldIDs = Set(clipboardManager.items.map { $0.id })
@@ -528,8 +605,29 @@ struct ContentView: View {
                         if let newItem = clipboardManager.items.first(where: { !oldIDs.contains($0.id) }) { highlightAndScroll(to: newItem.id) }
                     }
                 } label: { Label("Add from Clipboard", systemImage: "doc.on.clipboard") }
-            } label: { Image(systemName: "plus.circle.fill").font(.system(size: 24, weight: .semibold)).foregroundColor(themeColor) }.padding(.trailing, 12)
-        }.frame(height: 46).background(.ultraThinMaterial).clipShape(Capsule()).shadow(color: .black.opacity(0.15), radius: 5, y: 2).padding(.horizontal, 22)
+            } label: { 
+                Image(systemName: "plus")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: 32, height: 32)
+                    .background(themeColor)
+                    .clipShape(Circle())
+            }
+            .padding(.trailing, 12)
+        }
+        .frame(height: 50)
+        .background(
+            Capsule()
+                .fill(
+                    LinearGradient(
+                        gradient: Gradient(colors: [themeColor.opacity(0.6), Color.black.opacity(0.8)]),
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+        )
+        .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
+        .padding(.horizontal, 22)
     }
     
     @ViewBuilder private func previewSheetContent(isFullscreen: Bool, onToggleFullscreen: @escaping () -> Void) -> some View {

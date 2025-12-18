@@ -119,10 +119,15 @@ struct ClipboardItemRow: View {
     var body: some View {
         HStack(spacing: 15) {
             Button(action: copyAction) {
-                Text(itemIcon(for: item.type))
-                    .font(.system(size: 24, weight: .bold))
-                    .frame(width: 30)
-                    .foregroundColor(themeColor)
+                // Circular icon container with themeColor fill
+                Circle()
+                    .fill(themeColor.opacity(0.8))
+                    .frame(width: 40, height: 40)
+                    .overlay(
+                        Text(itemIcon(for: item.type))
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.white)
+                    )
             }
             .buttonStyle(.plain)
 
@@ -164,22 +169,12 @@ struct ClipboardItemRow: View {
             .onTapGesture(perform: previewAction)
         }
         .contentShape(Rectangle())
-        .padding(.vertical, 8)
-        .padding(.horizontal, isHighlighted ? 8 : 0)
+        .padding(.vertical, 4)
         .onDrag(createDragItem)
-        .swipeActions(edge: .leading) {
-            Button("Share", action: shareAction).tint(.blue)
-            Button(item.isPinned ? "Unpin" : "Pin", action: togglePinAction).tint(Color(UIColor.systemGray4))
-        }
-        .swipeActions(edge: .trailing) {
-            Button("Delete", action: deleteAction).tint(Color(UIColor.systemGray3))
-            Button("Tag", action: tagAction).tint(Color(UIColor.systemBlue).opacity(0.55))
-            Button("Rename", action: renameAction).tint(Color(UIColor.systemBlue).opacity(0.55))
-        }
-        // **FIX**: Updated padding syntax and added shape
+        // Pin indicator overlay
         .overlay(Group { if item.isPinned { CornerTriangleShape().fill(Color.red).frame(width: 12, height: 12).padding([.top, .trailing], 4) } }, alignment: .topTrailing)
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 12)
                 .stroke(themeColor, lineWidth: isHighlighted ? 3 : 0)
                 .padding(2)
         )
@@ -311,7 +306,7 @@ struct TagEditView: View {
     @Environment(\.dismiss) var dismiss
     
     // Theme Color Support
-    @AppStorage("themeColorName") private var themeColorName: String = "blue"
+    @AppStorage("themeColorName") private var themeColorName: String = "green"
     @AppStorage("customColorRed") private var customColorRed: Double = 0.0
     @AppStorage("customColorGreen") private var customColorGreen: Double = 0.478
     @AppStorage("customColorBlue") private var customColorBlue: Double = 1.0
@@ -459,7 +454,7 @@ struct TagFilterView: View {
     @Environment(\.dismiss) var dismiss
     
     // Theme Color Support
-    @AppStorage("themeColorName") private var themeColorName: String = "blue"
+    @AppStorage("themeColorName") private var themeColorName: String = "green"
     @AppStorage("customColorRed") private var customColorRed: Double = 0.0
     @AppStorage("customColorGreen") private var customColorGreen: Double = 0.478
     @AppStorage("customColorBlue") private var customColorBlue: Double = 1.0
@@ -807,7 +802,7 @@ struct SharedItemsImportView: View {
     @Environment(\.dismiss) var dismiss
     
     // Theme Color Support
-    @AppStorage("themeColorName") private var themeColorName: String = "blue"
+    @AppStorage("themeColorName") private var themeColorName: String = "green"
     @AppStorage("customColorRed") private var customColorRed: Double = 0.0
     @AppStorage("customColorGreen") private var customColorGreen: Double = 0.478
     @AppStorage("customColorBlue") private var customColorBlue: Double = 1.0

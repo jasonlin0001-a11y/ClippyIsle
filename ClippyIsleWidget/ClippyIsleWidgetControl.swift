@@ -21,7 +21,7 @@ struct Provider: TimelineProvider {
         let itemCount = userDefaults?.data(forKey: "clippedItems").flatMap {
             try? JSONDecoder().decode([ClipboardItem].self, from: $0).count
         } ?? 0
-        let themeColorName = userDefaults?.string(forKey: "themeColorName") ?? "blue"
+        let themeColorName = userDefaults?.string(forKey: "themeColorName") ?? "green"
 
         let entry = SimpleEntry(date: Date(), itemCount: itemCount, themeColorName: themeColorName)
         let timeline = Timeline(entries: [entry], policy: .atEnd)
