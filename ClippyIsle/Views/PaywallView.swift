@@ -189,7 +189,10 @@ struct ProductRow: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(ThemeColors.cardBorder(for: colorScheme).opacity(colorScheme == .dark ? 1 : 0.3), lineWidth: colorScheme == .dark ? 0.5 : 1)
+                .stroke(
+                    ThemeColors.cardBorder(for: colorScheme).opacity(colorScheme == .dark ? 1.0 : 0.3),
+                    lineWidth: colorScheme == .dark ? 0.5 : 1.0
+                )
         )
         .shadow(
             color: shadowConfig.color,

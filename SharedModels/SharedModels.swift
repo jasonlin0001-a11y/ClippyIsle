@@ -197,24 +197,37 @@ public extension ClippyIsleAttributes {
 /// Light Mode: Off-white background (#F2F2F7), pure white cards with soft shadows
 public struct ThemeColors {
     
+    // MARK: - Base Color Constants
+    
+    /// iOS off-white background color (#F2F2F7 - Apple's systemGray6)
+    private static let offWhite = Color(red: 242/255, green: 242/255, blue: 247/255)
+    
+    /// Neutral black for dark mode backgrounds
+    private static let neutralBlack = Color(red: 0.0, green: 0.0, blue: 0.0)
+    
+    /// Deep grey for dark mode layering
+    private static let deepGrey = Color(red: 28/255, green: 28/255, blue: 30/255)
+    
+    /// Dark grey for dark mode cards
+    private static let darkGrey = Color(red: 44/255, green: 44/255, blue: 46/255)
+    
+    /// Lighter grey for dark mode elevated surfaces
+    private static let lighterGrey = Color(red: 58/255, green: 58/255, blue: 60/255)
+    
     // MARK: - Background Colors
     
     /// Main background color
     /// Light: Soft off-white (#F2F2F7 - Apple's systemGray6)
     /// Dark: Neutral black
     public static func background(for colorScheme: ColorScheme) -> Color {
-        colorScheme == .dark
-            ? Color(red: 0.0, green: 0.0, blue: 0.0) // Neutral black
-            : Color(red: 242/255, green: 242/255, blue: 247/255) // #F2F2F7 off-white
+        colorScheme == .dark ? neutralBlack : offWhite
     }
     
     /// Secondary background for grouped content
     /// Light: System background
     /// Dark: Deep grey for layering
     public static func secondaryBackground(for colorScheme: ColorScheme) -> Color {
-        colorScheme == .dark
-            ? Color(red: 28/255, green: 28/255, blue: 30/255) // Deep grey
-            : Color(red: 242/255, green: 242/255, blue: 247/255) // #F2F2F7
+        colorScheme == .dark ? deepGrey : offWhite
     }
     
     // MARK: - Card/Surface Colors
@@ -223,18 +236,14 @@ public struct ThemeColors {
     /// Light: Pure white with soft shadows
     /// Dark: Sleek dark grey panel
     public static func cardBackground(for colorScheme: ColorScheme) -> Color {
-        colorScheme == .dark
-            ? Color(red: 44/255, green: 44/255, blue: 46/255) // Sleek dark grey
-            : Color.white // Pure white
+        colorScheme == .dark ? darkGrey : Color.white
     }
     
     /// Elevated surface (for modals, sheets)
     /// Light: White
     /// Dark: Lighter grey for elevation
     public static func elevatedSurface(for colorScheme: ColorScheme) -> Color {
-        colorScheme == .dark
-            ? Color(red: 58/255, green: 58/255, blue: 60/255) // Lighter grey
-            : Color.white
+        colorScheme == .dark ? lighterGrey : Color.white
     }
     
     // MARK: - Text Colors
@@ -290,17 +299,13 @@ public struct ThemeColors {
     
     /// Soft inner glow color for dark mode cards
     public static func innerGlow(for colorScheme: ColorScheme, accent: Color) -> Color {
-        colorScheme == .dark
-            ? accent.opacity(0.15)
-            : Color.clear
+        colorScheme == .dark ? accent.opacity(0.15) : Color.clear
     }
     
     // MARK: - Border Colors
     
     /// Subtle border for cards
     public static func cardBorder(for colorScheme: ColorScheme) -> Color {
-        colorScheme == .dark
-            ? Color(red: 58/255, green: 58/255, blue: 60/255) // Subtle grey border
-            : Color.clear // No border in light mode, shadows provide depth
+        colorScheme == .dark ? lighterGrey : Color.clear
     }
 }
