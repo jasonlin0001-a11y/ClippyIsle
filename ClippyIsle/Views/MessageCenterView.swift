@@ -107,6 +107,7 @@ struct NotificationRowView: View {
     let notification: NotificationItem
     let themeColor: Color
     let onTap: () -> Void
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         Button(action: onTap) {
@@ -143,7 +144,7 @@ struct NotificationRowView: View {
                             .font(.caption2)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Color.gray.opacity(0.2))
+                            .background(AdaptiveStyles.defaultTagBackground(for: colorScheme))
                             .cornerRadius(4)
                         
                         Spacer()
@@ -175,6 +176,7 @@ struct MessageCenterImportView: View {
     @Binding var isPresented: Bool
     @State private var selectedItems: Set<UUID> = []
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
     
     // Theme Color Support
     @AppStorage("themeColorName") private var themeColorName: String = "blue"
@@ -205,7 +207,7 @@ struct MessageCenterImportView: View {
                         .foregroundColor(.secondary)
                 }
                 .padding()
-                .background(Color(.systemGray6))
+                .background(AdaptiveStyles.secondaryCardBackground(for: colorScheme))
                 
                 // Selection controls
                 HStack {
@@ -261,7 +263,7 @@ struct MessageCenterImportView: View {
                                                     .font(.caption2)
                                                     .padding(.horizontal, 4)
                                                     .padding(.vertical, 2)
-                                                    .background(Color.gray.opacity(0.2))
+                                                    .background(AdaptiveStyles.defaultTagBackground(for: colorScheme))
                                                     .cornerRadius(4)
                                             }
                                             if tags.count > 3 {
