@@ -238,18 +238,23 @@ struct AdaptiveTagStyle: ViewModifier {
     @Environment(\.colorScheme) var colorScheme
     var customColor: Color?
     
-    func body(content: Content) -> some View {
-        let backgroundColor: Color
-        let textColor: Color
-        
+    private var backgroundColor: Color {
         if let custom = customColor {
-            backgroundColor = AdaptiveStyles.tagBackground(userColor: custom, for: colorScheme)
-            textColor = colorScheme == .dark ? Color.white : custom
+            return AdaptiveStyles.tagBackground(userColor: custom, for: colorScheme)
         } else {
-            backgroundColor = AdaptiveStyles.defaultTagBackground(for: colorScheme)
-            textColor = Color.primary
+            return AdaptiveStyles.defaultTagBackground(for: colorScheme)
         }
-        
+    }
+    
+    private var textColor: Color {
+        if let custom = customColor {
+            return colorScheme == .dark ? Color.white : custom
+        } else {
+            return Color.primary
+        }
+    }
+    
+    func body(content: Content) -> some View {
         content
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
