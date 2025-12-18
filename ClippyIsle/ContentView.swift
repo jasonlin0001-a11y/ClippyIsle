@@ -338,8 +338,9 @@ struct ContentView: View {
     private var mainContent: some View {
         VStack(spacing: 0) {
             if clipboardManager.dataLoadError != nil { dataErrorView }
-            else { ZStack(alignment: .bottom) { listContent; bottomToolbar.padding(.bottom, 8) } }
+            else { ZStack(alignment: .bottom) { listContent; bottomToolbar.padding(.bottom, 12) } }
         }
+        .background(preferredColorScheme == .dark ? ClippyIsleAttributes.ColorUtility.darkBackground : Color(.systemGroupedBackground))
         .navigationTitle(navigationTitle).navigationBarTitleDisplayMode(selectedTagFilter == nil ? .large : .inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
@@ -457,6 +458,9 @@ struct ContentView: View {
                                 .transition(.opacity.combined(with: .scale(scale: 0.95)))
                         }
                     }
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                     .id(item.id)
                 }
                 .onDelete { indexSet in indexSet.map { filteredItems[$0] }.forEach { clipboardManager.moveItemToTrash(item: $0) } }
@@ -468,7 +472,11 @@ struct ContentView: View {
                     }
                 }
             )
-            .listStyle(.insetGrouped).ignoresSafeArea(.keyboard, edges: .bottom).refreshable { await clipboardManager.performCloudSync() }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .background(preferredColorScheme == .dark ? ClippyIsleAttributes.ColorUtility.darkBackground : Color(.systemGroupedBackground))
+            .ignoresSafeArea(.keyboard, edges: .bottom)
+            .refreshable { await clipboardManager.performCloudSync() }
             .onChange(of: filteredItems) { items in if let first = items.first, first.id != lastTopItemID { withAnimation { proxy.scrollTo(first.id, anchor: .top) }; lastTopItemID = first.id } }
             .onChange(of: newlyAddedItemID) { oldID, newID in
                 if let id = newID {
@@ -494,9 +502,23 @@ struct ContentView: View {
 
     private var bottomToolbar: some View {
         HStack(spacing: 0) {
-            Image(systemName: "magnifyingglass").foregroundColor(.secondary).padding(.leading, 12)
-            TextField("Search...", text: $searchText).padding(.horizontal, 8).submitLabel(.search)
-            if !searchText.isEmpty { Button { searchText = ""; hideKeyboard() } label: { Image(systemName: "xmark.circle.fill").foregroundColor(Color(.systemGray3)) }.padding(.trailing, 8) }
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.secondary)
+                .padding(.leading, 14)
+            
+            TextField("Search...", text: $searchText)
+                .font(.system(size: 15, weight: .regular, design: .rounded))
+                .padding(.horizontal, 10)
+                .submitLabel(.search)
+            
+            if !searchText.isEmpty { 
+                Button { searchText = ""; hideKeyboard() } label: { 
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(Color(.systemGray3)) 
+                }.padding(.trailing, 8) 
+            }
             
             Button {
                 if isTranscribing {
@@ -507,11 +529,16 @@ struct ContentView: View {
                 }
             } label: {
                 Image(systemName: "mic.fill")
+                    .font(.system(size: 16, weight: .medium))
                     .foregroundColor(isTranscribing ? .red : .secondary)
             }
-            .padding(.trailing, 8)
+            .padding(.trailing, 10)
             
-            Rectangle().frame(width: 1, height: 20).foregroundColor(.gray.opacity(0.3)).padding(.horizontal, 4)
+            Rectangle()
+                .frame(width: 1, height: 22)
+                .foregroundColor(preferredColorScheme == .dark ? Color.white.opacity(0.15) : Color.gray.opacity(0.3))
+                .padding(.horizontal, 6)
+            
             Menu {
                 Button {
                     let oldIDs = Set(clipboardManager.items.map { $0.id })
@@ -528,8 +555,23 @@ struct ContentView: View {
                         if let newItem = clipboardManager.items.first(where: { !oldIDs.contains($0.id) }) { highlightAndScroll(to: newItem.id) }
                     }
                 } label: { Label("Add from Clipboard", systemImage: "doc.on.clipboard") }
-            } label: { Image(systemName: "plus.circle.fill").font(.system(size: 24, weight: .semibold)).foregroundColor(themeColor) }.padding(.trailing, 12)
-        }.frame(height: 46).background(.ultraThinMaterial).clipShape(Capsule()).shadow(color: .black.opacity(0.15), radius: 5, y: 2).padding(.horizontal, 22)
+            } label: { 
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 26, weight: .semibold))
+                    .foregroundColor(themeColor) 
+            }.padding(.trailing, 14)
+        }
+        .frame(height: 50)
+        .background(
+            Capsule()
+                .fill(preferredColorScheme == .dark ? ClippyIsleAttributes.ColorUtility.darkCard : Color(.systemBackground))
+                .shadow(color: preferredColorScheme == .dark ? Color.black.opacity(0.4) : Color.black.opacity(0.12), radius: 8, x: 0, y: 4)
+        )
+        .overlay(
+            Capsule()
+                .strokeBorder(preferredColorScheme == .dark ? ClippyIsleAttributes.ColorUtility.darkBorder : Color.clear, lineWidth: 0.5)
+        )
+        .padding(.horizontal, 20)
     }
     
     @ViewBuilder private func previewSheetContent(isFullscreen: Bool, onToggleFullscreen: @escaping () -> Void) -> some View {

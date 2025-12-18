@@ -167,9 +167,17 @@ public extension ClippyIsleAttributes {
         // Cement gray color matching the app logo (used in widgets)
         public static let cementGray = Color(red: 0.74, green: 0.74, blue: 0.74)
         
+        // Modern dark mode colors
+        public static let neonGreen = Color(red: 57/255, green: 255/255, blue: 20/255) // Vibrant neon green accent
+        public static let darkBackground = Color(red: 18/255, green: 18/255, blue: 18/255) // Deep dark background
+        public static let darkCard = Color(red: 30/255, green: 30/255, blue: 30/255) // Dark grey card background
+        public static let darkCardElevated = Color(red: 38/255, green: 38/255, blue: 38/255) // Slightly lighter for elevated cards
+        public static let darkBorder = Color(red: 50/255, green: 50/255, blue: 50/255) // Subtle border color
+        
         public static func color(forName name: String) -> Color {
             switch name {
             case "green": return .green
+            case "neonGreen": return neonGreen
             case "orange": return .orange
             case "red": return .red
             case "pink": return .pink

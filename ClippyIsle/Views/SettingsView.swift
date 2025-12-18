@@ -117,7 +117,7 @@ struct SettingsView: View {
 
     let countOptions = [50, 100, 200, 0]
     let dayOptions = [7, 30, 90, 0]
-    let colorOptions = ["blue", "green", "orange", "red", "pink", "purple", "black", "white", "retro", "custom"]
+    let colorOptions = ["blue", "green", "neonGreen", "orange", "red", "pink", "purple", "black", "white", "retro", "custom"]
     
     var themeColor: Color {
         if themeColorName == "custom" {
@@ -348,7 +348,9 @@ struct SettingsView: View {
                         if colorName == "custom" && !subscriptionManager.isPro {
                             Text("Custom (Pro)").foregroundColor(.secondary)
                             Image(systemName: "lock.fill").font(.caption).foregroundColor(.secondary)
-                        } else { Text(colorName == "retro" ? "Retro" : colorName.capitalized) }
+                        } else { 
+                            Text(colorName == "retro" ? "Retro" : (colorName == "neonGreen" ? "Neon Green" : colorName.capitalized)) 
+                        }
                     }.tag(colorName).tint(colorToShow)
                 }
             }
