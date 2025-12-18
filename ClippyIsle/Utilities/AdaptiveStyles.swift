@@ -15,14 +15,14 @@ import SwiftUI
 /// Design Guidelines:
 /// - **Dark Mode**: Use deep grey backgrounds, no shadows, accent colors with slight glow/opacity
 /// - **Light Mode**: Off-white background (#F2F2F7), pure white cards with soft drop shadows
-public struct AdaptiveStyles {
+struct AdaptiveStyles {
     
     // MARK: - Background Colors
     
     /// The main screen background color
     /// - Dark Mode: Neutral black (system background)
     /// - Light Mode: Soft off-white (#F2F2F7)
-    public static func screenBackground(for colorScheme: ColorScheme) -> Color {
+    static func screenBackground(for colorScheme: ColorScheme) -> Color {
         switch colorScheme {
         case .dark:
             return Color(UIColor.systemBackground)
@@ -36,7 +36,7 @@ public struct AdaptiveStyles {
     /// Card background color for floating card elements
     /// - Dark Mode: Deep grey panel (systemGray6)
     /// - Light Mode: Pure white
-    public static func cardBackground(for colorScheme: ColorScheme) -> Color {
+    static func cardBackground(for colorScheme: ColorScheme) -> Color {
         switch colorScheme {
         case .dark:
             return Color(UIColor.systemGray6)
@@ -50,7 +50,7 @@ public struct AdaptiveStyles {
     /// Secondary card background (for nested elements)
     /// - Dark Mode: Slightly lighter grey (systemGray5)
     /// - Light Mode: Very light grey
-    public static func secondaryCardBackground(for colorScheme: ColorScheme) -> Color {
+    static func secondaryCardBackground(for colorScheme: ColorScheme) -> Color {
         switch colorScheme {
         case .dark:
             return Color(UIColor.systemGray5)
@@ -66,7 +66,7 @@ public struct AdaptiveStyles {
     /// Card shadow configuration
     /// - Dark Mode: No shadow (shadows look dirty on dark backgrounds)
     /// - Light Mode: Soft drop shadow
-    public static func cardShadow(for colorScheme: ColorScheme) -> (color: Color, radius: CGFloat, x: CGFloat, y: CGFloat) {
+    static func cardShadow(for colorScheme: ColorScheme) -> (color: Color, radius: CGFloat, x: CGFloat, y: CGFloat) {
         switch colorScheme {
         case .dark:
             return (Color.clear, 0, 0, 0)
@@ -80,7 +80,7 @@ public struct AdaptiveStyles {
     /// Elevated card shadow (for prominent elements)
     /// - Dark Mode: Subtle inner glow effect using border
     /// - Light Mode: More pronounced drop shadow
-    public static func elevatedCardShadow(for colorScheme: ColorScheme) -> (color: Color, radius: CGFloat, x: CGFloat, y: CGFloat) {
+    static func elevatedCardShadow(for colorScheme: ColorScheme) -> (color: Color, radius: CGFloat, x: CGFloat, y: CGFloat) {
         switch colorScheme {
         case .dark:
             return (Color.clear, 0, 0, 0)
@@ -96,7 +96,7 @@ public struct AdaptiveStyles {
     /// Tag/Label background color based on user's accent color
     /// - Dark Mode: Lower opacity (0.2) for subtle appearance
     /// - Light Mode: Very low opacity (0.1) for subtle tint
-    public static func tagBackground(userColor: Color, for colorScheme: ColorScheme) -> Color {
+    static func tagBackground(userColor: Color, for colorScheme: ColorScheme) -> Color {
         switch colorScheme {
         case .dark:
             return userColor.opacity(0.2)
@@ -110,21 +110,21 @@ public struct AdaptiveStyles {
     /// Tag/Label text color
     /// - Both modes: Use the user's accent color directly
     /// Note: In light mode, ensure the color is dark enough for contrast
-    public static func tagTextColor(userColor: Color, for colorScheme: ColorScheme) -> Color {
+    static func tagTextColor(userColor: Color, for colorScheme: ColorScheme) -> Color {
         return userColor
     }
     
     /// Icon tint configuration
     /// - Dark Mode: Original color, optionally with slight glow
     /// - Light Mode: Original color, no glow
-    public static func iconColor(userColor: Color, for colorScheme: ColorScheme) -> Color {
+    static func iconColor(userColor: Color, for colorScheme: ColorScheme) -> Color {
         return userColor
     }
     
     /// Default tag background when no custom color is set
     /// - Dark Mode: Subtle grey
     /// - Light Mode: Light grey
-    public static func defaultTagBackground(for colorScheme: ColorScheme) -> Color {
+    static func defaultTagBackground(for colorScheme: ColorScheme) -> Color {
         switch colorScheme {
         case .dark:
             return Color.gray.opacity(0.3)
@@ -140,7 +140,7 @@ public struct AdaptiveStyles {
     /// Primary text color
     /// - Dark Mode: High contrast white
     /// - Light Mode: Clean dark typography
-    public static func primaryText(for colorScheme: ColorScheme) -> Color {
+    static func primaryText(for colorScheme: ColorScheme) -> Color {
         switch colorScheme {
         case .dark:
             return Color.white
@@ -152,7 +152,7 @@ public struct AdaptiveStyles {
     }
     
     /// Secondary text color
-    public static func secondaryText(for colorScheme: ColorScheme) -> Color {
+    static func secondaryText(for colorScheme: ColorScheme) -> Color {
         return Color.secondary
     }
     
@@ -161,7 +161,7 @@ public struct AdaptiveStyles {
     /// Card border color (for subtle definition)
     /// - Dark Mode: Subtle light border for depth
     /// - Light Mode: Usually not needed due to shadows
-    public static func cardBorder(for colorScheme: ColorScheme) -> Color {
+    static func cardBorder(for colorScheme: ColorScheme) -> Color {
         switch colorScheme {
         case .dark:
             return Color.white.opacity(0.08)
@@ -173,7 +173,7 @@ public struct AdaptiveStyles {
     }
     
     /// Separator/Divider color
-    public static func separator(for colorScheme: ColorScheme) -> Color {
+    static func separator(for colorScheme: ColorScheme) -> Color {
         switch colorScheme {
         case .dark:
             return Color.gray.opacity(0.3)
@@ -188,12 +188,12 @@ public struct AdaptiveStyles {
 // MARK: - View Modifiers
 
 /// A view modifier that applies adaptive card styling
-public struct AdaptiveCardStyle: ViewModifier {
+struct AdaptiveCardStyle: ViewModifier {
     @Environment(\.colorScheme) var colorScheme
     var cornerRadius: CGFloat = 12
     var includeBorder: Bool = true
     
-    public func body(content: Content) -> some View {
+    func body(content: Content) -> some View {
         let shadow = AdaptiveStyles.cardShadow(for: colorScheme)
         
         content
@@ -213,11 +213,11 @@ public struct AdaptiveCardStyle: ViewModifier {
 }
 
 /// A view modifier that applies elevated card styling
-public struct AdaptiveElevatedCardStyle: ViewModifier {
+struct AdaptiveElevatedCardStyle: ViewModifier {
     @Environment(\.colorScheme) var colorScheme
     var cornerRadius: CGFloat = 16
     
-    public func body(content: Content) -> some View {
+    func body(content: Content) -> some View {
         let shadow = AdaptiveStyles.elevatedCardShadow(for: colorScheme)
         
         content
@@ -234,11 +234,11 @@ public struct AdaptiveElevatedCardStyle: ViewModifier {
 }
 
 /// A view modifier for adaptive tag chip styling
-public struct AdaptiveTagStyle: ViewModifier {
+struct AdaptiveTagStyle: ViewModifier {
     @Environment(\.colorScheme) var colorScheme
     var customColor: Color?
     
-    public func body(content: Content) -> some View {
+    func body(content: Content) -> some View {
         let backgroundColor: Color
         let textColor: Color
         
@@ -261,7 +261,7 @@ public struct AdaptiveTagStyle: ViewModifier {
 
 // MARK: - View Extensions
 
-public extension View {
+extension View {
     /// Applies adaptive card styling based on color scheme
     func adaptiveCardStyle(cornerRadius: CGFloat = 12, includeBorder: Bool = true) -> some View {
         modifier(AdaptiveCardStyle(cornerRadius: cornerRadius, includeBorder: includeBorder))

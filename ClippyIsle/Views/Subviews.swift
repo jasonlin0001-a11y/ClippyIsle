@@ -149,8 +149,8 @@ struct ClipboardItemRow: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.displayName ?? item.content)
-                        .lineLimit(1)
                         .font(.body)
+                        .lineLimit(1)
                         .foregroundColor(AdaptiveStyles.primaryText(for: colorScheme))
                     HStack(spacing: 8) {
                         if let tags = item.tags, !tags.isEmpty {
