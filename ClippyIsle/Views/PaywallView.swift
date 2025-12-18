@@ -112,6 +112,7 @@ struct PaywallView: View {
 
 struct ProductRow: View {
     let product: Product
+    @Environment(\.colorScheme) var colorScheme
     
     var isBestValue: Bool {
         product.id == ProductIDs.lifetime || product.id == ProductIDs.yearly
@@ -177,12 +178,6 @@ struct ProductRow: View {
             }
         }
         .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.accentColor.opacity(0.3), lineWidth: 1)
-        )
-        .background(Color(uiColor: .systemBackground))
-        .cornerRadius(12)
-        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+        .adaptiveCardStyle(cornerRadius: 12, includeBorder: true)
     }
 }

@@ -125,11 +125,7 @@ struct LinkPreviewCard: View {
                     }
                 }
                 .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color(.systemGray6))
-                        .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
-                )
+                .adaptiveElevatedCardStyle(cornerRadius: 16)
                 .padding(.horizontal)
                 
                 Spacer()

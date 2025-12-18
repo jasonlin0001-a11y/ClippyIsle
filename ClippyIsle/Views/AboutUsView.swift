@@ -9,6 +9,7 @@ import SwiftUI
 
 struct AboutUsView: View {
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
     
     private let aboutLogoSize: CGFloat = 100
     private let aboutLogoCornerRadius: CGFloat = 22
@@ -87,7 +88,7 @@ struct AboutUsView: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(width: aboutLogoSize, height: aboutLogoSize)
                     .cornerRadius(aboutLogoCornerRadius)
-                    .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
+                    .adaptiveShadow(colorScheme: colorScheme)
                     .padding(.top, 30)
                 
                 // App Name

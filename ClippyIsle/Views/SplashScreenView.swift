@@ -32,7 +32,7 @@ struct SplashScreenView: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(width: splashLogoSize, height: splashLogoSize)
                     .cornerRadius(appIconCornerRadius) // iOS app icon corner radius
-                    .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
+                    .adaptiveShadow(colorScheme: colorScheme, elevated: true)
                 
                 // App Title
                 Text("CC Isle")

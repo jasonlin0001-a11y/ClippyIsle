@@ -29,14 +29,7 @@ struct InlineLinkPreview: View {
                 contentView(metadata: metadata)
             }
         }
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(colorScheme == .dark ? Color(.systemGray6) : Color(.systemGray6))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-        )
+        .adaptiveCardStyle(cornerRadius: 12, includeBorder: true)
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .task {
@@ -180,6 +173,7 @@ struct CompactLinkImageView: View {
     let imageProvider: NSItemProvider
     @State private var image: UIImage?
     @State private var isLoading = true
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         ZStack {
@@ -197,7 +191,7 @@ struct CompactLinkImageView: View {
             }
         }
         .frame(width: 80, height: 80)
-        .background(Color.gray.opacity(0.1))
+        .background(AdaptiveStyles.defaultTagBackground(for: colorScheme))
         .onAppear {
             loadImage()
         }

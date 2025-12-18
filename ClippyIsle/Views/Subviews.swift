@@ -6,17 +6,37 @@ import LinkPresentation
 
 struct TagChipView: View {
     let tag: String
-    let tagColor: Color
-    let textColor: Color
+    let customColor: Color?  // User's custom tag color (nil if no custom color set)
     let onFilter: () -> Void
+    @Environment(\.colorScheme) var colorScheme
+    
+    /// Computed background color using adaptive design system
+    private var adaptiveBackgroundColor: Color {
+        if let custom = customColor {
+            return AdaptiveStyles.tagBackground(userColor: custom, for: colorScheme)
+        } else {
+            return AdaptiveStyles.defaultTagBackground(for: colorScheme)
+        }
+    }
+    
+    /// Computed text color using adaptive design system
+    private var adaptiveTextColor: Color {
+        if let custom = customColor {
+            // In dark mode with custom color: use white text for readability
+            // In light mode with custom color: use the custom color itself
+            return colorScheme == .dark ? Color.white : custom
+        } else {
+            return Color.primary
+        }
+    }
     
     var body: some View {
         Text(tag)
             .font(.caption2)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(tagColor)
-            .foregroundColor(textColor)
+            .background(adaptiveBackgroundColor)
+            .foregroundColor(adaptiveTextColor)
             .cornerRadius(8)
             .contentShape(Rectangle())
             .gesture(
@@ -128,19 +148,19 @@ struct ClipboardItemRow: View {
 
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(item.displayName ?? item.content).lineLimit(1).font(.body).foregroundColor(colorScheme == .light ? Color(.darkGray) : .primary)
+                    Text(item.displayName ?? item.content)
+                        .lineLimit(1)
+                        .font(.body)
+                        .foregroundColor(AdaptiveStyles.primaryText(for: colorScheme))
                     HStack(spacing: 8) {
                         if let tags = item.tags, !tags.isEmpty {
                             ScrollView(.horizontal, showsIndicators: false) { 
                                 HStack { 
                                     ForEach(tags, id: \.self) { tag in 
                                         let customColor = clipboardManager?.getTagColor(tag)
-                                        let tagColor = customColor ?? Color.gray.opacity(0.2)
-                                        let textColor = customColor != nil ? Color.white : Color.primary
                                         TagChipView(
                                             tag: tag,
-                                            tagColor: tagColor,
-                                            textColor: textColor,
+                                            customColor: customColor,
                                             onFilter: {
                                                 if let onTagLongPress = self.onTagLongPress {
                                                     onTagLongPress(tag)
@@ -309,6 +329,7 @@ struct TagEditView: View {
     @State private var showColorPicker = false
     @State private var showPaywall = false
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
     
     // Theme Color Support
     @AppStorage("themeColorName") private var themeColorName: String = "blue"
@@ -333,7 +354,7 @@ struct TagEditView: View {
                         FlowLayout(alignment: .leading) {
                             ForEach(item.tags ?? [], id: \.self) { tag in
                                 HStack { Text(tag); Button(action: { removeTag(tag) }) { Image(systemName: "xmark") } }
-                                .padding(.horizontal, 8).padding(.vertical, 4).background(Color.gray.opacity(0.2)).clipShape(Capsule()).buttonStyle(.plain)
+                                .padding(.horizontal, 8).padding(.vertical, 4).background(AdaptiveStyles.defaultTagBackground(for: colorScheme)).clipShape(Capsule()).buttonStyle(.plain)
                             }
                         }
                     }
@@ -344,7 +365,7 @@ struct TagEditView: View {
                     else {
                         FlowLayout(alignment: .leading) {
                             ForEach(existingTags, id: \.self) { tag in
-                                Button(action: { addTag(tag) }) { Text(tag).padding(.horizontal, 10).padding(.vertical, 5).background(Color.accentColor.opacity(0.2)).foregroundColor(.accentColor).clipShape(Capsule()) }.buttonStyle(.plain)
+                                Button(action: { addTag(tag) }) { Text(tag).padding(.horizontal, 10).padding(.vertical, 5).background(AdaptiveStyles.tagBackground(userColor: .accentColor, for: colorScheme)).foregroundColor(.accentColor).clipShape(Capsule()) }.buttonStyle(.plain)
                             }
                         }
                     }
@@ -670,6 +691,7 @@ struct TagColorManagementView: View {
     @State private var showColorPicker = false
     @State private var showPaywall = false
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         List {
@@ -704,7 +726,7 @@ struct TagColorManagementView: View {
                                     .frame(width: 24, height: 24)
                             } else {
                                 Circle()
-                                    .fill(Color.gray.opacity(0.2))
+                                    .fill(AdaptiveStyles.defaultTagBackground(for: colorScheme))
                                     .frame(width: 24, height: 24)
                             }
                             
@@ -805,6 +827,7 @@ struct SharedItemsImportView: View {
     @Binding var isPresented: Bool
     @State private var selectedItems: Set<UUID> = []
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
     
     // Theme Color Support
     @AppStorage("themeColorName") private var themeColorName: String = "blue"
@@ -832,7 +855,7 @@ struct SharedItemsImportView: View {
                     Spacer()
                 }
                 .padding()
-                .background(Color(.systemGray6))
+                .background(AdaptiveStyles.secondaryCardBackground(for: colorScheme))
                 
                 // Selection controls
                 HStack {
@@ -888,7 +911,7 @@ struct SharedItemsImportView: View {
                                                     .font(.caption2)
                                                     .padding(.horizontal, 4)
                                                     .padding(.vertical, 2)
-                                                    .background(Color.gray.opacity(0.2))
+                                                    .background(AdaptiveStyles.defaultTagBackground(for: colorScheme))
                                                     .cornerRadius(4)
                                             }
                                             if tags.count > 3 {
