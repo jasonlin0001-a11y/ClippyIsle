@@ -805,6 +805,7 @@ struct SharedItemsImportView: View {
     @Binding var isPresented: Bool
     @State private var selectedItems: Set<UUID> = []
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
     
     // Theme Color Support
     @AppStorage("themeColorName") private var themeColorName: String = "blue"
@@ -829,10 +830,11 @@ struct SharedItemsImportView: View {
                         .foregroundColor(themeColor)
                     Text("Received \(pendingItems.count) item(s)")
                         .font(.headline)
+                        .foregroundColor(ThemeColors.primaryText(for: colorScheme))
                     Spacer()
                 }
                 .padding()
-                .background(Color(.systemGray6))
+                .background(ThemeColors.secondaryBackground(for: colorScheme))
                 
                 // Selection controls
                 HStack {
@@ -846,7 +848,7 @@ struct SharedItemsImportView: View {
                     
                     Text("\(selectedItems.count) selected")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(ThemeColors.secondaryText(for: colorScheme))
                     
                     Spacer()
                     
@@ -866,7 +868,7 @@ struct SharedItemsImportView: View {
                             HStack(spacing: 12) {
                                 // Selection indicator
                                 Image(systemName: selectedItems.contains(item.id) ? "checkmark.circle.fill" : "circle")
-                                    .foregroundColor(selectedItems.contains(item.id) ? themeColor : .secondary)
+                                    .foregroundColor(selectedItems.contains(item.id) ? themeColor : ThemeColors.secondaryText(for: colorScheme))
                                     .font(.title3)
                                 
                                 // Item icon
@@ -878,7 +880,7 @@ struct SharedItemsImportView: View {
                                     Text(item.displayName ?? item.content)
                                         .lineLimit(2)
                                         .font(.body)
-                                        .foregroundColor(.primary)
+                                        .foregroundColor(ThemeColors.primaryText(for: colorScheme))
                                     
                                     HStack(spacing: 8) {
                                         // Show tags if any
@@ -888,13 +890,13 @@ struct SharedItemsImportView: View {
                                                     .font(.caption2)
                                                     .padding(.horizontal, 4)
                                                     .padding(.vertical, 2)
-                                                    .background(Color.gray.opacity(0.2))
+                                                    .background(ThemeColors.cardBackground(for: colorScheme).opacity(0.5))
                                                     .cornerRadius(4)
                                             }
                                             if tags.count > 3 {
                                                 Text("+\(tags.count - 3)")
                                                     .font(.caption2)
-                                                    .foregroundColor(.secondary)
+                                                    .foregroundColor(ThemeColors.secondaryText(for: colorScheme))
                                             }
                                         }
                                         
@@ -903,7 +905,7 @@ struct SharedItemsImportView: View {
                                         // Item type indicator
                                         Text(itemTypeLabel(for: item.type))
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .foregroundColor(ThemeColors.secondaryText(for: colorScheme))
                                     }
                                 }
                                 
@@ -916,6 +918,7 @@ struct SharedItemsImportView: View {
                 }
                 .listStyle(.plain)
             }
+            .background(ThemeColors.background(for: colorScheme))
             .navigationTitle("Shared Items")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

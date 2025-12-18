@@ -27,6 +27,7 @@ struct PaywallView: View {
     // 使用 Singleton 或 EnvironmentObject
     @StateObject var manager = SubscriptionManager.shared
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         VStack(spacing: 20) {
@@ -39,6 +40,7 @@ struct PaywallView: View {
                 
                 Text("解鎖CC Isle Pro")
                     .font(.largeTitle.bold())
+                    .foregroundColor(ThemeColors.primaryText(for: colorScheme))
                 
                 Text("解鎖完整功能，享受更強大的體驗")
                     .font(.body)
@@ -103,6 +105,7 @@ struct PaywallView: View {
                 .padding(.bottom)
         }
         .padding()
+        .background(ThemeColors.background(for: colorScheme))
         .task {
             // 只有打開這個頁面時才去抓取商品資訊
             await manager.loadProducts()
@@ -142,8 +145,11 @@ struct ProductRow: View {
             return product.description
         }
     }
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
+        let shadowConfig = ThemeColors.cardShadow(for: colorScheme)
+        
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
@@ -179,10 +185,17 @@ struct ProductRow: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.accentColor.opacity(0.3), lineWidth: 1)
+                .fill(ThemeColors.cardBackground(for: colorScheme))
         )
-        .background(Color(uiColor: .systemBackground))
-        .cornerRadius(12)
-        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(ThemeColors.cardBorder(for: colorScheme).opacity(colorScheme == .dark ? 1 : 0.3), lineWidth: colorScheme == .dark ? 0.5 : 1)
+        )
+        .shadow(
+            color: shadowConfig.color,
+            radius: shadowConfig.radius,
+            x: shadowConfig.x,
+            y: shadowConfig.y
+        )
     }
 }

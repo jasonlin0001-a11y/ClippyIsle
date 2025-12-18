@@ -117,7 +117,8 @@ struct SettingsView: View {
 
     let countOptions = [50, 100, 200, 0]
     let dayOptions = [7, 30, 90, 0]
-    let colorOptions = ["blue", "green", "orange", "red", "pink", "purple", "black", "white", "retro", "custom"]
+    // Original colors + new accent colors for dark mode (neon) and light mode (deeper)
+    let colorOptions = ["blue", "green", "orange", "red", "pink", "purple", "black", "white", "retro", "electricBlue", "neonGreen", "vibrantOrange", "deepPurple", "royalBlue", "coralRed", "custom"]
     
     var themeColor: Color {
         if themeColorName == "custom" {
@@ -348,7 +349,7 @@ struct SettingsView: View {
                         if colorName == "custom" && !subscriptionManager.isPro {
                             Text("Custom (Pro)").foregroundColor(.secondary)
                             Image(systemName: "lock.fill").font(.caption).foregroundColor(.secondary)
-                        } else { Text(colorName == "retro" ? "Retro" : colorName.capitalized) }
+                        } else { Text(colorDisplayName(for: colorName)) }
                     }.tag(colorName).tint(colorToShow)
                 }
             }
@@ -356,6 +357,21 @@ struct SettingsView: View {
                 if subscriptionManager.isPro { ColorPicker("Custom Color", selection: customColorBinding, supportsOpacity: false) }
                 else { Button(action: { showPaywall = true }) { HStack { Text("Unlock Custom Color"); Spacer(); Image(systemName: "lock.fill").foregroundColor(.orange) } } }
             }
+        }
+    }
+    
+    /// Returns a user-friendly display name for color options
+    private func colorDisplayName(for colorName: String) -> String {
+        switch colorName {
+        case "retro": return "Retro"
+        case "electricBlue": return "Electric Blue ⚡"
+        case "neonGreen": return "Neon Green 💚"
+        case "vibrantOrange": return "Vibrant Orange 🔥"
+        case "deepPurple": return "Deep Purple 💜"
+        case "royalBlue": return "Royal Blue 👑"
+        case "coralRed": return "Coral Red ❤️"
+        case "custom": return "Custom"
+        default: return colorName.capitalized
         }
     }
     

@@ -20,6 +20,8 @@ struct InlineLinkPreview: View {
     private static let fetchTimeoutSeconds: TimeInterval = 10.0
     
     var body: some View {
+        let shadowConfig = ThemeColors.cardShadow(for: colorScheme)
+        
         VStack(spacing: 0) {
             if isLoading {
                 loadingView
@@ -31,11 +33,17 @@ struct InlineLinkPreview: View {
         }
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(colorScheme == .dark ? Color(.systemGray6) : Color(.systemGray6))
+                .fill(ThemeColors.cardBackground(for: colorScheme))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                .stroke(ThemeColors.cardBorder(for: colorScheme), lineWidth: colorScheme == .dark ? 0.5 : 0)
+        )
+        .shadow(
+            color: shadowConfig.color,
+            radius: shadowConfig.radius,
+            x: shadowConfig.x,
+            y: shadowConfig.y
         )
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
