@@ -92,7 +92,7 @@ struct LinkPreviewCard: View {
     private func contentView(metadata: LPLinkMetadata) -> some View {
         let shadowConfig = ThemeColors.cardShadow(for: colorScheme)
         
-        ScrollView {
+        return ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 // Card
                 VStack(alignment: .leading, spacing: 12) {
