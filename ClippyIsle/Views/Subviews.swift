@@ -115,36 +115,58 @@ struct ClipboardItemRow: View {
     var linkPreviewAction: (() -> Void)? = nil
     var onTagLongPress: ((String) -> Void)? = nil
     @Environment(\.colorScheme) var colorScheme
+    
+    // Modern card colors
+    private var cardBackground: Color {
+        colorScheme == .dark ? ClippyIsleAttributes.ColorUtility.darkCard : Color(.systemBackground)
+    }
+    
+    private var cardElevatedBackground: Color {
+        colorScheme == .dark ? ClippyIsleAttributes.ColorUtility.darkCardElevated : Color(.secondarySystemBackground)
+    }
+    
+    private var cardBorder: Color {
+        colorScheme == .dark ? ClippyIsleAttributes.ColorUtility.darkBorder : Color(.separator).opacity(0.3)
+    }
 
     var body: some View {
-        HStack(spacing: 15) {
+        HStack(spacing: 16) {
+            // Icon button with modern styling
             Button(action: copyAction) {
-                Text(itemIcon(for: item.type))
-                    .font(.system(size: 24, weight: .bold))
-                    .frame(width: 30)
-                    .foregroundColor(themeColor)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(themeColor.opacity(colorScheme == .dark ? 0.2 : 0.15))
+                        .frame(width: 44, height: 44)
+                    Text(itemIcon(for: item.type))
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundColor(themeColor)
+                }
             }
             .buttonStyle(.plain)
 
+            // Content area
             HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(item.displayName ?? item.content).lineLimit(1).font(.body).foregroundColor(colorScheme == .light ? Color(.darkGray) : .primary)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(item.displayName ?? item.content)
+                        .lineLimit(2)
+                        .font(.system(size: 15, weight: .medium, design: .rounded))
+                        .foregroundColor(colorScheme == .dark ? .white : Color(.darkGray))
+                    
                     HStack(spacing: 8) {
                         if let tags = item.tags, !tags.isEmpty {
                             ScrollView(.horizontal, showsIndicators: false) { 
-                                HStack { 
+                                HStack(spacing: 6) { 
                                     ForEach(tags, id: \.self) { tag in 
                                         let customColor = clipboardManager?.getTagColor(tag)
-                                        let tagColor = customColor ?? Color.gray.opacity(0.2)
-                                        let textColor = customColor != nil ? Color.white : Color.primary
-                                        TagChipView(
+                                        let tagColor = customColor ?? (colorScheme == .dark ? Color.white.opacity(0.15) : Color.gray.opacity(0.15))
+                                        let textColor = customColor != nil ? Color.white : (colorScheme == .dark ? Color.white.opacity(0.8) : Color.primary.opacity(0.8))
+                                        ModernTagChip(
                                             tag: tag,
                                             tagColor: tagColor,
                                             textColor: textColor,
                                             onFilter: {
                                                 if let onTagLongPress = self.onTagLongPress {
                                                     onTagLongPress(tag)
-                                                    // Add haptic feedback
                                                     let generator = UIImpactFeedbackGenerator(style: .medium)
                                                     generator.impactOccurred()
                                                 }
@@ -155,36 +177,89 @@ struct ClipboardItemRow: View {
                             }
                         }
                         Spacer()
-                        Text(item.timestamp.timeAgoDisplay()).font(.caption).foregroundColor(.secondary).lineLimit(1)
-                    }.frame(height: 20)
+                        Text(item.timestamp.timeAgoDisplay())
+                            .font(.system(size: 12, weight: .regular, design: .rounded))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }.frame(height: 22)
                 }
                 Spacer()
+                
+                // Chevron indicator for modern look
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.secondary.opacity(0.5))
             }
             .contentShape(Rectangle())
             .onTapGesture(perform: previewAction)
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(cardBackground)
+                .shadow(color: colorScheme == .dark ? Color.black.opacity(0.3) : Color.black.opacity(0.08), radius: colorScheme == .dark ? 8 : 4, x: 0, y: 2)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(isHighlighted ? themeColor : cardBorder, lineWidth: isHighlighted ? 2 : 0.5)
+        )
+        // Pin indicator - modern floating badge
+        .overlay(alignment: .topTrailing) {
+            if item.isPinned {
+                Image(systemName: "pin.fill")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(5)
+                    .background(
+                        Circle()
+                            .fill(themeColor)
+                            .shadow(color: themeColor.opacity(0.4), radius: 4, x: 0, y: 2)
+                    )
+                    .offset(x: 6, y: -6)
+            }
+        }
         .contentShape(Rectangle())
-        .padding(.vertical, 8)
-        .padding(.horizontal, isHighlighted ? 8 : 0)
         .onDrag(createDragItem)
         .swipeActions(edge: .leading) {
-            Button("Share", action: shareAction).tint(.blue)
+            Button("Share", action: shareAction).tint(themeColor)
             Button(item.isPinned ? "Unpin" : "Pin", action: togglePinAction).tint(Color(UIColor.systemGray4))
         }
         .swipeActions(edge: .trailing) {
             Button("Delete", action: deleteAction).tint(Color(UIColor.systemGray3))
-            Button("Tag", action: tagAction).tint(Color(UIColor.systemBlue).opacity(0.55))
-            Button("Rename", action: renameAction).tint(Color(UIColor.systemBlue).opacity(0.55))
+            Button("Tag", action: tagAction).tint(themeColor.opacity(0.7))
+            Button("Rename", action: renameAction).tint(themeColor.opacity(0.7))
         }
-        // **FIX**: Updated padding syntax and added shape
-        .overlay(Group { if item.isPinned { CornerTriangleShape().fill(Color.red).frame(width: 12, height: 12).padding([.top, .trailing], 4) } }, alignment: .topTrailing)
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(themeColor, lineWidth: isHighlighted ? 3 : 0)
-                .padding(2)
-        )
-        .animation(.easeInOut, value: isHighlighted)
-        .clipped()
+        .animation(.easeInOut(duration: 0.2), value: isHighlighted)
+    }
+}
+
+// MARK: - Modern Tag Chip for Card Design
+struct ModernTagChip: View {
+    let tag: String
+    let tagColor: Color
+    let textColor: Color
+    let onFilter: () -> Void
+    
+    var body: some View {
+        Text(tag)
+            .font(.system(size: 11, weight: .medium, design: .rounded))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                Capsule()
+                    .fill(tagColor)
+            )
+            .foregroundColor(textColor)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 10)
+                    .onEnded { value in
+                        if abs(value.translation.width) > abs(value.translation.height) * 1.5 {
+                            onFilter()
+                        }
+                    }
+            )
     }
 }
 

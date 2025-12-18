@@ -22,6 +22,7 @@ struct AudioFileManagerView: View {
     @State private var itemToDelete: AudioFileItem?
     
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
     
     @AppStorage("previewFontSize") private var previewFontSize: Double = 17.0
 
@@ -36,6 +37,14 @@ struct AudioFileManagerView: View {
             return Color(red: customColorRed, green: customColorGreen, blue: customColorBlue)
         }
         return ClippyIsleAttributes.ColorUtility.color(forName: themeColorName)
+    }
+    
+    private var cardBackground: Color {
+        colorScheme == .dark ? ClippyIsleAttributes.ColorUtility.darkCard : Color(.systemBackground)
+    }
+    
+    private var cardBorder: Color {
+        colorScheme == .dark ? ClippyIsleAttributes.ColorUtility.darkBorder : Color(.separator).opacity(0.3)
     }
     
     struct AudioFileItem: Identifiable, Equatable {
@@ -58,60 +67,67 @@ struct AudioFileManagerView: View {
                 Section(header: Text("Summary")) {
                     HStack {
                         Text("Total Space Used")
+                            .font(.system(size: 15, weight: .medium, design: .rounded))
                         Spacer()
                         Text(ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file))
+                            .font(.system(size: 15, weight: .regular, design: .rounded))
                             .foregroundColor(.secondary)
                     }
+                    .padding(.vertical, 4)
+                    
                     if !audioFiles.isEmpty {
                         Button("Delete All Audio Files", role: .destructive) {
                             deleteConfirmationText = ""
                             isShowingDeleteAllAlert = true
                         }
+                        .font(.system(size: 15, weight: .medium, design: .rounded))
                     }
                 }
                 
                 Section(header: Text("Files")) {
                     if audioFiles.isEmpty {
-                        Text("No audio files found.").foregroundColor(.secondary)
+                        Text("No audio files found.")
+                            .font(.system(size: 15, weight: .regular, design: .rounded))
+                            .foregroundColor(.secondary)
                     } else {
                         ForEach(audioFiles) { file in
-                            HStack(spacing: 12) {
-                                // **修正 1**: 使用 Button 取代單純的 Image，增加點擊靈敏度
+                            HStack(spacing: 14) {
+                                // Modern play button with card styling
                                 Button(action: {
                                     let generator = UIImpactFeedbackGenerator(style: .medium)
                                     generator.impactOccurred()
                                     togglePlayback(for: file)
                                 }) {
-                                    Image(systemName: isPlaying(file) ? "stop.circle.fill" : "play.circle")
-                                        .font(.title2)
-                                        .foregroundColor(themeColor)
-                                        .frame(width: 44, height: 44) // 增加觸控範圍
-                                        .contentShape(Rectangle())
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(themeColor.opacity(colorScheme == .dark ? 0.2 : 0.15))
+                                            .frame(width: 44, height: 44)
+                                        Image(systemName: isPlaying(file) ? "stop.fill" : "play.fill")
+                                            .font(.system(size: 16, weight: .bold))
+                                            .foregroundColor(themeColor)
+                                    }
                                 }
-                                .buttonStyle(PlainButtonStyle()) // 避免點擊時整行閃爍
+                                .buttonStyle(PlainButtonStyle())
 
-                                VStack(alignment: .leading, spacing: 4) {
-                                    // 文字區域點擊也可以播放，或保留跑馬燈
+                                VStack(alignment: .leading, spacing: 5) {
                                     ClickableMarqueeText(
                                         text: file.displayTitle,
                                         isPlaying: isPlaying(file),
                                         highlightColor: themeColor
                                     )
                                     
-                                    HStack {
+                                    HStack(spacing: 6) {
                                         Text(file.creationDate.formatted(date: .abbreviated, time: .shortened))
                                         Text("•")
                                         Text(file.sizeString)
                                     }
-                                    .font(.caption)
+                                    .font(.system(size: 12, weight: .regular, design: .rounded))
                                     .foregroundColor(.secondary)
                                 }
-                                // **修正 2**: 讓文字區域也能觸發播放，提升體驗
                                 .onTapGesture {
                                     togglePlayback(for: file)
                                 }
                                 .onLongPressGesture {
-                                    // Open the corresponding clipboard item
                                     if let itemID = file.originalItemID,
                                        let item = clipboardManager.items.first(where: { $0.id == itemID }) {
                                         onOpenItem?(item)
@@ -121,10 +137,23 @@ struct AudioFileManagerView: View {
                                 
                                 Spacer()
                             }
-                            // **修正 3**: 移除整行的 onTapGesture，避免與 List 手勢衝突
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .fill(cardBackground)
+                                    .shadow(color: colorScheme == .dark ? Color.black.opacity(0.3) : Color.black.opacity(0.06), radius: 4, x: 0, y: 2)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .strokeBorder(cardBorder, lineWidth: 0.5)
+                            )
+                            .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
                             .contentShape(Rectangle())
                             .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                                Button { shareFile(file.url) } label: { Text("Share") }.tint(.blue)
+                                Button { shareFile(file.url) } label: { Text("Share") }.tint(themeColor)
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 Button {
@@ -136,6 +165,9 @@ struct AudioFileManagerView: View {
                     }
                 }
             }
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .background(colorScheme == .dark ? ClippyIsleAttributes.ColorUtility.darkBackground : Color(.systemGroupedBackground))
         }
         .navigationTitle("音訊管理")
         .navigationBarTitleDisplayMode(.inline)
@@ -245,7 +277,9 @@ struct ClickableMarqueeText: View {
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
-                Text(text).font(.body).foregroundColor(isPlaying ? highlightColor : .primary)
+                Text(text)
+                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                    .foregroundColor(isPlaying ? highlightColor : .primary)
                     .lineLimit(1).fixedSize(horizontal: true, vertical: false)
                     .background(GeometryReader { textGeo in Color.clear.onAppear { textWidth = textGeo.size.width }.onChange(of: text) { _, newText in textWidth = textGeo.size.width; isAnimating = false } })
                     .offset(x: isAnimating ? -(textWidth - containerWidth + 20) : 0)
