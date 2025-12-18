@@ -102,6 +102,9 @@ class ShareViewController: UIViewController {
             defaults.set(encodedData, forKey: "clippedItems")
             print("✅ Share Extension: Saved new item.")
         }
+        
+        // Also add to pending notifications for Message Center
+        addToPendingNotifications([newItem], source: "appShare", defaults: defaults)
     }
     
     // Import JSON data (ClippyIsle backup file)
@@ -171,8 +174,59 @@ class ShareViewController: UIViewController {
             let encodedData = try JSONEncoder().encode(existingItems)
             defaults.set(encodedData, forKey: "clippedItems")
             print("✅ Share Extension: Imported \(newItemsCount) new items from JSON.")
+            
+            // Also add imported items to pending notifications for Message Center
+            let importedClipboardItems = importedItems.map { importedItem in
+                ClipboardItem(
+                    id: importedItem.id,
+                    content: importedItem.content,
+                    type: importedItem.type,
+                    filename: importedItem.filename,
+                    timestamp: importedItem.timestamp,
+                    isPinned: importedItem.isPinned,
+                    displayName: importedItem.displayName,
+                    isTrashed: importedItem.isTrashed,
+                    tags: importedItem.tags,
+                    fileData: nil
+                )
+            }
+            addToPendingNotifications(importedClipboardItems, source: "appShare", defaults: defaults)
         } catch {
             print("❌ Share Extension: Failed to import JSON data: \(error.localizedDescription)")
+        }
+    }
+    
+    // Add items to pending notifications for Message Center
+    private func addToPendingNotifications(_ items: [ClipboardItem], source: String, defaults: UserDefaults) {
+        // Use a simple structure that can be decoded by the main app
+        struct PendingNotification: Codable {
+            var id: UUID
+            var items: [ClipboardItem]
+            var timestamp: Date
+            var source: String
+        }
+        
+        var pendingNotifications: [PendingNotification] = []
+        
+        // Load existing pending notifications
+        if let data = defaults.data(forKey: "pendingNotifications"),
+           let decoded = try? JSONDecoder().decode([PendingNotification].self, from: data) {
+            pendingNotifications = decoded
+        }
+        
+        // Add new notification
+        let newNotification = PendingNotification(
+            id: UUID(),
+            items: items,
+            timestamp: Date(),
+            source: source
+        )
+        pendingNotifications.insert(newNotification, at: 0)
+        
+        // Save back
+        if let encoded = try? JSONEncoder().encode(pendingNotifications) {
+            defaults.set(encoded, forKey: "pendingNotifications")
+            print("✅ Share Extension: Added notification with \(items.count) item(s) to pending notifications.")
         }
     }
     

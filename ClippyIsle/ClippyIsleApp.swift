@@ -125,9 +125,11 @@ struct ClippyIsleApp: App {
                     if pendingItems.isEmpty {
                         print("⚠️ No valid items found in shared data")
                     } else {
-                        print("📥 Loaded \(pendingItems.count) shared item(s), showing selection dialog")
-                        // Show selection dialog instead of auto-importing
-                        self.pendingShareManager.setPendingItems(pendingItems)
+                        print("📥 Loaded \(pendingItems.count) shared item(s), adding to message center")
+                        // Add to notification manager for Message Center
+                        Task { @MainActor in
+                            NotificationManager.shared.addNotification(items: pendingItems, source: .deepLink)
+                        }
                     }
                 }
             case .failure(let error):

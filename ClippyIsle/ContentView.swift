@@ -66,6 +66,10 @@ struct ContentView: View {
     
     // iPad fullscreen preview state
     @State private var isPreviewFullscreen = false
+    
+    // Message Center state
+    @State private var isShowingMessageCenter = false
+    @StateObject private var notificationManager = NotificationManager.shared
 
     @AppStorage("themeColorName") private var themeColorName: String = "blue"
     
@@ -147,6 +151,9 @@ struct ContentView: View {
             case .active:
                 checkActivityStatus()
                 clipboardManager.cloudKitManager.checkAccountStatus()
+                
+                // Check for pending notifications from Share Extension
+                notificationManager.checkForPendingNotifications()
                 
                 // Reload items from UserDefaults to pick up items added via Share Extension
                 let oldIDs = Set(clipboardManager.items.lazy.map { $0.id })
@@ -312,6 +319,13 @@ struct ContentView: View {
                 pendingShareManager.clearPendingItems()
             }
         }
+        // Message Center sheet
+        .sheet(isPresented: $isShowingMessageCenter) {
+            MessageCenterView(
+                notificationManager: notificationManager,
+                clipboardManager: clipboardManager
+            )
+        }
     }
     
     private func stopTranscription() {
@@ -333,6 +347,27 @@ struct ContentView: View {
                 else { Button { clipboardManager.isLiveActivityOn.toggle() } label: { Image(systemName: "c.circle.fill").font(.system(size: 20, weight: .bold)).foregroundColor(clipboardManager.isLiveActivityOn ? Color.green : Color.red) }.disabled(!areActivitiesEnabled) }
             }
             ToolbarItemGroup(placement: .navigationBarTrailing) {
+                // Message Center button with badge
+                Button { isShowingMessageCenter = true } label: {
+                    ZStack(alignment: .topTrailing) {
+                        Image(systemName: "tray.circle.fill")
+                            .font(.system(size: 20, weight: .bold))
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                        
+                        // Badge for unread count
+                        if notificationManager.unreadCount > 0 {
+                            Text("\(notificationManager.unreadCount)")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.white)
+                                .frame(minWidth: 16, minHeight: 16)
+                                .background(Color.red)
+                                .clipShape(Circle())
+                                .offset(x: 8, y: -4)
+                        }
+                    }
+                }
+                
                 Button { isShowingTagSheet = true } label: {
                     Image(systemName: "tag.circle.fill")
                         .font(.system(size: 20, weight: .bold))

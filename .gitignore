@@ -1,2 +1,2 @@
-# 這裡使用 nano 編輯器作為範例
-nano .gitignore
+.DS_Store
+*.xcuserstate
