@@ -69,6 +69,9 @@ struct ContentView: View {
     // State to control Audio Manager sheet
     @State private var isShowingAudioManager = false
     
+    // State to control search field focus (for radial menu Search action)
+    @FocusState private var isSearchFieldFocused: Bool
+    
     // Firebase share state
     @State private var isSharingFirebase = false
     @State private var firebaseShareURL: String?
@@ -374,7 +377,37 @@ struct ContentView: View {
             
             VStack(spacing: 0) {
                 if clipboardManager.dataLoadError != nil { dataErrorView }
-                else { ZStack(alignment: .bottom) { listContent; bottomToolbar.padding(.bottom, 8) } }
+                else { 
+                    ZStack(alignment: .bottom) { 
+                        listContent
+                        bottomToolbar.padding(.bottom, 8)
+                    }
+                    .overlay(alignment: .bottomTrailing) {
+                        // Radial Menu FAB
+                        RadialMenuView(
+                            themeColor: themeColor,
+                            onSearch: {
+                                // Focus the search field
+                                isSearchFieldFocused = true
+                            },
+                            onNewItem: {
+                                let oldIDs = Set(clipboardManager.items.map { $0.id })
+                                clipboardManager.addNewItem(content: String(localized: "New Item"), type: UTType.text.identifier)
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                    if let newItem = clipboardManager.items.first(where: { !oldIDs.contains($0.id) }) { highlightAndScroll(to: newItem.id) }
+                                }
+                            },
+                            onPasteFromClipboard: {
+                                let oldIDs = Set(clipboardManager.items.map { $0.id })
+                                clipboardManager.checkClipboard(isManual: true)
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                    if let newItem = clipboardManager.items.first(where: { !oldIDs.contains($0.id) }) { highlightAndScroll(to: newItem.id) }
+                                }
+                            }
+                        )
+                        .padding(.bottom, 80) // Position above the bottom toolbar
+                    }
+                }
             }
         }
         .navigationTitle(navigationTitle).navigationBarTitleDisplayMode(selectedTagFilter == nil ? .large : .inline)
@@ -621,6 +654,7 @@ struct ContentView: View {
                 .foregroundColor(colorScheme == .dark ? .white.opacity(0.7) : .gray)
                 .padding(.leading, 12)
             TextField("Search...", text: $searchText)
+                .focused($isSearchFieldFocused)
                 .padding(.horizontal, 8)
                 .submitLabel(.search)
                 .foregroundColor(colorScheme == .dark ? .white : .primary)
@@ -643,35 +677,6 @@ struct ContentView: View {
                 Image(systemName: "mic.fill")
                     .foregroundColor(isTranscribing ? .red : (colorScheme == .dark ? .white.opacity(0.7) : .gray))
             }
-            .padding(.trailing, 8)
-            
-            Rectangle()
-                .frame(width: 1, height: 20)
-                .foregroundColor(colorScheme == .dark ? .white.opacity(0.3) : .gray.opacity(0.3))
-                .padding(.horizontal, 4)
-            Menu {
-                Button {
-                    let oldIDs = Set(clipboardManager.items.map { $0.id })
-                    clipboardManager.addNewItem(content: String(localized: "New Item"), type: UTType.text.identifier)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                        if let newItem = clipboardManager.items.first(where: { !oldIDs.contains($0.id) }) { highlightAndScroll(to: newItem.id) }
-                    }
-                } label: { Label("New Item", systemImage: "square.and.pencil") }
-                
-                Button {
-                    let oldIDs = Set(clipboardManager.items.map { $0.id })
-                    clipboardManager.checkClipboard(isManual: true)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                        if let newItem = clipboardManager.items.first(where: { !oldIDs.contains($0.id) }) { highlightAndScroll(to: newItem.id) }
-                    }
-                } label: { Label("Add from Clipboard", systemImage: "doc.on.clipboard") }
-            } label: { 
-                Image(systemName: "plus")
-                    .font(.system(size: 14, weight: .bold))
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(themeColor)
-            .clipShape(Capsule())
             .padding(.trailing, 12)
         }
         .frame(height: bottomToolbarHeight)
