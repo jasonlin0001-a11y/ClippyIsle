@@ -36,10 +36,10 @@ struct RadialMenuButton: View {
         guard isExpanded else {
             return .zero
         }
-        let radians = angle * .pi / 180
+        let radians = CGFloat(angle) * .pi / 180
         return CGSize(
-            width: cos(radians) * expandedRadius,
-            height: sin(radians) * expandedRadius
+            width: Darwin.cos(radians) * expandedRadius,
+            height: Darwin.sin(radians) * expandedRadius
         )
     }
     
