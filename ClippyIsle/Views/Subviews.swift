@@ -491,6 +491,10 @@ struct TagFilterView: View {
     @AppStorage("customColorGreen") private var customColorGreen: Double = 0.478
     @AppStorage("customColorBlue") private var customColorBlue: Double = 1.0
     
+    // Firebase password settings
+    @AppStorage("firebasePasswordEnabled") private var firebasePasswordEnabled: Bool = false
+    @AppStorage("firebasePassword") private var firebasePassword: String = ""
+    
     var themeColor: Color {
         if themeColorName == "custom" {
             return Color(red: customColorRed, green: customColorGreen, blue: customColorBlue)
@@ -669,8 +673,12 @@ struct TagFilterView: View {
             return
         }
         
+        // Get password if enabled
+        let password: String? = firebasePasswordEnabled && !firebasePassword.isEmpty ? firebasePassword : nil
+        print("🔐 shareSelectedTagsViaFirebase: firebasePasswordEnabled=\(firebasePasswordEnabled), hasPassword=\(password != nil)")
+        
         isSharingFirebase = true
-        FirebaseManager.shared.shareItems(filteredItems) { result in
+        FirebaseManager.shared.shareItems(filteredItems, password: password) { result in
             DispatchQueue.main.async {
                 self.isSharingFirebase = false
                 switch result {
