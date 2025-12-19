@@ -542,16 +542,16 @@ struct ContentView: View {
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                    // Right swipe: Share action (blue background)
+                    // Right swipe: Share action (blue background - matches Tag Management style)
                     .swipeActions(edge: .leading, allowsFullSwipe: false) {
                         Button {
                             shareItem(item: item)
                         } label: {
                             Label("Share", systemImage: "square.and.arrow.up")
                         }
-                        .tint(.blue)
+                        .tint(Color(UIColor.systemBlue).opacity(0.55))
                     }
-                    // Left swipe: Rename, Tag, Delete actions
+                    // Left swipe: Rename, Tag, Delete actions (matches Tag Management style)
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         // Delete (destructive - red)
                         Button(role: .destructive) {
@@ -561,15 +561,15 @@ struct ContentView: View {
                             Label("Delete", systemImage: "trash")
                         }
                         
-                        // Tag (orange)
+                        // Tag (blue - matches Tag Management style)
                         Button {
                             openTagSheet(for: item)
                         } label: {
                             Label("Tag", systemImage: "tag")
                         }
-                        .tint(.orange)
+                        .tint(Color(UIColor.systemBlue).opacity(0.55))
                         
-                        // Rename (yellow)
+                        // Rename (blue - matches Tag Management style)
                         Button {
                             itemToRename = item
                             newName = item.displayName ?? ""
@@ -577,17 +577,7 @@ struct ContentView: View {
                         } label: {
                             Label("Rename", systemImage: "pencil")
                         }
-                        .tint(.yellow)
-                    }
-                    // Context menu for additional actions
-                    .contextMenu {
-                        Button { shareItem(item: item) } label: { Label("Share", systemImage: "square.and.arrow.up") }
-                        Button { clipboardManager.togglePin(for: item) } label: { Label(item.isPinned ? "Unpin" : "Pin", systemImage: item.isPinned ? "pin.slash" : "pin") }
-                        Divider()
-                        Button { itemToRename = item; newName = item.displayName ?? ""; isShowingRenameAlert = true } label: { Label("Rename", systemImage: "pencil") }
-                        Button { openTagSheet(for: item) } label: { Label("Tag", systemImage: "tag") }
-                        Divider()
-                        Button(role: .destructive) { itemToDelete = item; isShowingDeleteConfirm = true } label: { Label("Delete", systemImage: "trash") }
+                        .tint(Color(UIColor.systemBlue).opacity(0.55))
                     }
                 }
             }
