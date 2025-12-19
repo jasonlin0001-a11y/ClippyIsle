@@ -395,18 +395,12 @@ struct ContentView: View {
                 // Unified capsule container for navigation icons
                 let hasUnreadNotifications = notificationManager.unreadCount > 0
                 HStack(spacing: 4) {
-                    // Message Center button with badge (centered)
+                    // Message Center button with badge (uniform style - no individual background)
                     Button { isShowingMessageCenter = true } label: {
                         ZStack {
-                            // Active state background (highlight when there are unread notifications)
-                            if hasUnreadNotifications {
-                                Capsule()
-                                    .fill(themeColor)
-                                    .frame(width: navIconWidth, height: navIconHeight)
-                            }
                             Image(systemName: "tray.fill")
                                 .font(.system(size: navIconFontSize, weight: .semibold))
-                                .foregroundColor(hasUnreadNotifications ? .white : themeColor)
+                                .foregroundColor(themeColor)
                             
                             // Badge for unread count - centered on the button
                             if hasUnreadNotifications {
