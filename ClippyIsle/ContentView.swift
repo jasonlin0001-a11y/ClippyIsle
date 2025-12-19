@@ -395,7 +395,7 @@ struct ContentView: View {
                 // Unified capsule container for navigation icons
                 let hasUnreadNotifications = notificationManager.unreadCount > 0
                 HStack(spacing: 4) {
-                    // Message Center button with badge
+                    // Message Center button with badge (centered)
                     Button { isShowingMessageCenter = true } label: {
                         ZStack {
                             // Active state background (highlight when there are unread notifications)
@@ -406,20 +406,19 @@ struct ContentView: View {
                             }
                             Image(systemName: "tray.fill")
                                 .font(.system(size: navIconFontSize, weight: .semibold))
-                                .foregroundColor(hasUnreadNotifications ? .white : .white.opacity(0.9))
+                                .foregroundColor(hasUnreadNotifications ? .white : themeColor)
+                            
+                            // Badge for unread count - centered on the button
+                            if hasUnreadNotifications {
+                                Text("\(notificationManager.unreadCount)")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .frame(minWidth: 14, minHeight: 14)
+                                    .background(Color.red)
+                                    .clipShape(Circle())
+                            }
                         }
-                    }
-                    .overlay(alignment: .topTrailing) {
-                        // Badge for unread count
-                        if hasUnreadNotifications {
-                            Text("\(notificationManager.unreadCount)")
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundColor(.white)
-                                .frame(minWidth: 14, minHeight: 14)
-                                .background(Color.red)
-                                .clipShape(Circle())
-                                .offset(x: 4, y: -4)
-                        }
+                        .frame(width: navIconWidth, height: navIconHeight)
                     }
                     
                     // Tag button
@@ -451,7 +450,7 @@ struct ContentView: View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: navIconFontSize, weight: .semibold))
-                .foregroundColor(.white.opacity(0.9))
+                .foregroundColor(themeColor)
                 .frame(width: navIconWidth, height: navIconHeight)
         }
     }

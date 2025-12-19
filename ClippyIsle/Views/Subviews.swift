@@ -119,15 +119,39 @@ struct ClipboardItemRow: View {
     var body: some View {
         HStack(spacing: 15) {
             Button(action: copyAction) {
-                // Rounded square icon container with themeColor fill
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(themeColor.opacity(0.8))
-                    .frame(width: 44, height: 44)
-                    .overlay(
-                        Text(itemIcon(for: item.type))
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(.white)
-                    )
+                // Corner bracket minimalist icon design
+                ZStack {
+                    // Center text
+                    Text(itemIcon(for: item.type))
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.primary)
+                    
+                    // Corner brackets using themeColor
+                    // Top-left corner
+                    Text("┌")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(themeColor)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    
+                    // Top-right corner
+                    Text("┐")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(themeColor)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    
+                    // Bottom-left corner
+                    Text("└")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(themeColor)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                    
+                    // Bottom-right corner
+                    Text("┘")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(themeColor)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                }
+                .frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
 
