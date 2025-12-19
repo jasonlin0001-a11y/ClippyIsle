@@ -19,6 +19,8 @@ struct ContentView: View {
     // Constants for consistent UI sizing
     private let bottomToolbarHeight: CGFloat = 50
     private var bottomToolbarPadding: CGFloat { bottomToolbarHeight + 30 } // toolbar height + margin
+    private let badgeOffsetX: CGFloat = 10
+    private let badgeOffsetY: CGFloat = -8
 
     @StateObject private var clipboardManager: ClipboardManager
     @StateObject private var speechManager = SpeechManager()
@@ -398,7 +400,7 @@ struct ContentView: View {
                                 .frame(minWidth: 16, minHeight: 16)
                                 .background(Color.red)
                                 .clipShape(Circle())
-                                .offset(x: 10, y: -8)
+                                .offset(x: badgeOffsetX, y: badgeOffsetY)
                         }
                     }
                 }
@@ -638,24 +640,28 @@ struct ContentView: View {
             .padding(.trailing, 12)
         }
         .frame(height: bottomToolbarHeight)
-        .background(
-            Capsule()
-                .fill(
-                    colorScheme == .dark
-                        ? AnyShapeStyle(LinearGradient(
-                            gradient: Gradient(colors: [themeColor.opacity(0.6), Color.black.opacity(0.8)]),
-                            startPoint: .leading,
-                            endPoint: .trailing
-                          ))
-                        : AnyShapeStyle(Color.white)
-                )
-        )
+        .background(bottomToolbarBackground)
         .shadow(
             color: colorScheme == .dark ? .black.opacity(0.3) : .black.opacity(0.1),
             radius: colorScheme == .dark ? 8 : 4,
             y: 4
         )
         .padding(.horizontal, 22)
+    }
+    
+    @ViewBuilder
+    private var bottomToolbarBackground: some View {
+        if colorScheme == .dark {
+            Capsule()
+                .fill(LinearGradient(
+                    gradient: Gradient(colors: [themeColor.opacity(0.6), Color.black.opacity(0.8)]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                ))
+        } else {
+            Capsule()
+                .fill(Color.white)
+        }
     }
     
     @ViewBuilder private func previewSheetContent(isFullscreen: Bool, onToggleFullscreen: @escaping () -> Void) -> some View {
