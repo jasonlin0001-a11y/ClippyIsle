@@ -1,6 +1,15 @@
 import Foundation
 import FirebaseCore
 import FirebaseFirestore
+import CryptoKit
+
+// MARK: - Share Metadata
+/// Metadata about a shared clipboard, including password protection status
+struct ShareMetadata {
+    let hasPassword: Bool
+    let sharerNickname: String?
+    let itemCount: Int
+}
 
 // MARK: - Firebase Manager
 class FirebaseManager {
@@ -11,6 +20,14 @@ class FirebaseManager {
     
     private init() {
         self.db = Firestore.firestore()
+    }
+    
+    // MARK: - Password Hashing
+    /// Hashes a password using SHA256
+    private func hashPassword(_ password: String) -> String {
+        let data = Data(password.utf8)
+        let hash = SHA256.hash(data: data)
+        return hash.compactMap { String(format: "%02x", $0) }.joined()
     }
     
     // MARK: - Upload Items
@@ -100,35 +117,6 @@ class FirebaseManager {
         }
     }
     
-    // MARK: - Download Items by Share ID
-    /// Downloads shared clipboard items data from Firestore by share ID
-    /// - Parameters:
-    ///   - shareId: The share document ID to fetch
-    ///   - completion: Result callback with array of raw item dictionaries or error
-    /// - Note: Returns raw JSON data to avoid Core Data context issues. Caller should create ClipboardItem instances with appropriate context.
-    func downloadItems(byShareId shareId: String, completion: @escaping (Result<[[String: Any]], Error>) -> Void) {
-        db.collection("sharedClipboards").document(shareId).getDocument { snapshot, error in
-            if let error = error {
-                completion(.failure(error))
-                return
-            }
-            
-            guard let document = snapshot, document.exists, let data = document.data() else {
-                completion(.failure(NSError(domain: "FirebaseManager", code: 404, userInfo: [NSLocalizedDescriptionKey: "Share not found"])))
-                return
-            }
-            
-            // Extract items array from the shared document
-            guard let itemsData = data["items"] as? [[String: Any]] else {
-                completion(.failure(NSError(domain: "FirebaseManager", code: 400, userInfo: [NSLocalizedDescriptionKey: "Invalid share data"])))
-                return
-            }
-            
-            // Return raw data for caller to process
-            completion(.success(itemsData))
-        }
-    }
-    
     // MARK: - Delete Items
     /// Deletes clipboard items from Firestore
     /// - Parameters:
@@ -155,8 +143,9 @@ class FirebaseManager {
     /// Creates a shareable link for clipboard items by uploading to Firestore
     /// - Parameters:
     ///   - items: Array of ClipboardItem to share
+    ///   - password: Optional password for protecting the share
     ///   - completion: Result callback with shareable URL string or error
-    func shareItems(_ items: [ClipboardItem], completion: @escaping (Result<String, Error>) -> Void) {
+    func shareItems(_ items: [ClipboardItem], password: String? = nil, completion: @escaping (Result<String, Error>) -> Void) {
         // Convert items to array of dictionaries
         var itemsData: [[String: Any]] = []
         
@@ -195,6 +184,11 @@ class FirebaseManager {
             shareData["sharerNickname"] = nickname
         }
         
+        // Add password hash if password is provided
+        if let password = password, !password.isEmpty {
+            shareData["passwordHash"] = hashPassword(password)
+        }
+        
         // Add document and get auto-generated ID
         let docRef = db.collection("sharedClipboards").document()
         docRef.setData(shareData) { error in
@@ -206,6 +200,75 @@ class FirebaseManager {
                 let shareURL = "https://cc-isle.web.app/share?id=\(shareId)"
                 completion(.success(shareURL))
             }
+        }
+    }
+    
+    // MARK: - Get Share Metadata
+    /// Fetches metadata about a shared clipboard to check if it requires a password
+    /// - Parameters:
+    ///   - shareId: The share document ID to fetch metadata for
+    ///   - completion: Result callback with ShareMetadata or error
+    func getShareMetadata(shareId: String, completion: @escaping (Result<ShareMetadata, Error>) -> Void) {
+        db.collection("sharedClipboards").document(shareId).getDocument { snapshot, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let document = snapshot, document.exists, let data = document.data() else {
+                completion(.failure(NSError(domain: "FirebaseManager", code: 404, userInfo: [NSLocalizedDescriptionKey: "Share not found"])))
+                return
+            }
+            
+            let hasPassword = data["passwordHash"] != nil
+            let sharerNickname = data["sharerNickname"] as? String
+            let itemCount = data["itemCount"] as? Int ?? 0
+            
+            let metadata = ShareMetadata(hasPassword: hasPassword, sharerNickname: sharerNickname, itemCount: itemCount)
+            completion(.success(metadata))
+        }
+    }
+    
+    // MARK: - Download Items with Password
+    /// Downloads shared clipboard items data from Firestore by share ID with password verification
+    /// - Parameters:
+    ///   - shareId: The share document ID to fetch
+    ///   - password: The password to verify (nil if no password protection)
+    ///   - completion: Result callback with array of raw item dictionaries or error
+    func downloadItems(byShareId shareId: String, password: String?, completion: @escaping (Result<[[String: Any]], Error>) -> Void) {
+        db.collection("sharedClipboards").document(shareId).getDocument { [weak self] snapshot, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let document = snapshot, document.exists, let data = document.data() else {
+                completion(.failure(NSError(domain: "FirebaseManager", code: 404, userInfo: [NSLocalizedDescriptionKey: "Share not found"])))
+                return
+            }
+            
+            // Check password if required
+            if let storedHash = data["passwordHash"] as? String {
+                guard let password = password, !password.isEmpty else {
+                    completion(.failure(NSError(domain: "FirebaseManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "Password required"])))
+                    return
+                }
+                
+                let providedHash = self?.hashPassword(password) ?? ""
+                if providedHash != storedHash {
+                    completion(.failure(NSError(domain: "FirebaseManager", code: 403, userInfo: [NSLocalizedDescriptionKey: "Incorrect password"])))
+                    return
+                }
+            }
+            
+            // Extract items array from the shared document
+            guard let itemsData = data["items"] as? [[String: Any]] else {
+                completion(.failure(NSError(domain: "FirebaseManager", code: 400, userInfo: [NSLocalizedDescriptionKey: "Invalid share data"])))
+                return
+            }
+            
+            // Return raw data for caller to process
+            completion(.success(itemsData))
         }
     }
 }

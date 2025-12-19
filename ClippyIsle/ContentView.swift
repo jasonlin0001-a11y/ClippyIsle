@@ -92,6 +92,10 @@ struct ContentView: View {
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode.RawValue = AppearanceMode.system.rawValue
     @AppStorage("previewFontSize") private var previewFontSize: Double = 17.0
     
+    // Firebase password settings
+    @AppStorage("firebasePasswordEnabled") private var firebasePasswordEnabled: Bool = false
+    @AppStorage("firebasePassword") private var firebasePassword: String = ""
+    
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.undoManager) private var undoManager
@@ -721,9 +725,12 @@ struct ContentView: View {
             return
         }
         
+        // Get password if enabled
+        let password: String? = firebasePasswordEnabled && !firebasePassword.isEmpty ? firebasePassword : nil
+        
         // Use Firebase sharing instead of JSON
         isSharingFirebase = true
-        FirebaseManager.shared.shareItems([item]) { result in
+        FirebaseManager.shared.shareItems([item], password: password) { result in
             DispatchQueue.main.async {
                 self.isSharingFirebase = false
                 switch result {

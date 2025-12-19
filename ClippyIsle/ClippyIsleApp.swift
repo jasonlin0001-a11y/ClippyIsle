@@ -12,6 +12,13 @@ struct ClippyIsleApp: App {
     @State private var showSplash = true
     @State private var isAppReady = false
     
+    // Password protection state for shared links
+    @State private var pendingShareId: String?
+    @State private var showPasswordPrompt = false
+    @State private var passwordInput = ""
+    @State private var showPasswordError = false
+    @State private var pendingShareMetadata: ShareMetadata?
+    
     init() {
         LaunchLogger.log("ClippyIsleApp.init() - START")
         // Configure Firebase
@@ -50,6 +57,42 @@ struct ClippyIsleApp: App {
                     .onOpenURL { url in
                         handleDeepLink(url)
                     }
+                    // Password prompt alert for protected shares
+                    .alert("Password Required", isPresented: $showPasswordPrompt) {
+                        SecureField("Enter password", text: $passwordInput)
+                        Button("Cancel", role: .cancel) {
+                            pendingShareId = nil
+                            passwordInput = ""
+                            pendingShareMetadata = nil
+                        }
+                        Button("Submit") {
+                            submitPassword()
+                        }
+                    } message: {
+                        if let metadata = pendingShareMetadata {
+                            if let nickname = metadata.sharerNickname {
+                                Text("This share from \(nickname) is password protected. Please enter the password to access \(metadata.itemCount) item(s).")
+                            } else {
+                                Text("This share is password protected. Please enter the password to access \(metadata.itemCount) item(s).")
+                            }
+                        } else {
+                            Text("This share is password protected.")
+                        }
+                    }
+                    // Password error alert
+                    .alert("Incorrect Password", isPresented: $showPasswordError) {
+                        Button("Try Again") {
+                            passwordInput = ""
+                            showPasswordPrompt = true
+                        }
+                        Button("Cancel", role: .cancel) {
+                            pendingShareId = nil
+                            passwordInput = ""
+                            pendingShareMetadata = nil
+                        }
+                    } message: {
+                        Text("The password you entered is incorrect. Please try again.")
+                    }
                 
                 // Splash Screen Overlay
                 if showSplash {
@@ -59,6 +102,13 @@ struct ClippyIsleApp: App {
                 }
             }
         }
+    }
+    
+    // MARK: - Password Submission
+    private func submitPassword() {
+        guard let shareId = pendingShareId else { return }
+        downloadSharedItems(shareId: shareId, password: passwordInput)
+        passwordInput = ""
     }
     
     // MARK: - Deep Link Handling
@@ -87,13 +137,38 @@ struct ClippyIsleApp: App {
             return
         }
         
+        print("📥 Checking shared items with ID: \(shareId)")
+        
+        // First, check if the share requires a password
+        FirebaseManager.shared.getShareMetadata(shareId: shareId) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let metadata):
+                    if metadata.hasPassword {
+                        // Store the share ID and show password prompt
+                        self.pendingShareId = shareId
+                        self.pendingShareMetadata = metadata
+                        self.showPasswordPrompt = true
+                    } else {
+                        // No password required, download directly
+                        self.downloadSharedItems(shareId: shareId, password: nil)
+                    }
+                case .failure(let error):
+                    print("❌ Failed to get share metadata: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    // MARK: - Download Shared Items
+    private func downloadSharedItems(shareId: String, password: String?) {
         print("📥 Loading shared items with ID: \(shareId)")
         
         // Download raw items data from Firebase
-        FirebaseManager.shared.downloadItems(byShareId: shareId) { result in
-            switch result {
-            case .success(let itemsData):
-                DispatchQueue.main.async {
+        FirebaseManager.shared.downloadItems(byShareId: shareId, password: password) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let itemsData):
                     // Parse items data and create ClipboardItem instances for preview
                     var pendingItems: [ClipboardItem] = []
                     
@@ -122,6 +197,10 @@ struct ClippyIsleApp: App {
                         pendingItems.append(item)
                     }
                     
+                    // Clear pending state
+                    self.pendingShareId = nil
+                    self.pendingShareMetadata = nil
+                    
                     if pendingItems.isEmpty {
                         print("⚠️ No valid items found in shared data")
                     } else {
@@ -131,9 +210,17 @@ struct ClippyIsleApp: App {
                             NotificationManager.shared.addNotification(items: pendingItems, source: .deepLink)
                         }
                     }
+                    
+                case .failure(let error):
+                    // Check if it's a password error
+                    if error.localizedDescription.contains("Incorrect password") {
+                        self.showPasswordError = true
+                    } else {
+                        print("❌ Failed to load shared items: \(error.localizedDescription)")
+                        self.pendingShareId = nil
+                        self.pendingShareMetadata = nil
+                    }
                 }
-            case .failure(let error):
-                print("❌ Failed to load shared items: \(error.localizedDescription)")
             }
         }
     }

@@ -9,6 +9,7 @@ struct MessageCenterView: View {
     @ObservedObject var clipboardManager: ClipboardManager
     @State private var selectedNotification: NotificationItem?
     @State private var showImportDialog = false
+    @State private var showClearAllConfirmation = false
     @Environment(\.dismiss) var dismiss
     
     // Theme Color Support
@@ -39,7 +40,7 @@ struct MessageCenterView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     if !notificationManager.notifications.isEmpty {
                         Button("Clear All") {
-                            notificationManager.clearAll()
+                            showClearAllConfirmation = true
                         }
                         .foregroundColor(.red)
                     }
@@ -48,6 +49,12 @@ struct MessageCenterView: View {
                     Button("Done") {
                         dismiss()
                     }
+                }
+            }
+            .alert("Are you sure you want to delete all notifications?", isPresented: $showClearAllConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button("Delete", role: .destructive) {
+                    notificationManager.clearAll()
                 }
             }
         }
