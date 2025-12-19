@@ -88,6 +88,7 @@ struct ContentView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.undoManager) private var undoManager
+    @Environment(\.colorScheme) private var colorScheme
     
     init(isAppReady: Binding<Bool>) {
         self._isAppReady = isAppReady
@@ -341,13 +342,24 @@ struct ContentView: View {
     
     private var mainContent: some View {
         ZStack {
-            // Global gradient background
-            LinearGradient(
-                gradient: Gradient(colors: [themeColor.opacity(0.4), Color.black]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            // Adaptive global gradient background
+            if colorScheme == .dark {
+                // Dark mode: theme color at top to black at bottom
+                LinearGradient(
+                    gradient: Gradient(colors: [themeColor.opacity(0.4), Color.black]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+            } else {
+                // Light mode: light gray at top to white at bottom
+                LinearGradient(
+                    gradient: Gradient(colors: [Color(UIColor.systemGray6), Color.white]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+            }
             
             VStack(spacing: 0) {
                 if clipboardManager.dataLoadError != nil { dataErrorView }
@@ -358,15 +370,10 @@ struct ContentView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 if selectedTagFilter != nil { 
-                    Button { selectedTagFilter = nil } label: { 
-                        Text("Clear")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(themeColor)
-                            .clipShape(Capsule())
-                    }
+                    Button("Clear") { selectedTagFilter = nil }
+                        .buttonStyle(.borderedProminent)
+                        .tint(themeColor)
+                        .clipShape(Capsule())
                 }
                 else { 
                     Button { clipboardManager.isLiveActivityOn.toggle() } label: { 
@@ -382,11 +389,6 @@ struct ContentView: View {
                 Button { isShowingMessageCenter = true } label: {
                     ZStack(alignment: .topTrailing) {
                         Image(systemName: "tray.fill")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.white)
-                            .frame(width: 32, height: 32)
-                            .background(themeColor)
-                            .clipShape(Capsule())
                         
                         // Badge for unread count
                         if notificationManager.unreadCount > 0 {
@@ -396,37 +398,34 @@ struct ContentView: View {
                                 .frame(minWidth: 16, minHeight: 16)
                                 .background(Color.red)
                                 .clipShape(Circle())
-                                .offset(x: 8, y: -4)
+                                .offset(x: 10, y: -8)
                         }
                     }
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(themeColor)
+                .clipShape(Capsule())
                 
                 Button { isShowingTagSheet = true } label: {
                     Image(systemName: "tag.fill")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(width: 32, height: 32)
-                        .background(themeColor)
-                        .clipShape(Capsule())
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(themeColor)
+                .clipShape(Capsule())
                 
                 Button { isShowingAudioManager = true } label: {
                     Image(systemName: "waveform")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(width: 32, height: 32)
-                        .background(themeColor)
-                        .clipShape(Capsule())
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(themeColor)
+                .clipShape(Capsule())
                 
                 Button { isShowingSettings = true } label: {
                     Image(systemName: "gearshape.fill")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(width: 32, height: 32)
-                        .background(themeColor)
-                        .clipShape(Capsule())
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(themeColor)
+                .clipShape(Capsule())
             }
         }
     }
@@ -501,14 +500,29 @@ struct ContentView: View {
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
                         .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Color(.systemGray6))
-                                .overlay(
+                            // Adaptive card background
+                            Group {
+                                if colorScheme == .dark {
+                                    // Dark mode: deep grey with theme tint
                                     RoundedRectangle(cornerRadius: 16)
-                                        .fill(themeColor.opacity(0.15))
-                                )
+                                        .fill(Color(UIColor.systemGray6))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 16)
+                                                .fill(themeColor.opacity(0.15))
+                                        )
+                                } else {
+                                    // Light mode: clean white background
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .fill(Color.white)
+                                }
+                            }
                         )
-                        .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 2)
+                        .shadow(
+                            color: colorScheme == .dark ? .black.opacity(0.3) : .black.opacity(0.1),
+                            radius: colorScheme == .dark ? 5 : 4,
+                            x: 0,
+                            y: 2
+                        )
                         .id(item.id)
                         // Swipe actions using context menu as fallback for ScrollView
                         .contextMenu {
@@ -566,15 +580,17 @@ struct ContentView: View {
 
     private var bottomToolbar: some View {
         HStack(spacing: 0) {
-            Image(systemName: "magnifyingglass").foregroundColor(.white.opacity(0.7)).padding(.leading, 12)
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(colorScheme == .dark ? .white.opacity(0.7) : .gray)
+                .padding(.leading, 12)
             TextField("Search...", text: $searchText)
                 .padding(.horizontal, 8)
                 .submitLabel(.search)
-                .foregroundColor(.white)
+                .foregroundColor(colorScheme == .dark ? .white : .primary)
             if !searchText.isEmpty { 
                 Button { searchText = ""; hideKeyboard() } label: { 
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.white.opacity(0.6)) 
+                        .foregroundColor(colorScheme == .dark ? .white.opacity(0.6) : .gray) 
                 }
                 .padding(.trailing, 8) 
             }
@@ -588,11 +604,14 @@ struct ContentView: View {
                 }
             } label: {
                 Image(systemName: "mic.fill")
-                    .foregroundColor(isTranscribing ? .red : .white.opacity(0.7))
+                    .foregroundColor(isTranscribing ? .red : (colorScheme == .dark ? .white.opacity(0.7) : .gray))
             }
             .padding(.trailing, 8)
             
-            Rectangle().frame(width: 1, height: 20).foregroundColor(.white.opacity(0.3)).padding(.horizontal, 4)
+            Rectangle()
+                .frame(width: 1, height: 20)
+                .foregroundColor(colorScheme == .dark ? .white.opacity(0.3) : .gray.opacity(0.3))
+                .padding(.horizontal, 4)
             Menu {
                 Button {
                     let oldIDs = Set(clipboardManager.items.map { $0.id })
@@ -612,25 +631,30 @@ struct ContentView: View {
             } label: { 
                 Image(systemName: "plus")
                     .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(.white)
-                    .frame(width: 32, height: 32)
-                    .background(themeColor)
-                    .clipShape(Circle())
             }
+            .buttonStyle(.borderedProminent)
+            .tint(themeColor)
+            .clipShape(Capsule())
             .padding(.trailing, 12)
         }
         .frame(height: bottomToolbarHeight)
         .background(
             Capsule()
                 .fill(
-                    LinearGradient(
-                        gradient: Gradient(colors: [themeColor.opacity(0.6), Color.black.opacity(0.8)]),
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
+                    colorScheme == .dark
+                        ? AnyShapeStyle(LinearGradient(
+                            gradient: Gradient(colors: [themeColor.opacity(0.6), Color.black.opacity(0.8)]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                          ))
+                        : AnyShapeStyle(Color.white)
                 )
         )
-        .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
+        .shadow(
+            color: colorScheme == .dark ? .black.opacity(0.3) : .black.opacity(0.1),
+            radius: colorScheme == .dark ? 8 : 4,
+            y: 4
+        )
         .padding(.horizontal, 22)
     }
     
