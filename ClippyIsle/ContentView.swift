@@ -727,6 +727,7 @@ struct ContentView: View {
         
         // Get password if enabled
         let password: String? = firebasePasswordEnabled && !firebasePassword.isEmpty ? firebasePassword : nil
+        print("🔐 shareItem: firebasePasswordEnabled=\(firebasePasswordEnabled), hasPassword=\(password != nil)")
         
         // Use Firebase sharing instead of JSON
         isSharingFirebase = true

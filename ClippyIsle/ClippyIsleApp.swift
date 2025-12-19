@@ -144,13 +144,16 @@ struct ClippyIsleApp: App {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let metadata):
+                    print("🔐 handleDeepLink: metadata.hasPassword=\(metadata.hasPassword)")
                     if metadata.hasPassword {
                         // Store the share ID and show password prompt
                         self.pendingShareId = shareId
                         self.pendingShareMetadata = metadata
                         self.showPasswordPrompt = true
+                        print("🔐 Showing password prompt for share: \(shareId)")
                     } else {
                         // No password required, download directly
+                        print("🔓 No password required, downloading directly: \(shareId)")
                         self.downloadSharedItems(shareId: shareId, password: nil)
                     }
                 case .failure(let error):
@@ -162,7 +165,7 @@ struct ClippyIsleApp: App {
     
     // MARK: - Download Shared Items
     private func downloadSharedItems(shareId: String, password: String?) {
-        print("📥 Loading shared items with ID: \(shareId)")
+        print("📥 Loading shared items with ID: \(shareId), password provided: \(password != nil)")
         
         // Download raw items data from Firebase
         FirebaseManager.shared.downloadItems(byShareId: shareId, password: password) { result in

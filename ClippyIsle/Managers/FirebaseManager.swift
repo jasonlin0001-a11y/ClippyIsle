@@ -186,7 +186,11 @@ class FirebaseManager {
         
         // Add password hash if password is provided
         if let password = password, !password.isEmpty {
-            shareData["passwordHash"] = hashPassword(password)
+            let hash = hashPassword(password)
+            shareData["passwordHash"] = hash
+            print("🔐 shareItems: Adding password protection, hash=\(hash)")
+        } else {
+            print("🔓 shareItems: No password protection")
         }
         
         // Add document and get auto-generated ID
@@ -198,6 +202,7 @@ class FirebaseManager {
                 // Generate shareable link with Firebase Hosting URL for Open Graph preview support
                 let shareId = docRef.documentID
                 let shareURL = "https://cc-isle.web.app/share?id=\(shareId)"
+                print("✅ shareItems: Created share with ID=\(shareId), hasPassword=\(shareData["passwordHash"] != nil)")
                 completion(.success(shareURL))
             }
         }
@@ -211,18 +216,23 @@ class FirebaseManager {
     func getShareMetadata(shareId: String, completion: @escaping (Result<ShareMetadata, Error>) -> Void) {
         db.collection("sharedClipboards").document(shareId).getDocument { snapshot, error in
             if let error = error {
+                print("❌ getShareMetadata error: \(error.localizedDescription)")
                 completion(.failure(error))
                 return
             }
             
             guard let document = snapshot, document.exists, let data = document.data() else {
+                print("❌ getShareMetadata: Share not found for ID: \(shareId)")
                 completion(.failure(NSError(domain: "FirebaseManager", code: 404, userInfo: [NSLocalizedDescriptionKey: "Share not found"])))
                 return
             }
             
-            let hasPassword = data["passwordHash"] != nil
+            let passwordHash = data["passwordHash"] as? String
+            let hasPassword = passwordHash != nil && !passwordHash!.isEmpty
             let sharerNickname = data["sharerNickname"] as? String
             let itemCount = data["itemCount"] as? Int ?? 0
+            
+            print("🔐 getShareMetadata: shareId=\(shareId), hasPassword=\(hasPassword), passwordHash=\(passwordHash ?? "nil")")
             
             let metadata = ShareMetadata(hasPassword: hasPassword, sharerNickname: sharerNickname, itemCount: itemCount)
             completion(.success(metadata))
