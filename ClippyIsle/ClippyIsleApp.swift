@@ -212,8 +212,10 @@ struct ClippyIsleApp: App {
                     }
                     
                 case .failure(let error):
-                    // Check if it's a password error
-                    if error.localizedDescription.contains("Incorrect password") {
+                    // Check if it's a password error by examining the error code
+                    let nsError = error as NSError
+                    if nsError.domain == "FirebaseManager" && nsError.code == 403 {
+                        // Incorrect password error
                         self.showPasswordError = true
                     } else {
                         print("❌ Failed to load shared items: \(error.localizedDescription)")

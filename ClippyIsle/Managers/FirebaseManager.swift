@@ -254,7 +254,12 @@ class FirebaseManager {
                     return
                 }
                 
-                let providedHash = self?.hashPassword(password) ?? ""
+                guard let strongSelf = self else {
+                    completion(.failure(NSError(domain: "FirebaseManager", code: 500, userInfo: [NSLocalizedDescriptionKey: "Internal error"])))
+                    return
+                }
+                
+                let providedHash = strongSelf.hashPassword(password)
                 if providedHash != storedHash {
                     completion(.failure(NSError(domain: "FirebaseManager", code: 403, userInfo: [NSLocalizedDescriptionKey: "Incorrect password"])))
                     return
