@@ -21,6 +21,11 @@ struct ContentView: View {
     private var bottomToolbarPadding: CGFloat { bottomToolbarHeight + 30 } // toolbar height + margin
     private let badgeOffsetX: CGFloat = 10
     private let badgeOffsetY: CGFloat = -8
+    
+    // Navigation bar icon sizing
+    private let navIconWidth: CGFloat = 36
+    private let navIconHeight: CGFloat = 28
+    private let navIconFontSize: CGFloat = 14
 
     @StateObject private var clipboardManager: ClipboardManager
     @StateObject private var speechManager = SpeechManager()
@@ -388,24 +393,25 @@ struct ContentView: View {
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 // Unified capsule container for navigation icons
+                let hasUnreadNotifications = notificationManager.unreadCount > 0
                 HStack(spacing: 4) {
                     // Message Center button with badge
                     Button { isShowingMessageCenter = true } label: {
                         ZStack {
                             // Active state background (highlight when there are unread notifications)
-                            if notificationManager.unreadCount > 0 {
+                            if hasUnreadNotifications {
                                 Capsule()
                                     .fill(themeColor)
-                                    .frame(width: 36, height: 28)
+                                    .frame(width: navIconWidth, height: navIconHeight)
                             }
                             Image(systemName: "tray.fill")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(notificationManager.unreadCount > 0 ? .white : .white.opacity(0.9))
+                                .font(.system(size: navIconFontSize, weight: .semibold))
+                                .foregroundColor(hasUnreadNotifications ? .white : .white.opacity(0.9))
                         }
                     }
                     .overlay(alignment: .topTrailing) {
                         // Badge for unread count
-                        if notificationManager.unreadCount > 0 {
+                        if hasUnreadNotifications {
                             Text("\(notificationManager.unreadCount)")
                                 .font(.system(size: 9, weight: .bold))
                                 .foregroundColor(.white)
@@ -417,28 +423,13 @@ struct ContentView: View {
                     }
                     
                     // Tag button
-                    Button { isShowingTagSheet = true } label: {
-                        Image(systemName: "tag.fill")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white.opacity(0.9))
-                            .frame(width: 36, height: 28)
-                    }
+                    navIconButton(systemName: "tag.fill") { isShowingTagSheet = true }
                     
                     // Audio Manager button
-                    Button { isShowingAudioManager = true } label: {
-                        Image(systemName: "waveform")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white.opacity(0.9))
-                            .frame(width: 36, height: 28)
-                    }
+                    navIconButton(systemName: "waveform") { isShowingAudioManager = true }
                     
                     // Settings button
-                    Button { isShowingSettings = true } label: {
-                        Image(systemName: "gearshape.fill")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white.opacity(0.9))
-                            .frame(width: 36, height: 28)
-                    }
+                    navIconButton(systemName: "gearshape.fill") { isShowingSettings = true }
                 }
                 .padding(.horizontal, 6)
                 .padding(.vertical, 4)
@@ -451,6 +442,17 @@ struct ContentView: View {
                         )
                 )
             }
+        }
+    }
+    
+    // Helper function for navigation bar icon buttons
+    @ViewBuilder
+    private func navIconButton(systemName: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: navIconFontSize, weight: .semibold))
+                .foregroundColor(.white.opacity(0.9))
+                .frame(width: navIconWidth, height: navIconHeight)
         }
     }
     
