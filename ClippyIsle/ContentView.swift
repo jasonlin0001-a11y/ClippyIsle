@@ -543,7 +543,7 @@ struct ContentView: View {
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     // Right swipe: Share action (blue background)
-                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                    .swipeActions(edge: .leading, allowsFullSwipe: false) {
                         Button {
                             shareItem(item: item)
                         } label: {
