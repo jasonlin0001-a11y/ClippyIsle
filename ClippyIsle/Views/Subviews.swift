@@ -119,13 +119,13 @@ struct ClipboardItemRow: View {
     var body: some View {
         HStack(spacing: 15) {
             Button(action: copyAction) {
-                // Circular icon container with themeColor fill
-                Circle()
+                // Rounded square icon container with themeColor fill
+                RoundedRectangle(cornerRadius: 8)
                     .fill(themeColor.opacity(0.8))
-                    .frame(width: 40, height: 40)
+                    .frame(width: 44, height: 44)
                     .overlay(
                         Text(itemIcon(for: item.type))
-                            .font(.system(size: 18, weight: .bold))
+                            .font(.system(size: 11, weight: .bold))
                             .foregroundColor(.white)
                     )
             }

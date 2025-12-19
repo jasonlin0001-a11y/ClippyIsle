@@ -387,26 +387,25 @@ struct ContentView: View {
                 }
             }
             ToolbarItemGroup(placement: .navigationBarTrailing) {
-                // Message Center button with badge
+                // Message Center button with badge - using overlay to prevent clipping
                 Button { isShowingMessageCenter = true } label: {
-                    ZStack(alignment: .topTrailing) {
-                        Image(systemName: "tray.fill")
-                        
-                        // Badge for unread count
-                        if notificationManager.unreadCount > 0 {
-                            Text("\(notificationManager.unreadCount)")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.white)
-                                .frame(minWidth: 16, minHeight: 16)
-                                .background(Color.red)
-                                .clipShape(Circle())
-                                .offset(x: badgeOffsetX, y: badgeOffsetY)
-                        }
-                    }
+                    Image(systemName: "tray.fill")
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(themeColor)
                 .clipShape(Capsule())
+                .overlay(alignment: .topTrailing) {
+                    // Badge for unread count - placed outside button to prevent clipping
+                    if notificationManager.unreadCount > 0 {
+                        Text("\(notificationManager.unreadCount)")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(minWidth: 16, minHeight: 16)
+                            .background(Color.red)
+                            .clipShape(Circle())
+                            .offset(x: badgeOffsetX, y: badgeOffsetY)
+                    }
+                }
                 
                 Button { isShowingTagSheet = true } label: {
                     Image(systemName: "tag.fill")
@@ -651,17 +650,9 @@ struct ContentView: View {
     
     @ViewBuilder
     private var bottomToolbarBackground: some View {
-        if colorScheme == .dark {
-            Capsule()
-                .fill(LinearGradient(
-                    gradient: Gradient(colors: [themeColor.opacity(0.6), Color.black.opacity(0.8)]),
-                    startPoint: .leading,
-                    endPoint: .trailing
-                ))
-        } else {
-            Capsule()
-                .fill(Color.white)
-        }
+        // Glassmorphism style - semi-transparent in both dark and light modes
+        Capsule()
+            .fill(.ultraThinMaterial)
     }
     
     @ViewBuilder private func previewSheetContent(isFullscreen: Bool, onToggleFullscreen: @escaping () -> Void) -> some View {

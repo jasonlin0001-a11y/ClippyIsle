@@ -5,14 +5,14 @@ import Combine
 // MARK: - Global Helper Functions
 
 func itemIcon(for type: String) -> String {
-    if type == UTType.url.identifier { return "L" }
-    else if type == UTType.png.identifier { return "P" }
-    else if type == UTType.pdf.identifier { return "D" }
-    else if type == UTType.rtfd.identifier { return "R" }
-    else if let utType = UTType(type), utType.conforms(to: .image) { return "P" }
+    if type == UTType.url.identifier { return "LINK" }
+    else if type == UTType.png.identifier { return "PIC" }
+    else if type == UTType.pdf.identifier { return "PDF" }
+    else if type == UTType.rtfd.identifier { return "RTF" }
+    else if let utType = UTType(type), utType.conforms(to: .image) { return "PIC" }
     else {
-        if type.contains("html") { return "H" }
-        return "T"
+        if type.contains("html") { return "HTML" }
+        return "TXT"
     }
 }
 
