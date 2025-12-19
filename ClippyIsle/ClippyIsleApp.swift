@@ -208,17 +208,11 @@ struct ClippyIsleApp: App {
                     if pendingItems.isEmpty {
                         print("⚠️ No valid items found in shared data")
                     } else {
-                        if isPasswordProtected {
-                            // Password-protected shares: Show import dialog directly
-                            // This prevents items from sitting in the notification center without password protection
-                            print("🔐 Password-protected share: showing import dialog directly")
-                            self.pendingShareManager.setPendingItems(pendingItems)
-                        } else {
-                            // Non-protected shares: Add to notification center for later import
-                            print("🔓 Non-protected share: adding to message center")
-                            Task { @MainActor in
-                                NotificationManager.shared.addNotification(items: pendingItems, source: .deepLink)
-                            }
+                        // Add to notification center for user to select which items to import
+                        // Password verification has already happened at this point
+                        print("📥 Loaded \(pendingItems.count) shared item(s), adding to message center")
+                        Task { @MainActor in
+                            NotificationManager.shared.addNotification(items: pendingItems, source: .deepLink)
                         }
                     }
                     
