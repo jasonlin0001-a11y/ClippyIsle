@@ -386,47 +386,70 @@ struct ContentView: View {
                     .disabled(!areActivitiesEnabled) 
                 }
             }
-            ToolbarItemGroup(placement: .navigationBarTrailing) {
-                // Message Center button with badge - using overlay to prevent clipping
-                Button { isShowingMessageCenter = true } label: {
-                    Image(systemName: "tray.fill")
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(themeColor)
-                .clipShape(Capsule())
-                .overlay(alignment: .topTrailing) {
-                    // Badge for unread count - placed outside button to prevent clipping
-                    if notificationManager.unreadCount > 0 {
-                        Text("\(notificationManager.unreadCount)")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.white)
-                            .frame(minWidth: 16, minHeight: 16)
-                            .background(Color.red)
-                            .clipShape(Circle())
-                            .offset(x: badgeOffsetX, y: badgeOffsetY)
+            ToolbarItem(placement: .navigationBarTrailing) {
+                // Unified capsule container for navigation icons
+                HStack(spacing: 4) {
+                    // Message Center button with badge
+                    Button { isShowingMessageCenter = true } label: {
+                        ZStack {
+                            // Active state background (highlight when there are unread notifications)
+                            if notificationManager.unreadCount > 0 {
+                                Capsule()
+                                    .fill(themeColor)
+                                    .frame(width: 36, height: 28)
+                            }
+                            Image(systemName: "tray.fill")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(notificationManager.unreadCount > 0 ? .white : .white.opacity(0.9))
+                        }
+                    }
+                    .overlay(alignment: .topTrailing) {
+                        // Badge for unread count
+                        if notificationManager.unreadCount > 0 {
+                            Text("\(notificationManager.unreadCount)")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundColor(.white)
+                                .frame(minWidth: 14, minHeight: 14)
+                                .background(Color.red)
+                                .clipShape(Circle())
+                                .offset(x: 4, y: -4)
+                        }
+                    }
+                    
+                    // Tag button
+                    Button { isShowingTagSheet = true } label: {
+                        Image(systemName: "tag.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.9))
+                            .frame(width: 36, height: 28)
+                    }
+                    
+                    // Audio Manager button
+                    Button { isShowingAudioManager = true } label: {
+                        Image(systemName: "waveform")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.9))
+                            .frame(width: 36, height: 28)
+                    }
+                    
+                    // Settings button
+                    Button { isShowingSettings = true } label: {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.9))
+                            .frame(width: 36, height: 28)
                     }
                 }
-                
-                Button { isShowingTagSheet = true } label: {
-                    Image(systemName: "tag.fill")
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(themeColor)
-                .clipShape(Capsule())
-                
-                Button { isShowingAudioManager = true } label: {
-                    Image(systemName: "waveform")
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(themeColor)
-                .clipShape(Capsule())
-                
-                Button { isShowingSettings = true } label: {
-                    Image(systemName: "gearshape.fill")
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(themeColor)
-                .clipShape(Capsule())
+                .padding(.horizontal, 6)
+                .padding(.vertical, 4)
+                .background(
+                    Capsule()
+                        .fill(.ultraThinMaterial)
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                        )
+                )
             }
         }
     }
