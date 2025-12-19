@@ -391,17 +391,13 @@ struct ContentView: View {
                                 isSearchFieldFocused = true
                             },
                             onNewItem: {
-                                let oldIDs = Set(clipboardManager.items.map { $0.id })
-                                clipboardManager.addNewItem(content: String(localized: "New Item"), type: UTType.text.identifier)
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                                    if let newItem = clipboardManager.items.first(where: { !oldIDs.contains($0.id) }) { highlightAndScroll(to: newItem.id) }
+                                trackAndHighlightNewItem {
+                                    clipboardManager.addNewItem(content: String(localized: "New Item"), type: UTType.text.identifier)
                                 }
                             },
                             onPasteFromClipboard: {
-                                let oldIDs = Set(clipboardManager.items.map { $0.id })
-                                clipboardManager.checkClipboard(isManual: true)
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                                    if let newItem = clipboardManager.items.first(where: { !oldIDs.contains($0.id) }) { highlightAndScroll(to: newItem.id) }
+                                trackAndHighlightNewItem {
+                                    clipboardManager.checkClipboard(isManual: true)
                                 }
                             }
                         )
@@ -631,6 +627,20 @@ struct ContentView: View {
     }
     
     private func highlightAndScroll(to id: UUID) { newlyAddedItemID = id }
+    
+    // Delay constant for item highlight after adding new items
+    private let itemAddHighlightDelay: Double = 0.2
+    
+    // Helper method to track old items and highlight newly added ones
+    private func trackAndHighlightNewItem(action: () -> Void) {
+        let oldIDs = Set(clipboardManager.items.map { $0.id })
+        action()
+        DispatchQueue.main.asyncAfter(deadline: .now() + itemAddHighlightDelay) {
+            if let newItem = clipboardManager.items.first(where: { !oldIDs.contains($0.id) }) {
+                highlightAndScroll(to: newItem.id)
+            }
+        }
+    }
     
     // Helper method to handle tag action with Pro check
     private func openTagSheet(for item: ClipboardItem) {

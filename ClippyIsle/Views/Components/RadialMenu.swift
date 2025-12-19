@@ -87,6 +87,13 @@ struct RadialMenuView: View {
     @State private var isExpanded = false
     @Environment(\.colorScheme) private var colorScheme
     
+    // Animation timing constants
+    private let closeAnimationDuration: Double = 0.3
+    private let actionExecutionDelay: Double = 0.25
+    
+    // Reusable haptic feedback generator
+    private let hapticGenerator = UIImpactFeedbackGenerator(style: .medium)
+    
     private var menuItems: [RadialMenuItem] {
         [
             RadialMenuItem(icon: "magnifyingglass", label: "Search", action: {
@@ -102,11 +109,11 @@ struct RadialMenuView: View {
     }
     
     private func closeMenuAndExecute(_ action: @escaping () -> Void) {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+        withAnimation(.spring(response: closeAnimationDuration, dampingFraction: 0.7)) {
             isExpanded = false
         }
-        // Execute action after menu closes
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+        // Execute action after menu close animation completes
+        DispatchQueue.main.asyncAfter(deadline: .now() + actionExecutionDelay) {
             action()
         }
     }
@@ -118,7 +125,7 @@ struct RadialMenuView: View {
                 Color.black.opacity(0.3)
                     .ignoresSafeArea()
                     .onTapGesture {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        withAnimation(.spring(response: closeAnimationDuration, dampingFraction: 0.7)) {
                             isExpanded = false
                         }
                     }
@@ -143,7 +150,7 @@ struct RadialMenuView: View {
                     if !isExpanded {
                         onNewItem()
                     } else {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        withAnimation(.spring(response: closeAnimationDuration, dampingFraction: 0.7)) {
                             isExpanded = false
                         }
                     }
@@ -163,16 +170,19 @@ struct RadialMenuView: View {
                             .font(.system(size: 24, weight: .bold))
                             .foregroundColor(.white)
                             .rotationEffect(.degrees(isExpanded ? 180 : 0))
-                            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isExpanded)
+                            .animation(.spring(response: closeAnimationDuration, dampingFraction: 0.7), value: isExpanded)
                     }
                 }
                 .buttonStyle(.plain)
+                .onAppear {
+                    // Prepare haptic generator for better performance
+                    hapticGenerator.prepare()
+                }
                 .simultaneousGesture(
                     LongPressGesture(minimumDuration: 0.5)
                         .onEnded { _ in
-                            // Haptic feedback
-                            let generator = UIImpactFeedbackGenerator(style: .medium)
-                            generator.impactOccurred()
+                            // Trigger prepared haptic feedback
+                            hapticGenerator.impactOccurred()
                             
                             withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                                 isExpanded = true
