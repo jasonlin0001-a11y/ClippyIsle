@@ -248,6 +248,10 @@ struct TagFirebaseShareView: View {
     @State private var selectedTags: Set<String> = []
     @State private var isSharingFirebase = false
     @Environment(\.dismiss) var dismiss
+    
+    // Firebase password settings
+    @AppStorage("firebasePasswordEnabled") private var firebasePasswordEnabled: Bool = false
+    @AppStorage("firebasePassword") private var firebasePassword: String = ""
 
     var body: some View {
         NavigationView {
@@ -296,9 +300,13 @@ struct TagFirebaseShareView: View {
             return
         }
         
+        // Get password if enabled
+        let password: String? = firebasePasswordEnabled && !firebasePassword.isEmpty ? firebasePassword : nil
+        print("🔐 shareSelectedTags: firebasePasswordEnabled=\(firebasePasswordEnabled), hasPassword=\(password != nil)")
+        
         print("🔥 Calling FirebaseManager.shareItems with \(filteredItems.count) items")
         isSharingFirebase = true
-        FirebaseManager.shared.shareItems(filteredItems) { result in
+        FirebaseManager.shared.shareItems(filteredItems, password: password) { result in
             print("🔥 Firebase callback received")
             DispatchQueue.main.async {
                 self.isSharingFirebase = false
