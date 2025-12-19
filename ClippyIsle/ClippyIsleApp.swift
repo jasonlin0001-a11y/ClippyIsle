@@ -165,7 +165,8 @@ struct ClippyIsleApp: App {
     
     // MARK: - Download Shared Items
     private func downloadSharedItems(shareId: String, password: String?) {
-        print("📥 Loading shared items with ID: \(shareId), password provided: \(password != nil)")
+        let isPasswordProtected = password != nil
+        print("📥 Loading shared items with ID: \(shareId), password provided: \(isPasswordProtected)")
         
         // Download raw items data from Firebase
         FirebaseManager.shared.downloadItems(byShareId: shareId, password: password) { result in
@@ -207,10 +208,17 @@ struct ClippyIsleApp: App {
                     if pendingItems.isEmpty {
                         print("⚠️ No valid items found in shared data")
                     } else {
-                        print("📥 Loaded \(pendingItems.count) shared item(s), adding to message center")
-                        // Add to notification manager for Message Center
-                        Task { @MainActor in
-                            NotificationManager.shared.addNotification(items: pendingItems, source: .deepLink)
+                        if isPasswordProtected {
+                            // Password-protected shares: Show import dialog directly
+                            // This prevents items from sitting in the notification center without password protection
+                            print("🔐 Password-protected share: showing import dialog directly")
+                            self.pendingShareManager.setPendingItems(pendingItems)
+                        } else {
+                            // Non-protected shares: Add to notification center for later import
+                            print("🔓 Non-protected share: adding to message center")
+                            Task { @MainActor in
+                                NotificationManager.shared.addNotification(items: pendingItems, source: .deepLink)
+                            }
                         }
                     }
                     
