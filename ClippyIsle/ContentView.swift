@@ -542,40 +542,27 @@ struct ContentView: View {
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                    // Right swipe: Share action (blue background - matches Tag Management style)
+                    // Right swipe: Share action (matches Tag Management style - text only, no icons)
                     .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                        Button {
+                        Button("Share") {
                             shareItem(item: item)
-                        } label: {
-                            Label("Share", systemImage: "square.and.arrow.up")
                         }
                         .tint(Color(UIColor.systemBlue).opacity(0.55))
                     }
-                    // Left swipe: Rename, Tag, Delete actions (matches Tag Management style)
+                    // Left swipe: Rename, Tag, Delete actions (matches Tag Management style - text only, no icons)
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        // Delete (destructive - red)
-                        Button(role: .destructive) {
+                        Button("Delete", role: .destructive) {
                             itemToDelete = item
                             isShowingDeleteConfirm = true
-                        } label: {
-                            Label("Delete", systemImage: "trash")
                         }
-                        
-                        // Tag (blue - matches Tag Management style)
-                        Button {
+                        Button("Tag") {
                             openTagSheet(for: item)
-                        } label: {
-                            Label("Tag", systemImage: "tag")
                         }
                         .tint(Color(UIColor.systemBlue).opacity(0.55))
-                        
-                        // Rename (blue - matches Tag Management style)
-                        Button {
+                        Button("Rename") {
                             itemToRename = item
                             newName = item.displayName ?? ""
                             isShowingRenameAlert = true
-                        } label: {
-                            Label("Rename", systemImage: "pencil")
                         }
                         .tint(Color(UIColor.systemBlue).opacity(0.55))
                     }
