@@ -464,110 +464,138 @@ struct ContentView: View {
     
     private var listContent: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 16) {
-                    ForEach(filteredItems) { item in
-                        VStack(spacing: 0) {
-                            ClipboardItemRow(
-                                item: item,
-                                themeColor: themeColor,
-                                isHighlighted: item.id == newlyAddedItemID,
-                                clipboardManager: clipboardManager,
-                                copyAction: { copyItemToClipboard(item: item) }, 
-                                previewAction: { previewState = .loading(item) },
-                                createDragItem: { createDragItem(for: item) }, 
-                                togglePinAction: { clipboardManager.togglePin(for: item) },
-                                deleteAction: { itemToDelete = item; isShowingDeleteConfirm = true },
-                                renameAction: { itemToRename = item; newName = item.displayName ?? ""; isShowingRenameAlert = true },
-                                // **MODIFIED**: Tag Limit Logic
-                                tagAction: {
-                                    // Check if user is Pro OR if total unique tags < 10
-                                    if subscriptionManager.isPro || clipboardManager.allTags.count < 10 {
-                                        itemToTag = item
-                                    } else {
-                                        showPaywall = true
-                                    }
-                                },
-                                shareAction: { shareItem(item: item) },
-                                linkPreviewAction: {
-                                    // Toggle inline preview for URL items
-                                    if item.type == UTType.url.identifier, URL(string: item.content) != nil {
-                                        withAnimation(.easeInOut(duration: 0.3)) {
-                                            if expandedPreviewItemID == item.id {
-                                                expandedPreviewItemID = nil
-                                            } else {
-                                                expandedPreviewItemID = item.id
-                                            }
+            List {
+                ForEach(filteredItems) { item in
+                    VStack(spacing: 0) {
+                        ClipboardItemRow(
+                            item: item,
+                            themeColor: themeColor,
+                            isHighlighted: item.id == newlyAddedItemID,
+                            clipboardManager: clipboardManager,
+                            copyAction: { copyItemToClipboard(item: item) }, 
+                            previewAction: { previewState = .loading(item) },
+                            createDragItem: { createDragItem(for: item) }, 
+                            togglePinAction: { clipboardManager.togglePin(for: item) },
+                            deleteAction: { itemToDelete = item; isShowingDeleteConfirm = true },
+                            renameAction: { itemToRename = item; newName = item.displayName ?? ""; isShowingRenameAlert = true },
+                            // **MODIFIED**: Tag Limit Logic
+                            tagAction: { openTagSheet(for: item) },
+                            shareAction: { shareItem(item: item) },
+                            linkPreviewAction: {
+                                // Toggle inline preview for URL items
+                                if item.type == UTType.url.identifier, URL(string: item.content) != nil {
+                                    withAnimation(.easeInOut(duration: 0.3)) {
+                                        if expandedPreviewItemID == item.id {
+                                            expandedPreviewItemID = nil
+                                        } else {
+                                            expandedPreviewItemID = item.id
                                         }
                                     }
-                                },
-                                onTagLongPress: { tag in
-                                    // Toggle filter: if the tag is already filtered, clear it; otherwise, set it
-                                    if selectedTagFilter == tag {
-                                        selectedTagFilter = nil
-                                    } else {
-                                        selectedTagFilter = tag
-                                    }
                                 }
-                            )
-                            
-                            // Show inline preview if this item is expanded
-                            if expandedPreviewItemID == item.id, 
-                               item.type == UTType.url.identifier,
-                               let url = URL(string: item.content) {
-                                InlineLinkPreview(url: url)
-                                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                            }
-                        }
-                        // Card styling
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(
-                            // Adaptive card background
-                            Group {
-                                if colorScheme == .dark {
-                                    // Dark mode: deep grey with theme tint
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .fill(Color(UIColor.systemGray6))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 16)
-                                                .fill(themeColor.opacity(0.15))
-                                        )
+                            },
+                            onTagLongPress: { tag in
+                                // Toggle filter: if the tag is already filtered, clear it; otherwise, set it
+                                if selectedTagFilter == tag {
+                                    selectedTagFilter = nil
                                 } else {
-                                    // Light mode: clean white background
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .fill(Color.white)
+                                    selectedTagFilter = tag
                                 }
                             }
                         )
-                        .shadow(
-                            color: colorScheme == .dark ? .black.opacity(0.3) : .black.opacity(0.1),
-                            radius: colorScheme == .dark ? 5 : 4,
-                            x: 0,
-                            y: 2
-                        )
-                        .id(item.id)
-                        // Swipe actions using context menu as fallback for ScrollView
-                        .contextMenu {
-                            Button { shareItem(item: item) } label: { Label("Share", systemImage: "square.and.arrow.up") }
-                            Button { clipboardManager.togglePin(for: item) } label: { Label(item.isPinned ? "Unpin" : "Pin", systemImage: item.isPinned ? "pin.slash" : "pin") }
-                            Divider()
-                            Button { itemToRename = item; newName = item.displayName ?? ""; isShowingRenameAlert = true } label: { Label("Rename", systemImage: "pencil") }
-                            Button {
-                                if subscriptionManager.isPro || clipboardManager.allTags.count < 10 {
-                                    itemToTag = item
-                                } else {
-                                    showPaywall = true
-                                }
-                            } label: { Label("Tag", systemImage: "tag") }
-                            Divider()
-                            Button(role: .destructive) { itemToDelete = item; isShowingDeleteConfirm = true } label: { Label("Delete", systemImage: "trash") }
+                        
+                        // Show inline preview if this item is expanded
+                        if expandedPreviewItemID == item.id, 
+                           item.type == UTType.url.identifier,
+                           let url = URL(string: item.content) {
+                            InlineLinkPreview(url: url)
+                                .transition(.opacity.combined(with: .scale(scale: 0.95)))
                         }
                     }
+                    // Card styling
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(
+                        // Adaptive card background
+                        Group {
+                            if colorScheme == .dark {
+                                // Dark mode: deep grey with theme tint
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color(UIColor.systemGray6))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .fill(themeColor.opacity(0.15))
+                                    )
+                            } else {
+                                // Light mode: clean white background
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color.white)
+                            }
+                        }
+                    )
+                    .shadow(
+                        color: colorScheme == .dark ? .black.opacity(0.3) : .black.opacity(0.1),
+                        radius: colorScheme == .dark ? 5 : 4,
+                        x: 0,
+                        y: 2
+                    )
+                    .id(item.id)
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    // Right swipe: Share action (blue background)
+                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                        Button {
+                            shareItem(item: item)
+                        } label: {
+                            Label("Share", systemImage: "square.and.arrow.up")
+                        }
+                        .tint(.blue)
+                    }
+                    // Left swipe: Rename, Tag, Delete actions
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        // Delete (destructive - red)
+                        Button(role: .destructive) {
+                            itemToDelete = item
+                            isShowingDeleteConfirm = true
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                        
+                        // Tag (orange)
+                        Button {
+                            openTagSheet(for: item)
+                        } label: {
+                            Label("Tag", systemImage: "tag")
+                        }
+                        .tint(.orange)
+                        
+                        // Rename (yellow)
+                        Button {
+                            itemToRename = item
+                            newName = item.displayName ?? ""
+                            isShowingRenameAlert = true
+                        } label: {
+                            Label("Rename", systemImage: "pencil")
+                        }
+                        .tint(.yellow)
+                    }
+                    // Context menu for additional actions
+                    .contextMenu {
+                        Button { shareItem(item: item) } label: { Label("Share", systemImage: "square.and.arrow.up") }
+                        Button { clipboardManager.togglePin(for: item) } label: { Label(item.isPinned ? "Unpin" : "Pin", systemImage: item.isPinned ? "pin.slash" : "pin") }
+                        Divider()
+                        Button { itemToRename = item; newName = item.displayName ?? ""; isShowingRenameAlert = true } label: { Label("Rename", systemImage: "pencil") }
+                        Button { openTagSheet(for: item) } label: { Label("Tag", systemImage: "tag") }
+                        Divider()
+                        Button(role: .destructive) { itemToDelete = item; isShowingDeleteConfirm = true } label: { Label("Delete", systemImage: "trash") }
+                    }
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
-                .padding(.bottom, bottomToolbarPadding)
+            }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .safeAreaInset(edge: .bottom) {
+                // Add space for bottom toolbar
+                Color.clear.frame(height: bottomToolbarPadding)
             }
             .simultaneousGesture(
                 DragGesture().onChanged { _ in
@@ -593,6 +621,15 @@ struct ContentView: View {
     }
     
     private func highlightAndScroll(to id: UUID) { newlyAddedItemID = id }
+    
+    // Helper method to handle tag action with Pro check
+    private func openTagSheet(for item: ClipboardItem) {
+        if subscriptionManager.isPro || clipboardManager.allTags.count < 10 {
+            itemToTag = item
+        } else {
+            showPaywall = true
+        }
+    }
     
     // Helper method to handle preview dismissal
     private func dismissPreview() {
