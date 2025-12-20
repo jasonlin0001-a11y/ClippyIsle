@@ -348,7 +348,7 @@ struct SettingsView: View {
                         if colorName == "custom" && !subscriptionManager.isPro {
                             Text("Custom (Pro)").foregroundColor(.secondary)
                             Image(systemName: "lock.fill").font(.caption).foregroundColor(.secondary)
-                        } else { Text(colorName == "retro" ? "Retro" : colorName.capitalized) }
+                        } else { Text(colorName.capitalized) }
                     }.tag(colorName).tint(colorToShow)
                 }
             }

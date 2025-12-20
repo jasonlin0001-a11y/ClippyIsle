@@ -127,7 +127,7 @@ struct NotificationRowView: View {
                 ZStack {
                     // Center text - "SHARE" for app share, "LINK" for deep link
                     Text(notification.source == .appShare ? "SHARE" : "LINK")
-                        .font(.system(size: 8, weight: .bold))
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundColor(.primary)
                     
                     // Corner brackets using themeColor
@@ -228,7 +228,7 @@ struct MessageCenterImportView: View {
                     // Icon based on source - matching Main Screen's corner bracket style
                     ZStack {
                         Text(notification.source == .appShare ? "SHARE" : "LINK")
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.system(size: 11, weight: .bold))
                             .foregroundColor(.primary)
                         
                         Text("┌")
