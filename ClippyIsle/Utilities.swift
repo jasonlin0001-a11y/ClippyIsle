@@ -12,7 +12,7 @@ func itemIcon(for type: String) -> String {
     else if let utType = UTType(type), utType.conforms(to: .image) { return "PIC" }
     else {
         if type.contains("html") { return "HTML" }
-        return "TXT"
+        return "TEXT"
     }
 }
 

@@ -7,6 +7,7 @@ struct RadialMenuItem: Identifiable {
     let letterIcon: String  // Single letter icon (S, N, P)
     let label: String
     let action: () -> Void
+    var longPressAction: (() -> Void)? = nil  // Optional long press action
 }
 
 // MARK: - Radial Menu Button
@@ -45,28 +46,33 @@ struct RadialMenuButton: View {
     }
     
     var body: some View {
-        Button(action: item.action) {
-            VStack(spacing: 4) {
-                ZStack {
-                    Circle()
-                        .fill(themeColor)
-                        .frame(width: 50, height: 50)
-                        .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
-                    
-                    // Letter icon instead of SF Symbol
-                    Text(item.letterIcon)
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.white)
-                }
+        VStack(spacing: 4) {
+            ZStack {
+                Circle()
+                    .fill(themeColor)
+                    .frame(width: 50, height: 50)
+                    .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
                 
-                Text(item.label)
-                    .font(.caption2)
-                    .fontWeight(.medium)
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
+                // Letter icon instead of SF Symbol
+                Text(item.letterIcon)
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.white)
+            }
+            
+            Text(item.label)
+                .font(.caption2)
+                .fontWeight(.medium)
+                .foregroundColor(.primary)
+                .lineLimit(1)
+        }
+        .onTapGesture {
+            item.action()
+        }
+        .onLongPressGesture(minimumDuration: 0.5) {
+            if let longPressAction = item.longPressAction {
+                longPressAction()
             }
         }
-        .buttonStyle(.plain)
         .offset(offset)
         .opacity(isExpanded ? 1 : 0)
         .scaleEffect(isExpanded ? 1 : 0.3)
@@ -83,12 +89,14 @@ struct RadialMenuButton: View {
 struct RadialMenuView: View {
     let themeColor: Color
     let onSearch: () -> Void
+    let onVoiceSearch: () -> Void  // New callback for voice search
     let onNewItem: () -> Void
     let onPasteFromClipboard: () -> Void
     
     @State private var isExpanded = false
     @State private var isDragging = false
     @State private var position: CGPoint = .zero
+    @State private var dragOffset: CGSize = .zero  // Separate drag offset to prevent ghost images
     @State private var isOnLeftSide = false
     @Environment(\.colorScheme) private var colorScheme
     
@@ -108,6 +116,8 @@ struct RadialMenuView: View {
         [
             RadialMenuItem(letterIcon: "S", label: "SEARCH", action: {
                 closeMenuAndExecute(onSearch)
+            }, longPressAction: {
+                closeMenuAndExecute(onVoiceSearch)
             }),
             RadialMenuItem(letterIcon: "N", label: "NEW ITEM", action: {
                 closeMenuAndExecute(onNewItem)
@@ -175,7 +185,6 @@ struct RadialMenuView: View {
                             .animation(.spring(response: closeAnimationDuration, dampingFraction: 0.7), value: isExpanded)
                     }
                     .scaleEffect(isDragging ? 1.1 : 1.0)
-                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDragging)
                     .onTapGesture {
                         // Tap action: Open radial menu
                         if !isExpanded {
@@ -194,20 +203,25 @@ struct RadialMenuView: View {
                             .onEnded { _ in
                                 // Start dragging mode
                                 hapticGenerator.impactOccurred()
-                                isDragging = true
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    isDragging = true
+                                }
                             }
                     )
-                    .simultaneousGesture(
+                    .gesture(
                         DragGesture()
                             .onChanged { value in
                                 if isDragging {
-                                    // Update position while dragging
-                                    position = value.location
+                                    // Calculate new position directly from translation
+                                    let newX = position.x + value.translation.width - dragOffset.width
+                                    let newY = position.y + value.translation.height - dragOffset.height
+                                    dragOffset = value.translation
+                                    position = CGPoint(x: newX, y: newY)
                                 }
                             }
                             .onEnded { value in
                                 if isDragging {
-                                    isDragging = false
+                                    dragOffset = .zero
                                     
                                     // Snap to left or right edge
                                     let screenWidth = geometry.size.width
@@ -215,14 +229,14 @@ struct RadialMenuView: View {
                                     let midX = screenWidth / 2
                                     
                                     // Determine which side to snap to
-                                    let newIsOnLeftSide = value.location.x < midX
+                                    let newIsOnLeftSide = position.x < midX
                                     
                                     // Clamp Y position within safe bounds (accounting for safe area)
                                     let safeAreaTop = geometry.safeAreaInsets.top
                                     let safeAreaBottom = geometry.safeAreaInsets.bottom
                                     let minY = fabSize / 2 + edgeMargin + safeAreaTop
                                     let maxY = screenHeight - fabSize / 2 - edgeMargin - safeAreaBottom
-                                    let clampedY = min(max(value.location.y, minY), maxY)
+                                    let clampedY = min(max(position.y, minY), maxY)
                                     
                                     // Calculate final X position (snapped to edge)
                                     let finalX = newIsOnLeftSide ? (fabSize / 2 + edgeMargin) : (screenWidth - fabSize / 2 - edgeMargin)
@@ -230,12 +244,14 @@ struct RadialMenuView: View {
                                     withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                                         position = CGPoint(x: finalX, y: clampedY)
                                         isOnLeftSide = newIsOnLeftSide
+                                        isDragging = false
                                     }
                                 }
                             }
                     )
                 }
-                .position(position == .zero ? defaultPosition(in: geometry) : position)
+                .position(position)
+                .drawingGroup()  // Fixes ghost image artifacts during drag
             }
             .onAppear {
                 // Set initial position
@@ -263,6 +279,7 @@ struct RadialMenuView: View {
         RadialMenuView(
             themeColor: .blue,
             onSearch: { print("Search tapped") },
+            onVoiceSearch: { print("Voice search tapped") },
             onNewItem: { print("New Item tapped") },
             onPasteFromClipboard: { print("Paste tapped") }
         )

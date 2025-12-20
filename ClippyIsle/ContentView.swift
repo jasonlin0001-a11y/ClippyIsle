@@ -149,6 +149,7 @@ struct ContentView: View {
     var body: some View {
         NavigationView { mainContent }
         .navigationViewStyle(.stack).tint(themeColor).preferredColorScheme(preferredColorScheme)
+        .searchable(text: $searchText, prompt: "Search...")
         .task(priority: .userInitiated) {
             // ✅ PERFORMANCE FIX: Initialize data asynchronously after UI rendering
             // Note: Runs on MainActor but doesn't block initial view rendering
@@ -380,7 +381,6 @@ struct ContentView: View {
                 else { 
                     ZStack(alignment: .bottom) { 
                         listContent
-                        bottomToolbar.padding(.bottom, 8)
                     }
                     .overlay {
                         // Radial Menu FAB - manages its own positioning
@@ -389,6 +389,16 @@ struct ContentView: View {
                             onSearch: {
                                 // Focus the search field
                                 isSearchFieldFocused = true
+                            },
+                            onVoiceSearch: {
+                                // Trigger voice search
+                                if isTranscribing {
+                                    stopTranscription()
+                                } else {
+                                    isTranscribing = true
+                                    speechRecognizer.startTranscribing()
+                                    isSearchFieldFocused = true
+                                }
                             },
                             onNewItem: {
                                 trackAndHighlightNewItem {
