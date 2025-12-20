@@ -47,6 +47,8 @@ struct ContentView: View {
     @State private var isShowingRenameAlert = false
     @State private var searchText = ""
     @State private var isTranscribing = false
+    @State private var isVoiceMemoMode = false  // Track if voice transcription is for memo (vs search)
+    @State private var voiceMemoTranscript = ""  // Store voice memo transcript separately
     @State private var isShowingPinnedOnly = false
     @State private var isShowingTagSheet = false
     @State private var itemToTag: ClipboardItem? = nil
@@ -68,6 +70,9 @@ struct ContentView: View {
     
     // State to control Audio Manager sheet
     @State private var isShowingAudioManager = false
+    
+    // State to control search field focus (for radial menu Search action)
+    @FocusState private var isSearchFieldFocused: Bool
     
     // Firebase share state
     @State private var isSharingFirebase = false
@@ -146,6 +151,7 @@ struct ContentView: View {
     var body: some View {
         NavigationView { mainContent }
         .navigationViewStyle(.stack).tint(themeColor).preferredColorScheme(preferredColorScheme)
+        .searchable(text: $searchText, prompt: "Search...")
         .task(priority: .userInitiated) {
             // ✅ PERFORMANCE FIX: Initialize data asynchronously after UI rendering
             // Note: Runs on MainActor but doesn't block initial view rendering
@@ -227,9 +233,22 @@ struct ContentView: View {
         .onChange(of: themeColorName) { _, newColor in if clipboardManager.isLiveActivityOn { clipboardManager.updateActivity(newColorName: newColor) } }
         .onChange(of: speechRecognizer.transcript) { _, newText in
             if isTranscribing {
-                searchText = newText
+                if isVoiceMemoMode {
+                    // Store transcript for voice memo
+                    voiceMemoTranscript = newText
+                } else {
+                    // Store transcript for search
+                    searchText = newText
+                }
                 silenceTimer?.invalidate()
-                silenceTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { _ in stopTranscription() }
+                silenceTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { _ in 
+                    if isVoiceMemoMode {
+                        // Auto-save voice memo after silence
+                        saveVoiceMemo()
+                    } else {
+                        stopTranscription() 
+                    }
+                }
             }
         }
         
@@ -346,9 +365,21 @@ struct ContentView: View {
     
     private func stopTranscription() {
         isTranscribing = false
+        isVoiceMemoMode = false
         speechRecognizer.stopTranscribing()
         silenceTimer?.invalidate()
         silenceTimer = nil
+    }
+    
+    private func saveVoiceMemo() {
+        stopTranscription()
+        let transcriptToSave = voiceMemoTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !transcriptToSave.isEmpty {
+            trackAndHighlightNewItem {
+                clipboardManager.addNewItem(content: transcriptToSave, type: UTType.text.identifier)
+            }
+        }
+        voiceMemoTranscript = ""
     }
     
     private var mainContent: some View {
@@ -374,7 +405,89 @@ struct ContentView: View {
             
             VStack(spacing: 0) {
                 if clipboardManager.dataLoadError != nil { dataErrorView }
-                else { ZStack(alignment: .bottom) { listContent; bottomToolbar.padding(.bottom, 8) } }
+                else { 
+                    ZStack(alignment: .bottom) { 
+                        listContent
+                    }
+                    .overlay {
+                        // Radial Menu FAB - manages its own positioning
+                        RadialMenuView(
+                            themeColor: themeColor,
+                            onVoiceMemo: {
+                                // Open microphone for voice-to-text memo
+                                if isTranscribing && isVoiceMemoMode {
+                                    // Stop and save voice memo
+                                    saveVoiceMemo()
+                                } else {
+                                    // Start voice memo transcription
+                                    voiceMemoTranscript = ""
+                                    isVoiceMemoMode = true
+                                    isTranscribing = true
+                                    speechRecognizer.transcript = ""  // Clear previous transcript
+                                    speechRecognizer.startTranscribing()
+                                }
+                            },
+                            onNewItem: {
+                                trackAndHighlightNewItem {
+                                    clipboardManager.addNewItem(content: String(localized: "New Item"), type: UTType.text.identifier)
+                                }
+                            },
+                            onPasteFromClipboard: {
+                                trackAndHighlightNewItem {
+                                    clipboardManager.checkClipboard(isManual: true)
+                                }
+                            }
+                        )
+                    }
+                    .overlay {
+                        // Voice Memo Recording Indicator
+                        if isVoiceMemoMode && isTranscribing {
+                            VStack {
+                                Spacer()
+                                VStack(spacing: 12) {
+                                    HStack(spacing: 8) {
+                                        Circle()
+                                            .fill(Color.red)
+                                            .frame(width: 12, height: 12)
+                                            .opacity(0.8)
+                                        Text("Recording Voice Memo...")
+                                            .font(.headline)
+                                            .foregroundColor(.white)
+                                    }
+                                    if !voiceMemoTranscript.isEmpty {
+                                        Text(voiceMemoTranscript)
+                                            .font(.body)
+                                            .foregroundColor(.white.opacity(0.9))
+                                            .multilineTextAlignment(.center)
+                                            .lineLimit(3)
+                                            .padding(.horizontal)
+                                    }
+                                    Button(action: saveVoiceMemo) {
+                                        HStack {
+                                            Image(systemName: "stop.circle.fill")
+                                            Text("Stop & Save")
+                                        }
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 20)
+                                        .padding(.vertical, 10)
+                                        .background(Color.red)
+                                        .cornerRadius(20)
+                                    }
+                                }
+                                .padding(.vertical, 20)
+                                .padding(.horizontal, 30)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .fill(Color.black.opacity(0.8))
+                                )
+                                .padding(.bottom, 120)
+                            }
+                            .transition(.opacity.combined(with: .move(edge: .bottom)))
+                            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isVoiceMemoMode)
+                        }
+                    }
+                }
             }
         }
         .navigationTitle(navigationTitle).navigationBarTitleDisplayMode(selectedTagFilter == nil ? .large : .inline)
@@ -599,6 +712,20 @@ struct ContentView: View {
     
     private func highlightAndScroll(to id: UUID) { newlyAddedItemID = id }
     
+    // Delay constant for item highlight after adding new items
+    private let itemAddHighlightDelay: Double = 0.2
+    
+    // Helper method to track old items and highlight newly added ones
+    private func trackAndHighlightNewItem(action: () -> Void) {
+        let oldIDs = Set(clipboardManager.items.map { $0.id })
+        action()
+        DispatchQueue.main.asyncAfter(deadline: .now() + itemAddHighlightDelay) {
+            if let newItem = clipboardManager.items.first(where: { !oldIDs.contains($0.id) }) {
+                highlightAndScroll(to: newItem.id)
+            }
+        }
+    }
+    
     // Helper method to handle tag action with Pro check
     private func openTagSheet(for item: ClipboardItem) {
         if subscriptionManager.isPro || clipboardManager.allTags.count < 10 {
@@ -621,6 +748,7 @@ struct ContentView: View {
                 .foregroundColor(colorScheme == .dark ? .white.opacity(0.7) : .gray)
                 .padding(.leading, 12)
             TextField("Search...", text: $searchText)
+                .focused($isSearchFieldFocused)
                 .padding(.horizontal, 8)
                 .submitLabel(.search)
                 .foregroundColor(colorScheme == .dark ? .white : .primary)
@@ -643,35 +771,6 @@ struct ContentView: View {
                 Image(systemName: "mic.fill")
                     .foregroundColor(isTranscribing ? .red : (colorScheme == .dark ? .white.opacity(0.7) : .gray))
             }
-            .padding(.trailing, 8)
-            
-            Rectangle()
-                .frame(width: 1, height: 20)
-                .foregroundColor(colorScheme == .dark ? .white.opacity(0.3) : .gray.opacity(0.3))
-                .padding(.horizontal, 4)
-            Menu {
-                Button {
-                    let oldIDs = Set(clipboardManager.items.map { $0.id })
-                    clipboardManager.addNewItem(content: String(localized: "New Item"), type: UTType.text.identifier)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                        if let newItem = clipboardManager.items.first(where: { !oldIDs.contains($0.id) }) { highlightAndScroll(to: newItem.id) }
-                    }
-                } label: { Label("New Item", systemImage: "square.and.pencil") }
-                
-                Button {
-                    let oldIDs = Set(clipboardManager.items.map { $0.id })
-                    clipboardManager.checkClipboard(isManual: true)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                        if let newItem = clipboardManager.items.first(where: { !oldIDs.contains($0.id) }) { highlightAndScroll(to: newItem.id) }
-                    }
-                } label: { Label("Add from Clipboard", systemImage: "doc.on.clipboard") }
-            } label: { 
-                Image(systemName: "plus")
-                    .font(.system(size: 14, weight: .bold))
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(themeColor)
-            .clipShape(Capsule())
             .padding(.trailing, 12)
         }
         .frame(height: bottomToolbarHeight)
