@@ -386,18 +386,21 @@ struct ContentView: View {
                         // Radial Menu FAB - manages its own positioning
                         RadialMenuView(
                             themeColor: themeColor,
-                            onSearch: {
-                                // Focus the search field
-                                isSearchFieldFocused = true
-                            },
-                            onVoiceSearch: {
-                                // Trigger voice search
+                            onVoiceMemo: {
+                                // Open microphone for voice-to-text memo
                                 if isTranscribing {
+                                    // Stop transcription and save memo
                                     stopTranscription()
+                                    if !searchText.isEmpty {
+                                        trackAndHighlightNewItem {
+                                            clipboardManager.addNewItem(content: searchText, type: UTType.text.identifier)
+                                        }
+                                        searchText = ""
+                                    }
                                 } else {
+                                    // Start voice transcription
                                     isTranscribing = true
                                     speechRecognizer.startTranscribing()
-                                    isSearchFieldFocused = true
                                 }
                             },
                             onNewItem: {

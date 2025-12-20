@@ -4,10 +4,9 @@ import SwiftUI
 /// Represents a single item in the radial menu
 struct RadialMenuItem: Identifiable {
     let id = UUID()
-    let letterIcon: String  // Single letter icon (S, N, P)
+    let letterIcon: String  // Single letter icon (V, N, P)
     let label: String
     let action: () -> Void
-    var longPressAction: (() -> Void)? = nil  // Optional long press action
 }
 
 // MARK: - Radial Menu Button
@@ -68,11 +67,6 @@ struct RadialMenuButton: View {
         .onTapGesture {
             item.action()
         }
-        .onLongPressGesture(minimumDuration: 0.5) {
-            if let longPressAction = item.longPressAction {
-                longPressAction()
-            }
-        }
         .offset(offset)
         .opacity(isExpanded ? 1 : 0)
         .scaleEffect(isExpanded ? 1 : 0.3)
@@ -88,15 +82,14 @@ struct RadialMenuButton: View {
 /// A floating action button with radial menu expansion and draggable positioning
 struct RadialMenuView: View {
     let themeColor: Color
-    let onSearch: () -> Void
-    let onVoiceSearch: () -> Void  // New callback for voice search
+    let onVoiceMemo: () -> Void  // Voice memo - opens microphone for voice-to-text memo
     let onNewItem: () -> Void
     let onPasteFromClipboard: () -> Void
     
     @State private var isExpanded = false
     @State private var isDragging = false
     @State private var position: CGPoint = .zero
-    @State private var dragOffset: CGSize = .zero  // Separate drag offset to prevent ghost images
+    @State private var startDragPosition: CGPoint = .zero  // Track starting position for smooth drag
     @State private var isOnLeftSide = false
     @Environment(\.colorScheme) private var colorScheme
     
@@ -114,10 +107,8 @@ struct RadialMenuView: View {
     
     private var menuItems: [RadialMenuItem] {
         [
-            RadialMenuItem(letterIcon: "S", label: "SEARCH", action: {
-                closeMenuAndExecute(onSearch)
-            }, longPressAction: {
-                closeMenuAndExecute(onVoiceSearch)
+            RadialMenuItem(letterIcon: "V", label: "VOICE MEMO", action: {
+                closeMenuAndExecute(onVoiceMemo)
             }),
             RadialMenuItem(letterIcon: "N", label: "NEW ITEM", action: {
                 closeMenuAndExecute(onNewItem)
@@ -185,16 +176,19 @@ struct RadialMenuView: View {
                             .animation(.spring(response: closeAnimationDuration, dampingFraction: 0.7), value: isExpanded)
                     }
                     .scaleEffect(isDragging ? 1.1 : 1.0)
+                    .animation(.easeOut(duration: 0.15), value: isDragging)
                     .onTapGesture {
                         // Tap action: Open radial menu
-                        if !isExpanded {
-                            hapticGenerator.impactOccurred()
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                                isExpanded = true
-                            }
-                        } else {
-                            withAnimation(.spring(response: closeAnimationDuration, dampingFraction: 0.7)) {
-                                isExpanded = false
+                        if !isDragging {
+                            if !isExpanded {
+                                hapticGenerator.impactOccurred()
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                                    isExpanded = true
+                                }
+                            } else {
+                                withAnimation(.spring(response: closeAnimationDuration, dampingFraction: 0.7)) {
+                                    isExpanded = false
+                                }
                             }
                         }
                     }
@@ -203,55 +197,48 @@ struct RadialMenuView: View {
                             .onEnded { _ in
                                 // Start dragging mode
                                 hapticGenerator.impactOccurred()
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                    isDragging = true
-                                }
+                                isDragging = true
+                                startDragPosition = position
                             }
                     )
-                    .gesture(
-                        DragGesture()
+                    .highPriorityGesture(
+                        isDragging ?
+                        DragGesture(minimumDistance: 0)
                             .onChanged { value in
-                                if isDragging {
-                                    // Calculate new position directly from translation
-                                    let newX = position.x + value.translation.width - dragOffset.width
-                                    let newY = position.y + value.translation.height - dragOffset.height
-                                    dragOffset = value.translation
-                                    position = CGPoint(x: newX, y: newY)
+                                // Direct position update without animation for smooth dragging
+                                let newX = startDragPosition.x + value.translation.width
+                                let newY = startDragPosition.y + value.translation.height
+                                position = CGPoint(x: newX, y: newY)
+                            }
+                            .onEnded { _ in
+                                // Snap to left or right edge
+                                let screenWidth = geometry.size.width
+                                let screenHeight = geometry.size.height
+                                let midX = screenWidth / 2
+                                
+                                // Determine which side to snap to
+                                let newIsOnLeftSide = position.x < midX
+                                
+                                // Clamp Y position within safe bounds (accounting for safe area)
+                                let safeAreaTop = geometry.safeAreaInsets.top
+                                let safeAreaBottom = geometry.safeAreaInsets.bottom
+                                let minY = fabSize / 2 + edgeMargin + safeAreaTop
+                                let maxY = screenHeight - fabSize / 2 - edgeMargin - safeAreaBottom
+                                let clampedY = min(max(position.y, minY), maxY)
+                                
+                                // Calculate final X position (snapped to edge)
+                                let finalX = newIsOnLeftSide ? (fabSize / 2 + edgeMargin) : (screenWidth - fabSize / 2 - edgeMargin)
+                                
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                                    position = CGPoint(x: finalX, y: clampedY)
+                                    isOnLeftSide = newIsOnLeftSide
+                                    isDragging = false
                                 }
                             }
-                            .onEnded { value in
-                                if isDragging {
-                                    dragOffset = .zero
-                                    
-                                    // Snap to left or right edge
-                                    let screenWidth = geometry.size.width
-                                    let screenHeight = geometry.size.height
-                                    let midX = screenWidth / 2
-                                    
-                                    // Determine which side to snap to
-                                    let newIsOnLeftSide = position.x < midX
-                                    
-                                    // Clamp Y position within safe bounds (accounting for safe area)
-                                    let safeAreaTop = geometry.safeAreaInsets.top
-                                    let safeAreaBottom = geometry.safeAreaInsets.bottom
-                                    let minY = fabSize / 2 + edgeMargin + safeAreaTop
-                                    let maxY = screenHeight - fabSize / 2 - edgeMargin - safeAreaBottom
-                                    let clampedY = min(max(position.y, minY), maxY)
-                                    
-                                    // Calculate final X position (snapped to edge)
-                                    let finalX = newIsOnLeftSide ? (fabSize / 2 + edgeMargin) : (screenWidth - fabSize / 2 - edgeMargin)
-                                    
-                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                                        position = CGPoint(x: finalX, y: clampedY)
-                                        isOnLeftSide = newIsOnLeftSide
-                                        isDragging = false
-                                    }
-                                }
-                            }
+                        : nil
                     )
                 }
                 .position(position)
-                .drawingGroup()  // Fixes ghost image artifacts during drag
             }
             .onAppear {
                 // Set initial position
@@ -278,8 +265,7 @@ struct RadialMenuView: View {
         
         RadialMenuView(
             themeColor: .blue,
-            onSearch: { print("Search tapped") },
-            onVoiceSearch: { print("Voice search tapped") },
+            onVoiceMemo: { print("Voice Memo tapped") },
             onNewItem: { print("New Item tapped") },
             onPasteFromClipboard: { print("Paste tapped") }
         )
