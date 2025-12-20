@@ -16,20 +16,30 @@ struct RadialMenuButton: View {
     let isExpanded: Bool
     let themeColor: Color
     let totalItems: Int
-    let isOnLeftSide: Bool  // Determines alignment direction
+    let isOnLeftSide: Bool  // Determines fan direction
     
-    // Fixed vertical spacing between items
-    private let itemSpacing: CGFloat = 55
-    private let horizontalOffset: CGFloat = 20  // Offset from FAB center
+    // Distance from center for expanded state
+    private let expandedRadius: CGFloat = 100
+    
+    // Calculate angle for fan expansion with equal spacing
+    private var angle: Double {
+        // Fan spans 90 degrees total, divided equally among items
+        // Right side: fan from 180° (left) to 270° (up)
+        // Left side: fan from 270° (up) to 360° (right)
+        let baseStartAngle: Double = isOnLeftSide ? 270 : 180
+        let anglePerItem: Double = 45  // Equal 45° spacing between each item (90° / 2 gaps for 3 items)
+        return baseStartAngle + (anglePerItem * Double(index))
+    }
     
     private var offset: CGSize {
         guard isExpanded else {
             return .zero
         }
-        // Stack items vertically with equal spacing, offset horizontally based on side
-        let yOffset = -CGFloat(index + 1) * itemSpacing  // Items go upward
-        let xOffset = isOnLeftSide ? horizontalOffset : -horizontalOffset  // Offset away from edge
-        return CGSize(width: xOffset, height: yOffset)
+        let radians = CGFloat(angle) * .pi / 180
+        return CGSize(
+            width: Darwin.cos(radians) * expandedRadius,
+            height: Darwin.sin(radians) * expandedRadius
+        )
     }
     
     var body: some View {
