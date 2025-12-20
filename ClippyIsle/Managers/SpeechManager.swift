@@ -41,13 +41,14 @@ class SpeechManager: NSObject, ObservableObject, AVSpeechSynthesizerDelegate, AV
     override init() {
         super.init()
         synthesizer.delegate = self
+        synthesizer.usesApplicationAudioSession = true
         setupAudioSession()
         setupRemoteCommandCenter()
     }
     
     private func setupAudioSession() {
         do {
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio, options: [.duckOthers, .allowBluetoothA2DP])
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio, options: [.allowBluetoothA2DP, .allowAirPlay])
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
             print("Audio Session Error: \(error)")
@@ -319,8 +320,35 @@ class SpeechManager: NSObject, ObservableObject, AVSpeechSynthesizerDelegate, AV
     
     private func setupRemoteCommandCenter() {
         let commandCenter = MPRemoteCommandCenter.shared()
-        commandCenter.playCommand.addTarget { [weak self] _ in self?.resume(); return .success }
-        commandCenter.pauseCommand.addTarget { [weak self] _ in self?.pause(); return .success }
+        
+        // Enable and configure play command
+        commandCenter.playCommand.isEnabled = true
+        commandCenter.playCommand.addTarget { [weak self] _ in 
+            self?.resume()
+            return .success 
+        }
+        
+        // Enable and configure pause command
+        commandCenter.pauseCommand.isEnabled = true
+        commandCenter.pauseCommand.addTarget { [weak self] _ in 
+            self?.pause()
+            return .success 
+        }
+        
+        // Enable and configure toggle play/pause command (for headphone button)
+        commandCenter.togglePlayPauseCommand.isEnabled = true
+        commandCenter.togglePlayPauseCommand.addTarget { [weak self] _ in
+            guard let self = self else { return .commandFailed }
+            if self.isSpeaking {
+                self.pause()
+            } else if self.isPaused || self.currentItemID != nil {
+                self.resume()
+            }
+            return .success
+        }
+        
+        // Enable and configure seek command
+        commandCenter.changePlaybackPositionCommand.isEnabled = true
         commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
             if let event = event as? MPChangePlaybackPositionCommandEvent {
                 self?.seek(to: event.positionTime)
@@ -328,15 +356,36 @@ class SpeechManager: NSObject, ObservableObject, AVSpeechSynthesizerDelegate, AV
             }
             return .commandFailed
         }
+        
+        // Enable skip forward/backward commands (only effective for audio file playback)
+        commandCenter.skipForwardCommand.isEnabled = true
+        commandCenter.skipForwardCommand.preferredIntervals = [NSNumber(value: 10)]
+        commandCenter.skipForwardCommand.addTarget { [weak self] _ in
+            guard let self = self, self.audioPlayer != nil else { return .commandFailed }
+            let newTime = min(self.duration, self.elapsedTime + 10)
+            self.seek(to: newTime)
+            return .success
+        }
+        
+        commandCenter.skipBackwardCommand.isEnabled = true
+        commandCenter.skipBackwardCommand.preferredIntervals = [NSNumber(value: 10)]
+        commandCenter.skipBackwardCommand.addTarget { [weak self] _ in
+            guard let self = self, self.audioPlayer != nil else { return .commandFailed }
+            let newTime = max(0, self.elapsedTime - 10)
+            self.seek(to: newTime)
+            return .success
+        }
     }
     
     private func updateNowPlayingInfo() {
         var nowPlayingInfo = [String: Any]()
         nowPlayingInfo[MPMediaItemPropertyTitle] = currentTitle
         nowPlayingInfo[MPMediaItemPropertyArtist] = "CC ISLE"
+        nowPlayingInfo[MPMediaItemPropertyMediaType] = MPMediaType.anyAudio.rawValue
         nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = isSpeaking ? (audioPlayer?.rate ?? 1.0) : 0.0
         nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
         nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = elapsedTime
+        nowPlayingInfo[MPNowPlayingInfoPropertyDefaultPlaybackRate] = 1.0
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
     }
 
