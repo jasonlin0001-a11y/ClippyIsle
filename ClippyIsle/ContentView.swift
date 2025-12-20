@@ -47,6 +47,8 @@ struct ContentView: View {
     @State private var isShowingRenameAlert = false
     @State private var searchText = ""
     @State private var isTranscribing = false
+    @State private var isVoiceMemoMode = false  // Track if voice transcription is for memo (vs search)
+    @State private var voiceMemoTranscript = ""  // Store voice memo transcript separately
     @State private var isShowingPinnedOnly = false
     @State private var isShowingTagSheet = false
     @State private var itemToTag: ClipboardItem? = nil
@@ -231,9 +233,22 @@ struct ContentView: View {
         .onChange(of: themeColorName) { _, newColor in if clipboardManager.isLiveActivityOn { clipboardManager.updateActivity(newColorName: newColor) } }
         .onChange(of: speechRecognizer.transcript) { _, newText in
             if isTranscribing {
-                searchText = newText
+                if isVoiceMemoMode {
+                    // Store transcript for voice memo
+                    voiceMemoTranscript = newText
+                } else {
+                    // Store transcript for search
+                    searchText = newText
+                }
                 silenceTimer?.invalidate()
-                silenceTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { _ in stopTranscription() }
+                silenceTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { _ in 
+                    if isVoiceMemoMode {
+                        // Auto-save voice memo after silence
+                        saveVoiceMemo()
+                    } else {
+                        stopTranscription() 
+                    }
+                }
             }
         }
         
@@ -350,9 +365,21 @@ struct ContentView: View {
     
     private func stopTranscription() {
         isTranscribing = false
+        isVoiceMemoMode = false
         speechRecognizer.stopTranscribing()
         silenceTimer?.invalidate()
         silenceTimer = nil
+    }
+    
+    private func saveVoiceMemo() {
+        stopTranscription()
+        let transcriptToSave = voiceMemoTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !transcriptToSave.isEmpty {
+            trackAndHighlightNewItem {
+                clipboardManager.addNewItem(content: transcriptToSave, type: UTType.text.identifier)
+            }
+        }
+        voiceMemoTranscript = ""
     }
     
     private var mainContent: some View {
@@ -388,18 +415,15 @@ struct ContentView: View {
                             themeColor: themeColor,
                             onVoiceMemo: {
                                 // Open microphone for voice-to-text memo
-                                if isTranscribing {
-                                    // Stop transcription and save memo
-                                    stopTranscription()
-                                    if !searchText.isEmpty {
-                                        trackAndHighlightNewItem {
-                                            clipboardManager.addNewItem(content: searchText, type: UTType.text.identifier)
-                                        }
-                                        searchText = ""
-                                    }
+                                if isTranscribing && isVoiceMemoMode {
+                                    // Stop and save voice memo
+                                    saveVoiceMemo()
                                 } else {
-                                    // Start voice transcription
+                                    // Start voice memo transcription
+                                    voiceMemoTranscript = ""
+                                    isVoiceMemoMode = true
                                     isTranscribing = true
+                                    speechRecognizer.transcript = ""  // Clear previous transcript
                                     speechRecognizer.startTranscribing()
                                 }
                             },
@@ -414,6 +438,54 @@ struct ContentView: View {
                                 }
                             }
                         )
+                    }
+                    .overlay {
+                        // Voice Memo Recording Indicator
+                        if isVoiceMemoMode && isTranscribing {
+                            VStack {
+                                Spacer()
+                                VStack(spacing: 12) {
+                                    HStack(spacing: 8) {
+                                        Circle()
+                                            .fill(Color.red)
+                                            .frame(width: 12, height: 12)
+                                            .opacity(0.8)
+                                        Text("Recording Voice Memo...")
+                                            .font(.headline)
+                                            .foregroundColor(.white)
+                                    }
+                                    if !voiceMemoTranscript.isEmpty {
+                                        Text(voiceMemoTranscript)
+                                            .font(.body)
+                                            .foregroundColor(.white.opacity(0.9))
+                                            .multilineTextAlignment(.center)
+                                            .lineLimit(3)
+                                            .padding(.horizontal)
+                                    }
+                                    Button(action: saveVoiceMemo) {
+                                        HStack {
+                                            Image(systemName: "stop.circle.fill")
+                                            Text("Stop & Save")
+                                        }
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 20)
+                                        .padding(.vertical, 10)
+                                        .background(Color.red)
+                                        .cornerRadius(20)
+                                    }
+                                }
+                                .padding(.vertical, 20)
+                                .padding(.horizontal, 30)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .fill(Color.black.opacity(0.8))
+                                )
+                                .padding(.bottom, 120)
+                            }
+                            .transition(.opacity.combined(with: .move(edge: .bottom)))
+                            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isVoiceMemoMode)
+                        }
                     }
                 }
             }
