@@ -333,6 +333,7 @@ class SpeechManager: NSObject, ObservableObject, AVSpeechSynthesizerDelegate, AV
     private func updateNowPlayingInfo() {
         var nowPlayingInfo = [String: Any]()
         nowPlayingInfo[MPMediaItemPropertyTitle] = currentTitle
+        nowPlayingInfo[MPMediaItemPropertyArtist] = "CC ISLE"
         nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = isSpeaking ? (audioPlayer?.rate ?? 1.0) : 0.0
         nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
         nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = elapsedTime
