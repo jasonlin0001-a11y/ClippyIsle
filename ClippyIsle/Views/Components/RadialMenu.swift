@@ -4,8 +4,7 @@ import SwiftUI
 /// Represents a single item in the radial menu
 struct RadialMenuItem: Identifiable {
     let id = UUID()
-    let letterIcon: String  // Single letter icon (V, N, P)
-    let label: String
+    let localizedKey: LocalizedStringKey  // Localized name key
     let action: () -> Void
 }
 
@@ -45,36 +44,28 @@ struct RadialMenuButton: View {
     }
     
     var body: some View {
-        VStack(spacing: 4) {
-            ZStack {
-                Circle()
-                    .fill(themeColor)
-                    .frame(width: 50, height: 50)
+        // Show only the localized name text (no letter icon, no circle background)
+        Text(item.localizedKey)
+            .font(.system(size: 16, weight: .bold))
+            .foregroundColor(themeColor)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(.systemBackground))
                     .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
-                
-                // Letter icon instead of SF Symbol
-                Text(item.letterIcon)
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.white)
+            )
+            .onTapGesture {
+                item.action()
             }
-            
-            Text(item.label)
-                .font(.caption2)
-                .fontWeight(.medium)
-                .foregroundColor(.primary)
-                .lineLimit(1)
-        }
-        .onTapGesture {
-            item.action()
-        }
-        .offset(offset)
-        .opacity(isExpanded ? 1 : 0)
-        .scaleEffect(isExpanded ? 1 : 0.3)
-        .animation(
-            .spring(response: 0.4, dampingFraction: 0.7, blendDuration: 0)
-                .delay(isExpanded ? Double(index) * 0.05 : Double(totalItems - index - 1) * 0.03),
-            value: isExpanded
-        )
+            .offset(offset)
+            .opacity(isExpanded ? 1 : 0)
+            .scaleEffect(isExpanded ? 1 : 0.3)
+            .animation(
+                .spring(response: 0.4, dampingFraction: 0.7, blendDuration: 0)
+                    .delay(isExpanded ? Double(index) * 0.05 : Double(totalItems - index - 1) * 0.03),
+                value: isExpanded
+            )
     }
 }
 
@@ -107,13 +98,13 @@ struct RadialMenuView: View {
     
     private var menuItems: [RadialMenuItem] {
         [
-            RadialMenuItem(letterIcon: "V", label: "VOICE MEMO", action: {
+            RadialMenuItem(localizedKey: "Voice Memo", action: {
                 closeMenuAndExecute(onVoiceMemo)
             }),
-            RadialMenuItem(letterIcon: "N", label: "NEW ITEM", action: {
+            RadialMenuItem(localizedKey: "New Item", action: {
                 closeMenuAndExecute(onNewItem)
             }),
-            RadialMenuItem(letterIcon: "P", label: "PASTE", action: {
+            RadialMenuItem(localizedKey: "Paste", action: {
                 closeMenuAndExecute(onPasteFromClipboard)
             })
         ]
