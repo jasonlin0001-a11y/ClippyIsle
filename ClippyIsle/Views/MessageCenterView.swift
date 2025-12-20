@@ -123,11 +123,35 @@ struct NotificationRowView: View {
                     .fill(notification.isRead ? Color.clear : themeColor)
                     .frame(width: 10, height: 10)
                 
-                // Icon based on source
-                Image(systemName: notification.source == .appShare ? "square.and.arrow.up" : "link")
-                    .font(.title3)
-                    .foregroundColor(themeColor)
-                    .frame(width: 30)
+                // Icon based on source - matching Main Screen's corner bracket style
+                ZStack {
+                    // Center text - "SHARE" for app share, "LINK" for deep link
+                    Text(notification.source == .appShare ? "SHARE" : "LINK")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundColor(.primary)
+                    
+                    // Corner brackets using themeColor
+                    Text("┌")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(themeColor)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    
+                    Text("┐")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(themeColor)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    
+                    Text("└")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(themeColor)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                    
+                    Text("┘")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(themeColor)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                }
+                .frame(width: 36, height: 36)
                 
                 VStack(alignment: .leading, spacing: 4) {
                     // Title
@@ -201,9 +225,33 @@ struct MessageCenterImportView: View {
             VStack(spacing: 0) {
                 // Header info
                 HStack {
-                    Image(systemName: notification.source == .appShare ? "square.and.arrow.up" : "link")
-                        .font(.title2)
-                        .foregroundColor(themeColor)
+                    // Icon based on source - matching Main Screen's corner bracket style
+                    ZStack {
+                        Text(notification.source == .appShare ? "SHARE" : "LINK")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(.primary)
+                        
+                        Text("┌")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(themeColor)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        
+                        Text("┐")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(themeColor)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                        
+                        Text("└")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(themeColor)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                        
+                        Text("┘")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(themeColor)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                    }
+                    .frame(width: 44, height: 44)
                     Text("Received \(notification.items.count) item(s)")
                         .font(.headline)
                     Spacer()

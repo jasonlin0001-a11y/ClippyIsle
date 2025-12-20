@@ -117,7 +117,7 @@ struct SettingsView: View {
 
     let countOptions = [50, 100, 200, 0]
     let dayOptions = [7, 30, 90, 0]
-    let colorOptions = ["blue", "green", "orange", "red", "pink", "purple", "black", "white", "retro", "custom"]
+    let colorOptions = ["blue", "green", "purple", "orange", "red", "custom"]
     
     var themeColor: Color {
         if themeColorName == "custom" {
