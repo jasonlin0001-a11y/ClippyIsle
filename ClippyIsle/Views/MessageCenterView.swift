@@ -1,6 +1,53 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+// MARK: - Corner Bracket Icon View
+/// A reusable view that displays text inside corner brackets, matching the Main Screen's icon style
+private struct CornerBracketIcon: View {
+    let text: String
+    let themeColor: Color
+    let size: CGFloat
+    let fontSize: CGFloat
+    let bracketFontSize: CGFloat
+    
+    init(text: String, themeColor: Color, size: CGFloat = 36, fontSize: CGFloat = 10, bracketFontSize: CGFloat = 12) {
+        self.text = text
+        self.themeColor = themeColor
+        self.size = size
+        self.fontSize = fontSize
+        self.bracketFontSize = bracketFontSize
+    }
+    
+    var body: some View {
+        ZStack {
+            Text(text)
+                .font(.system(size: fontSize, weight: .bold))
+                .foregroundColor(.primary)
+            
+            Text("┌")
+                .font(.system(size: bracketFontSize, weight: .medium))
+                .foregroundColor(themeColor)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            
+            Text("┐")
+                .font(.system(size: bracketFontSize, weight: .medium))
+                .foregroundColor(themeColor)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+            
+            Text("└")
+                .font(.system(size: bracketFontSize, weight: .medium))
+                .foregroundColor(themeColor)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+            
+            Text("┘")
+                .font(.system(size: bracketFontSize, weight: .medium))
+                .foregroundColor(themeColor)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+        }
+        .frame(width: size, height: size)
+    }
+}
+
 // MARK: - Message Center View
 /// Displays all pending notifications from app shares and deep links
 /// Users can view, import items, or delete notifications
@@ -124,34 +171,13 @@ struct NotificationRowView: View {
                     .frame(width: 10, height: 10)
                 
                 // Icon based on source - matching Main Screen's corner bracket style
-                ZStack {
-                    // Center text - "SHARE" for app share, "LINK" for deep link
-                    Text(notification.source == .appShare ? "SHARE" : "LINK")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.primary)
-                    
-                    // Corner brackets using themeColor
-                    Text("┌")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(themeColor)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    
-                    Text("┐")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(themeColor)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                    
-                    Text("└")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(themeColor)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-                    
-                    Text("┘")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(themeColor)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                }
-                .frame(width: 36, height: 36)
+                CornerBracketIcon(
+                    text: notification.source == .appShare ? "SHARE" : "LINK",
+                    themeColor: themeColor,
+                    size: 36,
+                    fontSize: 10,
+                    bracketFontSize: 12
+                )
                 
                 VStack(alignment: .leading, spacing: 4) {
                     // Title
@@ -226,32 +252,13 @@ struct MessageCenterImportView: View {
                 // Header info
                 HStack {
                     // Icon based on source - matching Main Screen's corner bracket style
-                    ZStack {
-                        Text(notification.source == .appShare ? "SHARE" : "LINK")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(.primary)
-                        
-                        Text("┌")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(themeColor)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                        
-                        Text("┐")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(themeColor)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                        
-                        Text("└")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(themeColor)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-                        
-                        Text("┘")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(themeColor)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                    }
-                    .frame(width: 44, height: 44)
+                    CornerBracketIcon(
+                        text: notification.source == .appShare ? "SHARE" : "LINK",
+                        themeColor: themeColor,
+                        size: 44,
+                        fontSize: 11,
+                        bracketFontSize: 14
+                    )
                     Text("Received \(notification.items.count) item(s)")
                         .font(.headline)
                     Spacer()
