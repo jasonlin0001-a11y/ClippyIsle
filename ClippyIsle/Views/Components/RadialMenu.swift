@@ -156,10 +156,10 @@ struct RadialMenuView: View {
                         )
                     }
                     
-                    // Main FAB button - 30% transparent
+                    // Main FAB button - 30% transparent (70% opacity)
                     ZStack {
                         Circle()
-                            .fill(themeColor.opacity(0.7))  // 30% transparent (0.7 opacity)
+                            .fill(themeColor.opacity(0.7))  // 70% opacity = 30% transparent
                             .frame(width: fabSize, height: fabSize)
                             .shadow(
                                 color: colorScheme == .dark ? .black.opacity(0.4) : .black.opacity(0.2),
@@ -217,9 +217,11 @@ struct RadialMenuView: View {
                                     // Determine which side to snap to
                                     let newIsOnLeftSide = value.location.x < midX
                                     
-                                    // Clamp Y position within safe bounds
-                                    let minY = fabSize / 2 + edgeMargin
-                                    let maxY = screenHeight - fabSize / 2 - edgeMargin
+                                    // Clamp Y position within safe bounds (accounting for safe area)
+                                    let safeAreaTop = geometry.safeAreaInsets.top
+                                    let safeAreaBottom = geometry.safeAreaInsets.bottom
+                                    let minY = fabSize / 2 + edgeMargin + safeAreaTop
+                                    let maxY = screenHeight - fabSize / 2 - edgeMargin - safeAreaBottom
                                     let clampedY = min(max(value.location.y, minY), maxY)
                                     
                                     // Calculate final X position (snapped to edge)
