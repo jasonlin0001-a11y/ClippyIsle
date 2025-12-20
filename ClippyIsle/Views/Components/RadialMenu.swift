@@ -4,7 +4,7 @@ import SwiftUI
 /// Represents a single item in the radial menu
 struct RadialMenuItem: Identifiable {
     let id = UUID()
-    let icon: String
+    let letterIcon: String  // Single letter icon (S, N, P)
     let label: String
     let action: () -> Void
 }
@@ -17,13 +17,14 @@ struct RadialMenuButton: View {
     let isExpanded: Bool
     let themeColor: Color
     let totalItems: Int
+    let isOnLeftSide: Bool  // Determines fan direction
     
-    // Calculate angle for fan expansion from bottom-right (upward arc)
+    // Calculate angle for fan expansion based on position
     private var angle: Double {
-        // Fan from roughly 180° (left) to 270° (up), centered around 225°
-        // Spread items evenly within this arc
-        let startAngle: Double = 180
-        let endAngle: Double = 270
+        // If on right side: fan from 180° (left) to 270° (up)
+        // If on left side: fan from 270° (up) to 360° (right)
+        let startAngle: Double = isOnLeftSide ? 270 : 180
+        let endAngle: Double = isOnLeftSide ? 360 : 270
         let angleSpread = endAngle - startAngle
         let angleStep = angleSpread / Double(max(totalItems - 1, 1))
         return startAngle + (angleStep * Double(index))
@@ -52,8 +53,9 @@ struct RadialMenuButton: View {
                         .frame(width: 50, height: 50)
                         .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
                     
-                    Image(systemName: item.icon)
-                        .font(.system(size: 20, weight: .semibold))
+                    // Letter icon instead of SF Symbol
+                    Text(item.letterIcon)
+                        .font(.system(size: 24, weight: .bold))
                         .foregroundColor(.white)
                 }
                 
@@ -77,7 +79,7 @@ struct RadialMenuButton: View {
 }
 
 // MARK: - Radial Menu View
-/// A floating action button with radial menu expansion
+/// A floating action button with radial menu expansion and draggable positioning
 struct RadialMenuView: View {
     let themeColor: Color
     let onSearch: () -> Void
@@ -85,24 +87,32 @@ struct RadialMenuView: View {
     let onPasteFromClipboard: () -> Void
     
     @State private var isExpanded = false
+    @State private var isDragging = false
+    @State private var position: CGPoint = .zero
+    @State private var isOnLeftSide = false
     @Environment(\.colorScheme) private var colorScheme
     
     // Animation timing constants
     private let closeAnimationDuration: Double = 0.3
     private let actionExecutionDelay: Double = 0.25
     
+    // FAB size and margins
+    private let fabSize: CGFloat = 56
+    private let edgeMargin: CGFloat = 16
+    private let verticalPadding: CGFloat = 100  // Distance from bottom
+    
     // Reusable haptic feedback generator
     private let hapticGenerator = UIImpactFeedbackGenerator(style: .medium)
     
     private var menuItems: [RadialMenuItem] {
         [
-            RadialMenuItem(icon: "magnifyingglass", label: "Search", action: {
+            RadialMenuItem(letterIcon: "S", label: "SEARCH", action: {
                 closeMenuAndExecute(onSearch)
             }),
-            RadialMenuItem(icon: "square.and.pencil", label: "New Item", action: {
+            RadialMenuItem(letterIcon: "N", label: "NEW ITEM", action: {
                 closeMenuAndExecute(onNewItem)
             }),
-            RadialMenuItem(icon: "doc.on.clipboard", label: "Paste", action: {
+            RadialMenuItem(letterIcon: "P", label: "PASTE", action: {
                 closeMenuAndExecute(onPasteFromClipboard)
             })
         ]
@@ -119,46 +129,38 @@ struct RadialMenuView: View {
     }
     
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            // Backdrop for dismissing menu when tapping outside
-            if isExpanded {
-                Color.black.opacity(0.3)
-                    .ignoresSafeArea()
-                    .onTapGesture {
-                        withAnimation(.spring(response: closeAnimationDuration, dampingFraction: 0.7)) {
-                            isExpanded = false
-                        }
-                    }
-            }
-            
-            // Radial menu container
+        GeometryReader { geometry in
             ZStack {
-                // Menu items
-                ForEach(Array(menuItems.enumerated()), id: \.element.id) { index, item in
-                    RadialMenuButton(
-                        item: item,
-                        index: index,
-                        isExpanded: isExpanded,
-                        themeColor: themeColor,
-                        totalItems: menuItems.count
-                    )
+                // Backdrop for dismissing menu when tapping outside
+                if isExpanded {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            withAnimation(.spring(response: closeAnimationDuration, dampingFraction: 0.7)) {
+                                isExpanded = false
+                            }
+                        }
                 }
                 
-                // Main FAB button
-                Button(action: {
-                    // Tap action: Add new item (default action)
-                    if !isExpanded {
-                        onNewItem()
-                    } else {
-                        withAnimation(.spring(response: closeAnimationDuration, dampingFraction: 0.7)) {
-                            isExpanded = false
-                        }
+                // Radial menu container
+                ZStack {
+                    // Menu items
+                    ForEach(Array(menuItems.enumerated()), id: \.element.id) { index, item in
+                        RadialMenuButton(
+                            item: item,
+                            index: index,
+                            isExpanded: isExpanded,
+                            themeColor: themeColor,
+                            totalItems: menuItems.count,
+                            isOnLeftSide: isOnLeftSide
+                        )
                     }
-                }) {
+                    
+                    // Main FAB button - 30% transparent
                     ZStack {
                         Circle()
-                            .fill(themeColor)
-                            .frame(width: 56, height: 56)
+                            .fill(themeColor.opacity(0.7))  // 30% transparent (0.7 opacity)
+                            .frame(width: fabSize, height: fabSize)
                             .shadow(
                                 color: colorScheme == .dark ? .black.opacity(0.4) : .black.opacity(0.2),
                                 radius: 8,
@@ -172,27 +174,81 @@ struct RadialMenuView: View {
                             .rotationEffect(.degrees(isExpanded ? 180 : 0))
                             .animation(.spring(response: closeAnimationDuration, dampingFraction: 0.7), value: isExpanded)
                     }
-                }
-                .buttonStyle(.plain)
-                .onAppear {
-                    // Prepare haptic generator for better performance
-                    hapticGenerator.prepare()
-                }
-                .simultaneousGesture(
-                    LongPressGesture(minimumDuration: 0.5)
-                        .onEnded { _ in
-                            // Trigger prepared haptic feedback
+                    .scaleEffect(isDragging ? 1.1 : 1.0)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDragging)
+                    .onTapGesture {
+                        // Tap action: Open radial menu
+                        if !isExpanded {
                             hapticGenerator.impactOccurred()
-                            
                             withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                                 isExpanded = true
                             }
+                        } else {
+                            withAnimation(.spring(response: closeAnimationDuration, dampingFraction: 0.7)) {
+                                isExpanded = false
+                            }
                         }
-                )
+                    }
+                    .simultaneousGesture(
+                        LongPressGesture(minimumDuration: 0.5)
+                            .onEnded { _ in
+                                // Start dragging mode
+                                hapticGenerator.impactOccurred()
+                                isDragging = true
+                            }
+                    )
+                    .simultaneousGesture(
+                        DragGesture()
+                            .onChanged { value in
+                                if isDragging {
+                                    // Update position while dragging
+                                    position = value.location
+                                }
+                            }
+                            .onEnded { value in
+                                if isDragging {
+                                    isDragging = false
+                                    
+                                    // Snap to left or right edge
+                                    let screenWidth = geometry.size.width
+                                    let screenHeight = geometry.size.height
+                                    let midX = screenWidth / 2
+                                    
+                                    // Determine which side to snap to
+                                    let newIsOnLeftSide = value.location.x < midX
+                                    
+                                    // Clamp Y position within safe bounds
+                                    let minY = fabSize / 2 + edgeMargin
+                                    let maxY = screenHeight - fabSize / 2 - edgeMargin
+                                    let clampedY = min(max(value.location.y, minY), maxY)
+                                    
+                                    // Calculate final X position (snapped to edge)
+                                    let finalX = newIsOnLeftSide ? (fabSize / 2 + edgeMargin) : (screenWidth - fabSize / 2 - edgeMargin)
+                                    
+                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                                        position = CGPoint(x: finalX, y: clampedY)
+                                        isOnLeftSide = newIsOnLeftSide
+                                    }
+                                }
+                            }
+                    )
+                }
+                .position(position == .zero ? defaultPosition(in: geometry) : position)
             }
-            .padding(.trailing, 16)
-            .padding(.bottom, 16)
+            .onAppear {
+                // Set initial position
+                position = defaultPosition(in: geometry)
+                hapticGenerator.prepare()
+            }
         }
+    }
+    
+    private func defaultPosition(in geometry: GeometryProxy) -> CGPoint {
+        // Default to bottom-right corner
+        CGPoint(
+            x: geometry.size.width - fabSize / 2 - edgeMargin,
+            y: geometry.size.height - fabSize / 2 - verticalPadding
+        )
     }
 }
 

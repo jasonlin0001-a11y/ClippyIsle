@@ -382,8 +382,8 @@ struct ContentView: View {
                         listContent
                         bottomToolbar.padding(.bottom, 8)
                     }
-                    .overlay(alignment: .bottomTrailing) {
-                        // Radial Menu FAB
+                    .overlay {
+                        // Radial Menu FAB - manages its own positioning
                         RadialMenuView(
                             themeColor: themeColor,
                             onSearch: {
@@ -401,7 +401,6 @@ struct ContentView: View {
                                 }
                             }
                         )
-                        .padding(.bottom, 80) // Position above the bottom toolbar
                     }
                 }
             }
