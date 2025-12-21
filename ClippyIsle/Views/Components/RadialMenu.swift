@@ -22,9 +22,9 @@ struct RadialMenuButton: View {
     private let expandedRadius: CGFloat = 100
     
     // Angle offsets for each item position (symmetrical fan centered on horizontal)
-    // Index 0 (Voice Memo): offset +45° → Bottom position
+    // Index 0 (Paste): offset +45° → Bottom position
     // Index 1 (New Item): offset 0° → Middle/Horizontal position
-    // Index 2 (Paste): offset -45° → Top position
+    // Index 2 (Voice Memo): offset -45° → Top position
     private let angleOffsets: [Double] = [45, 0, -45]
     
     // Safe index within bounds of angleOffsets array
@@ -124,14 +124,14 @@ struct RadialMenuView: View {
     
     private var menuItems: [RadialMenuItem] {
         [
-            RadialMenuItem(localizedKey: "Voice Memo", action: {
-                closeMenuAndExecute(onVoiceMemo)
+            RadialMenuItem(localizedKey: "Paste", action: {
+                closeMenuAndExecute(onPasteFromClipboard)
             }),
             RadialMenuItem(localizedKey: "New Item", action: {
                 closeMenuAndExecute(onNewItem)
             }),
-            RadialMenuItem(localizedKey: "Paste", action: {
-                closeMenuAndExecute(onPasteFromClipboard)
+            RadialMenuItem(localizedKey: "Voice Memo", action: {
+                closeMenuAndExecute(onVoiceMemo)
             })
         ]
     }
