@@ -21,14 +21,19 @@ struct RadialMenuButton: View {
     // Distance from center for expanded state
     private let expandedRadius: CGFloat = 100
     
+    // Mirror item order on left side: reverse index so items appear in mirrored positions
+    private var effectiveIndex: Int {
+        isOnLeftSide ? (totalItems - 1 - index) : index
+    }
+    
     // Calculate angle for fan expansion with equal spacing
     private var angle: Double {
         // Fan spans 90 degrees total, divided equally among items
         // Right side: fan from 180° (left) to 270° (up)
-        // Left side: fan from 270° (up) to 360° (right)
+        // Left side: fan from 270° (up) to 360° (right), but with reversed order to mirror right side
         let baseStartAngle: Double = isOnLeftSide ? 270 : 180
         let anglePerItem: Double = 45  // Equal 45° spacing between each item (90° / 2 gaps for 3 items)
-        return baseStartAngle + (anglePerItem * Double(index))
+        return baseStartAngle + (anglePerItem * Double(effectiveIndex))
     }
     
     // Calculate text rotation to align with radial spoke
@@ -38,7 +43,7 @@ struct RadialMenuButton: View {
         // Right side: rotations go counterclockwise (positive angles in SwiftUI)
         // Left side: rotations go clockwise (negative angles in SwiftUI) to mirror
         let rotations: [Double] = [0, 37.5, 67.5]  // Horizontal, diagonal, steep
-        let safeIndex = max(0, min(index, rotations.count - 1))
+        let safeIndex = max(0, min(effectiveIndex, rotations.count - 1))
         let rotation = rotations[safeIndex]
         return isOnLeftSide ? -rotation : rotation
     }
