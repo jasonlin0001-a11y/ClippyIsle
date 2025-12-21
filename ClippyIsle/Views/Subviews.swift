@@ -157,7 +157,7 @@ struct ClipboardItemRow: View {
 
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(item.displayName ?? item.content).lineLimit(1).font(.body).foregroundColor(colorScheme == .light ? Color(.darkGray) : .primary)
+                    Text(item.displayName ?? item.content).lineLimit(1).font(.callout).foregroundColor(colorScheme == .light ? Color(.darkGray) : .primary)
                     HStack(spacing: 8) {
                         if let tags = item.tags, !tags.isEmpty {
                             ScrollView(.horizontal, showsIndicators: false) { 
