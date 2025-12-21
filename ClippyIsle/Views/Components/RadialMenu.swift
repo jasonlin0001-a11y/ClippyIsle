@@ -22,8 +22,8 @@ struct RadialMenuButton: View {
     private let expandedRadius: CGFloat = 100
     
     // Angle offsets for each item position (from horizontal toward vertical)
-    // Index 0: Horizontal (0°), Index 1: Diagonal (45°), Index 2: Vertical (90°)
-    private let angleOffsets: [Double] = [0, 45, 90]
+    // Index 0: Diagonal (45°), Index 1: Vertical (90°), Index 2: Obtuse (135°)
+    private let angleOffsets: [Double] = [45, 90, 135]
     
     // Safe index within bounds of angleOffsets array
     private var safeIndex: Int {
@@ -38,10 +38,10 @@ struct RadialMenuButton: View {
         
         if isOnLeftSide {
             // Left side: start at 0° (right), fan upward with negative angles
-            return 0 - offset  // 0°, -45°, -90°
+            return 0 - offset  // -45°, -90°, -135°
         } else {
             // Right side: start at 180° (left), fan upward with positive offset
-            return 180 + offset  // 180°, 225°, 270°
+            return 180 + offset  // 225°, 270°, 315°
         }
     }
     
