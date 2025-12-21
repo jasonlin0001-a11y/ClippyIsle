@@ -38,7 +38,8 @@ struct RadialMenuButton: View {
         // Right side: rotations go counterclockwise (positive angles in SwiftUI)
         // Left side: rotations go clockwise (negative angles in SwiftUI) to mirror
         let rotations: [Double] = [0, 37.5, 67.5]  // Horizontal, diagonal, steep
-        let rotation = rotations[min(index, rotations.count - 1)]
+        let safeIndex = max(0, min(index, rotations.count - 1))
+        let rotation = rotations[safeIndex]
         return isOnLeftSide ? -rotation : rotation
     }
     
