@@ -21,9 +21,11 @@ struct RadialMenuButton: View {
     // Distance from center for expanded state
     private let expandedRadius: CGFloat = 100
     
-    // Angle offsets for each item position (from horizontal toward vertical)
-    // Index 0: Horizontal (0°), Index 1: Diagonal (37.5°), Index 2: Near-vertical (67.5°)
-    private let angleOffsets: [Double] = [0, 37.5, 67.5]
+    // Angle offsets for each item position (symmetrical fan centered on horizontal)
+    // Index 0 (Paste): offset +45° → Bottom position
+    // Index 1 (New Item): offset 0° → Middle/Horizontal position
+    // Index 2 (Voice Memo): offset -45° → Top position
+    private let angleOffsets: [Double] = [45, 0, -45]
     
     // Safe index within bounds of angleOffsets array
     private var safeIndex: Int {
@@ -37,11 +39,13 @@ struct RadialMenuButton: View {
         let offset = angleOffsets[safeIndex]
         
         if isOnLeftSide {
-            // Left side: start at 0° (right), fan upward with negative angles
-            return 0 - offset  // 0°, -37.5°, -67.5°
+            // Left side: start at 0° (right), fan symmetrically
+            // Index 0: -45°, Index 1: 0°, Index 2: 45°
+            return 0 - offset
         } else {
-            // Right side: start at 180° (left), fan upward with positive offset
-            return 180 + offset  // 180°, 217.5°, 247.5°
+            // Right side: start at 180° (left), fan symmetrically
+            // Index 0: 225°, Index 1: 180°, Index 2: 135°
+            return 180 + offset
         }
     }
     
@@ -120,14 +124,14 @@ struct RadialMenuView: View {
     
     private var menuItems: [RadialMenuItem] {
         [
-            RadialMenuItem(localizedKey: "Voice Memo", action: {
-                closeMenuAndExecute(onVoiceMemo)
+            RadialMenuItem(localizedKey: "Paste", action: {
+                closeMenuAndExecute(onPasteFromClipboard)
             }),
             RadialMenuItem(localizedKey: "New Item", action: {
                 closeMenuAndExecute(onNewItem)
             }),
-            RadialMenuItem(localizedKey: "Paste", action: {
-                closeMenuAndExecute(onPasteFromClipboard)
+            RadialMenuItem(localizedKey: "Voice Memo", action: {
+                closeMenuAndExecute(onVoiceMemo)
             })
         ]
     }
