@@ -31,6 +31,17 @@ struct RadialMenuButton: View {
         return baseStartAngle + (anglePerItem * Double(index))
     }
     
+    // Calculate text rotation to align with radial spoke
+    // Voice Memo (index 0) ~horizontal, New Item (index 1) ~30-45°, Paste (index 2) ~60-75°
+    private var textRotation: Double {
+        // Define rotation per item for spoke-like alignment
+        // Right side: rotations go counterclockwise (positive angles in SwiftUI)
+        // Left side: rotations go clockwise (negative angles in SwiftUI) to mirror
+        let rotations: [Double] = [0, 37.5, 67.5]  // Horizontal, diagonal, steep
+        let rotation = rotations[min(index, rotations.count - 1)]
+        return isOnLeftSide ? -rotation : rotation
+    }
+    
     private var offset: CGSize {
         guard isExpanded else {
             return .zero
@@ -54,6 +65,7 @@ struct RadialMenuButton: View {
                     .fill(Color(.systemBackground))
                     .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
             )
+            .rotationEffect(.degrees(isExpanded ? textRotation : 0))
             .onTapGesture {
                 item.action()
             }
