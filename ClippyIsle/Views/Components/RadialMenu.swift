@@ -21,9 +21,11 @@ struct RadialMenuButton: View {
     // Distance from center for expanded state
     private let expandedRadius: CGFloat = 100
     
-    // Angle offsets for each item position (from horizontal toward vertical)
-    // Index 0: Diagonal (45°), Index 1: Vertical (90°), Index 2: Obtuse (135°)
-    private let angleOffsets: [Double] = [45, 90, 135]
+    // Angle offsets for each item position (symmetrical fan centered on horizontal)
+    // Index 0 (Voice Memo): offset +45° → Bottom position
+    // Index 1 (New Item): offset 0° → Middle/Horizontal position
+    // Index 2 (Paste): offset -45° → Top position
+    private let angleOffsets: [Double] = [45, 0, -45]
     
     // Safe index within bounds of angleOffsets array
     private var safeIndex: Int {
@@ -37,11 +39,13 @@ struct RadialMenuButton: View {
         let offset = angleOffsets[safeIndex]
         
         if isOnLeftSide {
-            // Left side: start at 0° (right), fan upward with negative angles
-            return 0 - offset  // -45°, -90°, -135°
+            // Left side: start at 0° (right), fan symmetrically
+            // Index 0: -45°, Index 1: 0°, Index 2: 45°
+            return 0 - offset
         } else {
-            // Right side: start at 180° (left), fan upward with positive offset
-            return 180 + offset  // 225°, 270°, 315°
+            // Right side: start at 180° (left), fan symmetrically
+            // Index 0: 225°, Index 1: 180°, Index 2: 135°
+            return 180 + offset
         }
     }
     
