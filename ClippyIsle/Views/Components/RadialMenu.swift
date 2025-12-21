@@ -21,25 +21,35 @@ struct RadialMenuButton: View {
     // Distance from center for expanded state
     private let expandedRadius: CGFloat = 100
     
-    // Calculate angle for fan expansion with equal spacing
-    private var angle: Double {
-        // Fan spans 90 degrees total, divided equally among items
-        // Right side: fan from 180° (left) to 270° (up)
-        // Left side: fan from 270° (up) to 360° (right)
-        let baseStartAngle: Double = isOnLeftSide ? 270 : 180
-        let anglePerItem: Double = 45  // Equal 45° spacing between each item (90° / 2 gaps for 3 items)
-        return baseStartAngle + (anglePerItem * Double(index))
+    // Angle offsets for each item position (from horizontal toward vertical)
+    // Index 0: Horizontal (0°), Index 1: Diagonal (37.5°), Index 2: Near-vertical (67.5°)
+    private let angleOffsets: [Double] = [0, 37.5, 67.5]
+    
+    // Safe index within bounds of angleOffsets array
+    private var safeIndex: Int {
+        max(0, min(index, angleOffsets.count - 1))
     }
     
-    // Calculate text rotation to align with radial spoke
-    // Voice Memo (index 0) ~horizontal, New Item (index 1) ~30-45°, Paste (index 2) ~60-75°
+    // Calculate angle for fan expansion - explicit mirroring
+    private var angle: Double {
+        // Right side: Base 180° (pointing left), offset goes counterclockwise toward up
+        // Left side: Base 0° (pointing right), offset goes clockwise toward up (negative)
+        let offset = angleOffsets[safeIndex]
+        
+        if isOnLeftSide {
+            // Left side: start at 0° (right), fan upward with negative angles
+            return 0 - offset  // 0°, -37.5°, -67.5°
+        } else {
+            // Right side: start at 180° (left), fan upward with positive offset
+            return 180 + offset  // 180°, 217.5°, 247.5°
+        }
+    }
+    
+    // Calculate text rotation to align capsule with radial spoke
     private var textRotation: Double {
-        // Define rotation per item for spoke-like alignment
-        // Right side: rotations go counterclockwise (positive angles in SwiftUI)
-        // Left side: rotations go clockwise (negative angles in SwiftUI) to mirror
-        let rotations: [Double] = [0, 37.5, 67.5]  // Horizontal, diagonal, steep
-        let safeIndex = max(0, min(index, rotations.count - 1))
-        let rotation = rotations[safeIndex]
+        // Right side: positive rotations (counterclockwise visual)
+        // Left side: negative rotations (clockwise visual) for perfect mirror
+        let rotation = angleOffsets[safeIndex]
         return isOnLeftSide ? -rotation : rotation
     }
     
