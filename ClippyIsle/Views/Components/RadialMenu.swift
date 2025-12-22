@@ -108,6 +108,7 @@ struct RadialMenuView: View {
     @State private var position: CGPoint = .zero
     @State private var startDragPosition: CGPoint = .zero  // Track starting position for smooth drag
     @State private var isOnLeftSide = false
+    @State private var lastGeometrySize: CGSize = .zero  // Track geometry size for window resize handling
     @Environment(\.colorScheme) private var colorScheme
     
     // Animation timing constants
@@ -259,8 +260,44 @@ struct RadialMenuView: View {
             }
             .onAppear {
                 // Set initial position
+                lastGeometrySize = geometry.size
                 position = defaultPosition(in: geometry)
                 hapticGenerator.prepare()
+            }
+            .onChange(of: geometry.size) { oldSize, newSize in
+                // Handle window resize (iPad iOS 26 windowed mode, multitasking, etc.)
+                guard oldSize != newSize && lastGeometrySize != .zero else { return }
+                
+                // Get old height for calculating vertical ratio
+                let oldHeight = lastGeometrySize.height
+                
+                // Calculate new position maintaining relative position
+                let newX: CGFloat
+                if isOnLeftSide {
+                    // Keep on left side
+                    newX = fabSize / 2 + edgeMargin
+                } else {
+                    // Keep on right side
+                    newX = newSize.width - fabSize / 2 - edgeMargin
+                }
+                
+                // Maintain vertical ratio
+                let yRatio = position.y / oldHeight
+                let newY = yRatio * newSize.height
+                
+                // Clamp Y position within safe bounds
+                let safeAreaTop = geometry.safeAreaInsets.top
+                let safeAreaBottom = geometry.safeAreaInsets.bottom
+                let minY = fabSize / 2 + edgeMargin + safeAreaTop
+                let maxY = newSize.height - fabSize / 2 - edgeMargin - safeAreaBottom
+                let clampedY = min(max(newY, minY), maxY)
+                
+                // Update position with animation
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    position = CGPoint(x: newX, y: clampedY)
+                }
+                
+                lastGeometrySize = newSize
             }
         }
     }
