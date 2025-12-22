@@ -47,15 +47,28 @@ class LinkMetadataManager: ObservableObject {
             return await existingTask.value
         }
         
-        // Start new request
+        // Start new request with a NEW provider instance to support independent cancellation
         LaunchLogger.log("LinkMetadataManager.fetchMetadata() - START for URL: \(url)")
+        let localProvider = LPMetadataProvider()
         let task = Task { () -> LPLinkMetadata? in
             do {
-                let fetchedMetadata = try await provider.startFetchingMetadata(for: url)
+                // Check for cancellation before starting
+                try Task.checkCancellation()
+                
+                let fetchedMetadata = try await localProvider.startFetchingMetadata(for: url)
+                
+                // Check for cancellation after fetch
+                try Task.checkCancellation()
+                
                 Self.metadataCache[urlString] = fetchedMetadata
                 Self.activeRequests[urlString] = nil  // Cleanup after cache assignment
                 LaunchLogger.log("LinkMetadataManager.fetchMetadata() - SUCCESS for URL: \(url)")
                 return fetchedMetadata
+            } catch is CancellationError {
+                localProvider.cancel()
+                Self.activeRequests[urlString] = nil
+                LaunchLogger.log("LinkMetadataManager.fetchMetadata() - CANCELLED for URL: \(url)")
+                return nil
             } catch {
                 Self.activeRequests[urlString] = nil
                 LaunchLogger.log("LinkMetadataManager.fetchMetadata() - FAILED for URL: \(url)")

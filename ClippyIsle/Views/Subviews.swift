@@ -488,28 +488,50 @@ struct CompactLinkPreviewRow: View {
     private func fetchMetadata() async {
         // Use the queue to limit concurrent requests
         await LinkPreviewLoadingQueue.shared.enqueue {
-            // Use timeout to avoid blocking (5 seconds)
-            let fetchTask = Task {
-                await LinkMetadataManager.shared.fetchMetadata(for: self.url)
-            }
-            
-            let timeoutTask = Task {
-                try? await Task.sleep(for: .seconds(5))
-                fetchTask.cancel()
-            }
-            
-            let result = await fetchTask.value
-            timeoutTask.cancel()
-            
-            if let fetchedMetadata = result {
-                self.metadata = fetchedMetadata
-            } else {
+            do {
+                // Use task group with timeout - whichever finishes first wins
+                let result = try await withThrowingTaskGroup(of: LPLinkMetadata?.self) { group in
+                    // Task 1: Fetch metadata
+                    group.addTask {
+                        await LinkMetadataManager.shared.fetchMetadata(for: self.url)
+                    }
+                    
+                    // Task 2: Timeout after 5 seconds
+                    group.addTask {
+                        try await Task.sleep(for: .seconds(5))
+                        throw TimeoutError()
+                    }
+                    
+                    // Return first successful result
+                    while let taskResult = try await group.next() {
+                        // Cancel remaining tasks
+                        group.cancelAll()
+                        return taskResult
+                    }
+                    
+                    return nil
+                }
+                
+                if let fetchedMetadata = result {
+                    self.metadata = fetchedMetadata
+                } else {
+                    self.hasError = true
+                }
+            } catch is TimeoutError {
+                // Timeout occurred
+                self.hasError = true
+            } catch {
+                // Other error
                 self.hasError = true
             }
+            
             self.isLoading = false
         }
     }
 }
+
+/// Error type for timeout
+private struct TimeoutError: Error {}
 
 /// Helper view to load and display images for compact preview
 struct CompactPreviewImage: View {
