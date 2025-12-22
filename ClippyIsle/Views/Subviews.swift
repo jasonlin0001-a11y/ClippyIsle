@@ -98,11 +98,27 @@ struct ActivityView: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
+// MARK: - List Display Style
+enum ListDisplayStyle: Int, CaseIterable {
+    case compact = 0
+    case feed = 1
+    
+    var name: String {
+        switch self {
+        case .compact: return String(localized: "Compact")
+        case .feed: return String(localized: "Feed")
+        }
+    }
+}
+
+// MARK: - Clipboard Item Row (Supports both compact and feed styles)
 struct ClipboardItemRow: View {
     let item: ClipboardItem
     let themeColor: Color
     var isHighlighted: Bool = false
     var clipboardManager: ClipboardManager? = nil
+    var displayStyle: ListDisplayStyle = .feed
+    var showLinkPreview: Bool = true
     
     var copyAction: () -> Void
     var previewAction: () -> Void
@@ -134,110 +150,15 @@ struct ClipboardItemRow: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 15) {
-            // Type Icon - top-aligned to match title position in social feed layout
-            Button(action: copyAction) {
-                // Corner bracket minimalist icon design
-                ZStack {
-                    // Center text
-                    Text(itemIcon(for: item.type))
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(.primary)
-                    
-                    // Corner brackets using themeColor
-                    // Top-left corner
-                    Text("┌")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(themeColor)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    
-                    // Top-right corner
-                    Text("┐")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(themeColor)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                    
-                    // Bottom-left corner
-                    Text("└")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(themeColor)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-                    
-                    // Bottom-right corner
-                    Text("┘")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(themeColor)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                }
-                .frame(width: 44, height: 44)
+        Group {
+            if displayStyle == .compact {
+                compactLayout
+            } else {
+                feedLayout
             }
-            .buttonStyle(.plain)
-
-            // Content area - VStack for social feed style
-            VStack(alignment: .leading, spacing: 8) {
-                // Top: Title (Bold, larger font)
-                Text(item.displayName ?? item.content)
-                    .font(.headline.weight(.semibold))
-                    .foregroundColor(colorScheme == .light ? Color(.darkGray) : .primary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                
-                // Middle: Content Preview
-                if isLinkType {
-                    // Link type: show URL with distinct color, 1-2 lines
-                    Text(item.content)
-                        .font(.subheadline)
-                        .foregroundColor(Color.blue.opacity(0.8))
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                } else if !contentPreview.isEmpty {
-                    // Text type: show body content, 3 lines max
-                    Text(contentPreview)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .lineLimit(3)
-                        .multilineTextAlignment(.leading)
-                }
-                
-                // Bottom: Tags and Date
-                HStack(spacing: 8) {
-                    if let tags = item.tags, !tags.isEmpty {
-                        ScrollView(.horizontal, showsIndicators: false) { 
-                            HStack(spacing: 6) { 
-                                ForEach(tags, id: \.self) { tag in 
-                                    let customColor = clipboardManager?.getTagColor(tag)
-                                    let tagColor = customColor ?? Color.gray.opacity(0.2)
-                                    let textColor = customColor != nil ? Color.white : Color.primary
-                                    TagChipView(
-                                        tag: tag,
-                                        tagColor: tagColor,
-                                        textColor: textColor,
-                                        onFilter: {
-                                            if let onTagLongPress = self.onTagLongPress {
-                                                onTagLongPress(tag)
-                                                // Add haptic feedback
-                                                let generator = UIImpactFeedbackGenerator(style: .medium)
-                                                generator.impactOccurred()
-                                            }
-                                        }
-                                    )
-                                } 
-                            } 
-                        }
-                    }
-                    Spacer()
-                    Text(item.timestamp.timeAgoDisplay())
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-            .onTapGesture(perform: previewAction)
         }
         .contentShape(Rectangle())
-        .padding(.vertical, 8)
+        .padding(.vertical, displayStyle == .compact ? 4 : 8)
         .onDrag(createDragItem)
         // Pin indicator overlay - uses red for semantic visibility (pinned = important)
         .overlay(Group { if item.isPinned { CornerTriangleShape().fill(Color.red).frame(width: 12, height: 12).padding([.top, .trailing], 4) } }, alignment: .topTrailing)
@@ -248,6 +169,314 @@ struct ClipboardItemRow: View {
         )
         .animation(.easeInOut, value: isHighlighted)
         .clipped()
+    }
+    
+    // MARK: - Compact Layout (Original style)
+    private var compactLayout: some View {
+        HStack(spacing: 15) {
+            typeIconButton
+            
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.displayName ?? item.content)
+                        .lineLimit(1)
+                        .font(.callout)
+                        .foregroundColor(colorScheme == .light ? Color(.darkGray) : .primary)
+                    HStack(spacing: 8) {
+                        if let tags = item.tags, !tags.isEmpty {
+                            ScrollView(.horizontal, showsIndicators: false) { 
+                                HStack { 
+                                    ForEach(tags, id: \.self) { tag in 
+                                        let customColor = clipboardManager?.getTagColor(tag)
+                                        let tagColor = customColor ?? Color.gray.opacity(0.2)
+                                        let textColor = customColor != nil ? Color.white : Color.primary
+                                        TagChipView(
+                                            tag: tag,
+                                            tagColor: tagColor,
+                                            textColor: textColor,
+                                            onFilter: {
+                                                if let onTagLongPress = self.onTagLongPress {
+                                                    onTagLongPress(tag)
+                                                    let generator = UIImpactFeedbackGenerator(style: .medium)
+                                                    generator.impactOccurred()
+                                                }
+                                            }
+                                        )
+                                    } 
+                                } 
+                            }
+                        }
+                        Spacer()
+                        Text(item.timestamp.timeAgoDisplay())
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }.frame(height: 20)
+                }
+                Spacer()
+            }
+            .contentShape(Rectangle())
+            .onTapGesture(perform: previewAction)
+        }
+        .contentShape(Rectangle())
+    }
+    
+    // MARK: - Feed Layout (Social feed style with content preview)
+    private var feedLayout: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 15) {
+                // Type Icon - top-aligned to match title position in social feed layout
+                typeIconButton
+
+                // Content area - VStack for social feed style
+                VStack(alignment: .leading, spacing: 6) {
+                    // Top: Title (reduced font size: subheadline instead of headline)
+                    Text(item.displayName ?? item.content)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(colorScheme == .light ? Color(.darkGray) : .primary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                    
+                    // Middle: Content Preview (reduced font size: caption instead of subheadline)
+                    if isLinkType {
+                        // Link type: show URL with distinct color, 1-2 lines
+                        Text(item.content)
+                            .font(.caption)
+                            .foregroundColor(Color.blue.opacity(0.8))
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                    } else if !contentPreview.isEmpty {
+                        // Text type: show body content, 3 lines max
+                        Text(contentPreview)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(3)
+                            .multilineTextAlignment(.leading)
+                    }
+                    
+                    // Bottom: Tags and Date
+                    HStack(spacing: 8) {
+                        if let tags = item.tags, !tags.isEmpty {
+                            ScrollView(.horizontal, showsIndicators: false) { 
+                                HStack(spacing: 6) { 
+                                    ForEach(tags, id: \.self) { tag in 
+                                        let customColor = clipboardManager?.getTagColor(tag)
+                                        let tagColor = customColor ?? Color.gray.opacity(0.2)
+                                        let textColor = customColor != nil ? Color.white : Color.primary
+                                        TagChipView(
+                                            tag: tag,
+                                            tagColor: tagColor,
+                                            textColor: textColor,
+                                            onFilter: {
+                                                if let onTagLongPress = self.onTagLongPress {
+                                                    onTagLongPress(tag)
+                                                    let generator = UIImpactFeedbackGenerator(style: .medium)
+                                                    generator.impactOccurred()
+                                                }
+                                            }
+                                        )
+                                    } 
+                                } 
+                            }
+                        }
+                        Spacer()
+                        Text(item.timestamp.timeAgoDisplay())
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .onTapGesture(perform: previewAction)
+            }
+            .contentShape(Rectangle())
+            
+            // Link Preview - loaded asynchronously, only for URL items in feed mode
+            if isLinkType && showLinkPreview, let url = URL(string: item.content) {
+                CompactLinkPreviewRow(url: url)
+                    .padding(.top, 8)
+                    .padding(.leading, 59) // Align with content (44 icon + 15 spacing)
+            }
+        }
+    }
+    
+    // MARK: - Type Icon Button (shared between layouts)
+    private var typeIconButton: some View {
+        Button(action: copyAction) {
+            // Corner bracket minimalist icon design
+            ZStack {
+                // Center text
+                Text(itemIcon(for: item.type))
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(.primary)
+                
+                // Corner brackets using themeColor
+                // Top-left corner
+                Text("┌")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(themeColor)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                
+                // Top-right corner
+                Text("┐")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(themeColor)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                
+                // Bottom-left corner
+                Text("└")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(themeColor)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                
+                // Bottom-right corner
+                Text("┘")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(themeColor)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+            }
+            .frame(width: 44, height: 44)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Compact Link Preview Row (for feed style)
+/// A smaller inline preview for links that loads metadata asynchronously
+struct CompactLinkPreviewRow: View {
+    let url: URL
+    @State private var metadata: LPLinkMetadata?
+    @State private var isLoading = true
+    @State private var hasError = false
+    @Environment(\.colorScheme) var colorScheme
+    
+    var body: some View {
+        Group {
+            if isLoading {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                    Text("Loading preview...")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+                .padding(8)
+            } else if let metadata = metadata {
+                HStack(alignment: .center, spacing: 10) {
+                    // Image (if available)
+                    if let imageProvider = metadata.imageProvider {
+                        CompactPreviewImage(imageProvider: imageProvider)
+                            .frame(width: 48, height: 48)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
+                    
+                    // Text content
+                    VStack(alignment: .leading, spacing: 2) {
+                        if let title = metadata.title {
+                            Text(title)
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .lineLimit(1)
+                                .foregroundColor(.primary)
+                        }
+                        if let url = metadata.url {
+                            Text(url.host ?? url.absoluteString)
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    
+                    Spacer(minLength: 0)
+                }
+                .padding(8)
+            }
+            // Don't show anything if there's an error (keep UI clean)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(.systemGray6).opacity(colorScheme == .dark ? 1.0 : 0.5))
+        )
+        .task {
+            // Check cache first
+            if let cached = LinkMetadataManager.shared.getCachedMetadata(for: url) {
+                metadata = cached
+                isLoading = false
+            } else {
+                // Fetch metadata asynchronously
+                await fetchMetadata()
+            }
+        }
+    }
+    
+    @MainActor
+    private func fetchMetadata() async {
+        // Use timeout to avoid blocking (5 seconds)
+        let fetchTask = Task {
+            await LinkMetadataManager.shared.fetchMetadata(for: url)
+        }
+        
+        let timeoutTask = Task {
+            try await Task.sleep(for: .seconds(5))
+            fetchTask.cancel()
+            return nil as LPLinkMetadata?
+        }
+        
+        do {
+            let result = await fetchTask.value
+            timeoutTask.cancel()
+            
+            if let fetchedMetadata = result {
+                metadata = fetchedMetadata
+            } else {
+                hasError = true
+            }
+        }
+        isLoading = false
+    }
+}
+
+/// Helper view to load and display images for compact preview
+struct CompactPreviewImage: View {
+    let imageProvider: NSItemProvider
+    @State private var image: UIImage?
+    @State private var isLoading = true
+    
+    var body: some View {
+        ZStack {
+            if let image = image {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else if isLoading {
+                ProgressView()
+                    .scaleEffect(0.6)
+            } else {
+                Image(systemName: "link")
+                    .foregroundColor(.secondary)
+                    .font(.caption)
+            }
+        }
+        .frame(width: 48, height: 48)
+        .background(Color.gray.opacity(0.1))
+        .onAppear {
+            loadImage()
+        }
+    }
+    
+    private func loadImage() {
+        imageProvider.loadObject(ofClass: UIImage.self) { (object, error) in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("⚠️ Failed to load compact preview image: \(error.localizedDescription)")
+                } else if let image = object as? UIImage {
+                    self.image = image
+                }
+                self.isLoading = false
+            }
+        }
     }
 }
 

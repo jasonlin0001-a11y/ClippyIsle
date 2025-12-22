@@ -97,6 +97,10 @@ struct ContentView: View {
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode.RawValue = AppearanceMode.system.rawValue
     @AppStorage("previewFontSize") private var previewFontSize: Double = 17.0
     
+    // List display settings
+    @AppStorage("listDisplayStyle") private var listDisplayStyle: Int = ListDisplayStyle.feed.rawValue
+    @AppStorage("showLinkPreview") private var showLinkPreview: Bool = true
+    
     // Firebase password settings
     @AppStorage("firebasePasswordEnabled") private var firebasePasswordEnabled: Bool = false
     @AppStorage("firebasePassword") private var firebasePassword: String = ""
@@ -585,6 +589,8 @@ struct ContentView: View {
                             themeColor: themeColor,
                             isHighlighted: item.id == newlyAddedItemID,
                             clipboardManager: clipboardManager,
+                            displayStyle: ListDisplayStyle(rawValue: listDisplayStyle) ?? .feed,
+                            showLinkPreview: showLinkPreview,
                             copyAction: { copyItemToClipboard(item: item) }, 
                             previewAction: { previewState = .loading(item) },
                             createDragItem: { createDragItem(for: item) }, 
@@ -616,10 +622,11 @@ struct ContentView: View {
                             }
                         )
                         
-                        // Show inline preview if this item is expanded
+                        // Show inline preview if this item is expanded (only in compact mode or when linkPreviewAction is triggered)
                         if expandedPreviewItemID == item.id, 
                            item.type == UTType.url.identifier,
-                           let url = URL(string: item.content) {
+                           let url = URL(string: item.content),
+                           listDisplayStyle == ListDisplayStyle.compact.rawValue {
                             InlineLinkPreview(url: url)
                                 .transition(.opacity.combined(with: .scale(scale: 0.95)))
                         }

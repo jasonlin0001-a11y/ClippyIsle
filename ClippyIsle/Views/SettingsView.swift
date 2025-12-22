@@ -88,6 +88,8 @@ struct SettingsView: View {
     @AppStorage("maxItemCount") private var maxItemCount: Int = 100
     @AppStorage("clearAfterDays") private var clearAfterDays: Int = 30
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode.RawValue = AppearanceMode.system.rawValue
+    @AppStorage("listDisplayStyle") private var listDisplayStyle: Int = ListDisplayStyle.feed.rawValue
+    @AppStorage("showLinkPreview") private var showLinkPreview: Bool = true
     @ObservedObject var speechManager: SpeechManager
     @AppStorage("showSpeechSubtitles") private var showSpeechSubtitles: Bool = true
     @AppStorage("previewFontSize") private var previewFontSize: Double = 17.0
@@ -355,6 +357,19 @@ struct SettingsView: View {
             if themeColorName == "custom" {
                 if subscriptionManager.isPro { ColorPicker("Custom Color", selection: customColorBinding, supportsOpacity: false) }
                 else { Button(action: { showPaywall = true }) { HStack { Text("Unlock Custom Color"); Spacer(); Image(systemName: "lock.fill").foregroundColor(.orange) } } }
+            }
+            
+            // List Display Style
+            Picker("List Style", selection: $listDisplayStyle) {
+                ForEach(ListDisplayStyle.allCases, id: \.rawValue) { style in
+                    Text(style.name).tag(style.rawValue)
+                }
+            }
+            
+            // Link Preview Toggle (only shown in Feed mode)
+            if listDisplayStyle == ListDisplayStyle.feed.rawValue {
+                Toggle("Show Link Previews", isOn: $showLinkPreview)
+                Text("When enabled, links will show a preview with title and image. Previews load asynchronously and won't affect app performance.").font(.caption).foregroundColor(.secondary)
             }
         }
     }
