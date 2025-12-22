@@ -271,6 +271,12 @@ struct RadialMenuView: View {
                 // Get old height for calculating vertical ratio
                 let oldHeight = lastGeometrySize.height
                 
+                // Guard against division by zero
+                guard oldHeight > 0 else {
+                    lastGeometrySize = newSize
+                    return
+                }
+                
                 // Calculate new position maintaining relative position
                 let newX: CGFloat
                 if isOnLeftSide {
