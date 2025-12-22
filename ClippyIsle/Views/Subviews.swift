@@ -115,9 +115,29 @@ struct ClipboardItemRow: View {
     var linkPreviewAction: (() -> Void)? = nil
     var onTagLongPress: ((String) -> Void)? = nil
     @Environment(\.colorScheme) var colorScheme
+    
+    // Check if item is a URL type
+    private var isLinkType: Bool {
+        item.type == UTType.url.identifier
+    }
+    
+    // Get content preview text based on item type
+    private var contentPreview: String {
+        if isLinkType {
+            // For links, show the URL
+            return item.content
+        } else {
+            // For text, show the body content (use content if no displayName, or show content below displayName)
+            if item.displayName != nil && item.displayName != item.content {
+                return item.content
+            }
+            return ""
+        }
+    }
 
     var body: some View {
-        HStack(spacing: 15) {
+        HStack(alignment: .top, spacing: 15) {
+            // Type Icon - aligned to top
             Button(action: copyAction) {
                 // Corner bracket minimalist icon design
                 ZStack {
@@ -155,45 +175,72 @@ struct ClipboardItemRow: View {
             }
             .buttonStyle(.plain)
 
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(item.displayName ?? item.content).lineLimit(1).font(.callout).foregroundColor(colorScheme == .light ? Color(.darkGray) : .primary)
-                    HStack(spacing: 8) {
-                        if let tags = item.tags, !tags.isEmpty {
-                            ScrollView(.horizontal, showsIndicators: false) { 
-                                HStack { 
-                                    ForEach(tags, id: \.self) { tag in 
-                                        let customColor = clipboardManager?.getTagColor(tag)
-                                        let tagColor = customColor ?? Color.gray.opacity(0.2)
-                                        let textColor = customColor != nil ? Color.white : Color.primary
-                                        TagChipView(
-                                            tag: tag,
-                                            tagColor: tagColor,
-                                            textColor: textColor,
-                                            onFilter: {
-                                                if let onTagLongPress = self.onTagLongPress {
-                                                    onTagLongPress(tag)
-                                                    // Add haptic feedback
-                                                    let generator = UIImpactFeedbackGenerator(style: .medium)
-                                                    generator.impactOccurred()
-                                                }
-                                            }
-                                        )
-                                    } 
-                                } 
-                            }
-                        }
-                        Spacer()
-                        Text(item.timestamp.timeAgoDisplay()).font(.caption).foregroundColor(.secondary).lineLimit(1)
-                    }.frame(height: 20)
+            // Content area - VStack for social feed style
+            VStack(alignment: .leading, spacing: 8) {
+                // Top: Title (Bold, larger font)
+                Text(item.displayName ?? item.content)
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(colorScheme == .light ? Color(.darkGray) : .primary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                
+                // Middle: Content Preview
+                if isLinkType {
+                    // Link type: show URL with distinct color, 1-2 lines
+                    Text(item.content)
+                        .font(.subheadline)
+                        .foregroundColor(Color.blue.opacity(0.8))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                } else if !contentPreview.isEmpty {
+                    // Text type: show body content, 3 lines max
+                    Text(contentPreview)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .lineLimit(3)
+                        .multilineTextAlignment(.leading)
                 }
-                Spacer()
+                
+                // Bottom: Tags and Date
+                HStack(spacing: 8) {
+                    if let tags = item.tags, !tags.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) { 
+                            HStack(spacing: 6) { 
+                                ForEach(tags, id: \.self) { tag in 
+                                    let customColor = clipboardManager?.getTagColor(tag)
+                                    let tagColor = customColor ?? Color.gray.opacity(0.2)
+                                    let textColor = customColor != nil ? Color.white : Color.primary
+                                    TagChipView(
+                                        tag: tag,
+                                        tagColor: tagColor,
+                                        textColor: textColor,
+                                        onFilter: {
+                                            if let onTagLongPress = self.onTagLongPress {
+                                                onTagLongPress(tag)
+                                                // Add haptic feedback
+                                                let generator = UIImpactFeedbackGenerator(style: .medium)
+                                                generator.impactOccurred()
+                                            }
+                                        }
+                                    )
+                                } 
+                            } 
+                        }
+                    }
+                    Spacer()
+                    Text(item.timestamp.timeAgoDisplay())
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
             .onTapGesture(perform: previewAction)
         }
         .contentShape(Rectangle())
-        .padding(.vertical, 4)
+        .padding(.vertical, 8)
         .onDrag(createDragItem)
         // Pin indicator overlay - uses red for semantic visibility (pinned = important)
         .overlay(Group { if item.isPinned { CornerTriangleShape().fill(Color.red).frame(width: 12, height: 12).padding([.top, .trailing], 4) } }, alignment: .topTrailing)
