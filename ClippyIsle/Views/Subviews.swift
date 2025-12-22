@@ -127,17 +127,15 @@ struct ClipboardItemRow: View {
             // For links, show the URL
             return item.content
         } else {
-            // For text, show the body content (use content if no displayName, or show content below displayName)
-            if item.displayName != nil && item.displayName != item.content {
-                return item.content
-            }
-            return ""
+            // For text, show the body content only when displayName differs from content
+            guard let displayName = item.displayName, displayName != item.content else { return "" }
+            return item.content
         }
     }
 
     var body: some View {
         HStack(alignment: .top, spacing: 15) {
-            // Type Icon - aligned to top
+            // Type Icon - top-aligned to match title position in social feed layout
             Button(action: copyAction) {
                 // Corner bracket minimalist icon design
                 ZStack {
@@ -179,8 +177,7 @@ struct ClipboardItemRow: View {
             VStack(alignment: .leading, spacing: 8) {
                 // Top: Title (Bold, larger font)
                 Text(item.displayName ?? item.content)
-                    .font(.headline)
-                    .fontWeight(.semibold)
+                    .font(.headline.weight(.semibold))
                     .foregroundColor(colorScheme == .light ? Color(.darkGray) : .primary)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
