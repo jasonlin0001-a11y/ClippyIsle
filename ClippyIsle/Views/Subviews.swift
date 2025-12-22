@@ -239,11 +239,11 @@ struct ClipboardItemRow: View {
                     
                     // Middle: Content Preview (reduced font size: caption instead of subheadline)
                     if isLinkType {
-                        // Link type: show URL with distinct color, 1-2 lines
+                        // Link type: show URL with distinct color, limited to 1 line
                         Text(item.content)
                             .font(.caption)
                             .foregroundColor(Color.blue.opacity(0.8))
-                            .lineLimit(2)
+                            .lineLimit(1)
                             .multilineTextAlignment(.leading)
                     } else if !contentPreview.isEmpty {
                         // Text type: show body content, 3 lines max
