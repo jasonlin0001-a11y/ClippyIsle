@@ -342,18 +342,66 @@ struct ClipboardItemRow: View {
     }
 }
 
+// MARK: - Link Preview Loading Queue
+/// Manages concurrent link preview loading to prevent app freeze
+@MainActor
+class LinkPreviewLoadingQueue {
+    static let shared = LinkPreviewLoadingQueue()
+    
+    private var activeTasks: Int = 0
+    private let maxConcurrentTasks = 2 // Only allow 2 concurrent loads
+    private var pendingContinuations: [CheckedContinuation<Void, Never>] = []
+    
+    private init() {}
+    
+    func enqueue(task: @escaping () async -> Void) async {
+        // Wait if too many tasks are active
+        if activeTasks >= maxConcurrentTasks {
+            await withCheckedContinuation { continuation in
+                pendingContinuations.append(continuation)
+            }
+        }
+        
+        activeTasks += 1
+        await task()
+        activeTasks -= 1
+        
+        // Resume next waiting task if any
+        if !pendingContinuations.isEmpty {
+            let next = pendingContinuations.removeFirst()
+            next.resume()
+        }
+    }
+}
+
 // MARK: - Compact Link Preview Row (for feed style)
-/// A smaller inline preview for links that loads metadata asynchronously
+/// A smaller inline preview for links that loads metadata asynchronously with lazy loading
 struct CompactLinkPreviewRow: View {
     let url: URL
     @State private var metadata: LPLinkMetadata?
-    @State private var isLoading = true
+    @State private var isLoading = false
+    @State private var hasStartedLoading = false
     @State private var hasError = false
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         Group {
-            if isLoading {
+            if !hasStartedLoading {
+                // Placeholder before loading starts
+                HStack(spacing: 8) {
+                    Image(systemName: "link.circle")
+                        .foregroundColor(.secondary)
+                        .font(.caption)
+                    Text("Tap to load preview")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+                .padding(8)
+                .onTapGesture {
+                    startLoading()
+                }
+            } else if isLoading {
                 HStack(spacing: 8) {
                     ProgressView()
                         .scaleEffect(0.7)
@@ -392,49 +440,74 @@ struct CompactLinkPreviewRow: View {
                     Spacer(minLength: 0)
                 }
                 .padding(8)
+            } else if hasError {
+                // Show error state with retry option
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .foregroundColor(.orange)
+                        .font(.caption)
+                    Text("Failed to load")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Button("Retry") {
+                        hasError = false
+                        startLoading()
+                    }
+                    .font(.caption2)
+                }
+                .padding(8)
             }
-            // Don't show anything if there's an error (keep UI clean)
         }
         .background(
             RoundedRectangle(cornerRadius: 8)
                 .fill(Color(.systemGray6).opacity(colorScheme == .dark ? 1.0 : 0.5))
         )
-        .task {
-            // Check cache first
+        .onAppear {
+            // Check cache immediately on appear - if cached, show it
             if let cached = LinkMetadataManager.shared.getCachedMetadata(for: url) {
                 metadata = cached
+                hasStartedLoading = true
                 isLoading = false
-            } else {
-                // Fetch metadata asynchronously
-                await fetchMetadata()
             }
+            // Don't auto-load - user needs to tap to load preview
+        }
+    }
+    
+    private func startLoading() {
+        guard !isLoading && !hasStartedLoading else { return }
+        hasStartedLoading = true
+        isLoading = true
+        
+        Task {
+            await fetchMetadata()
         }
     }
     
     @MainActor
     private func fetchMetadata() async {
-        // Use timeout to avoid blocking (5 seconds)
-        let fetchTask = Task {
-            await LinkMetadataManager.shared.fetchMetadata(for: url)
-        }
-        
-        let timeoutTask = Task {
-            try await Task.sleep(for: .seconds(5))
-            fetchTask.cancel()
-            return nil as LPLinkMetadata?
-        }
-        
-        do {
+        // Use the queue to limit concurrent requests
+        await LinkPreviewLoadingQueue.shared.enqueue {
+            // Use timeout to avoid blocking (5 seconds)
+            let fetchTask = Task {
+                await LinkMetadataManager.shared.fetchMetadata(for: self.url)
+            }
+            
+            let timeoutTask = Task {
+                try? await Task.sleep(for: .seconds(5))
+                fetchTask.cancel()
+            }
+            
             let result = await fetchTask.value
             timeoutTask.cancel()
             
             if let fetchedMetadata = result {
-                metadata = fetchedMetadata
+                self.metadata = fetchedMetadata
             } else {
-                hasError = true
+                self.hasError = true
             }
+            self.isLoading = false
         }
-        isLoading = false
     }
 }
 
