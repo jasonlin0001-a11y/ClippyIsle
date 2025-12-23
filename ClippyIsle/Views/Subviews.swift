@@ -130,6 +130,10 @@ struct ClipboardItemRow: View {
     var shareAction: () -> Void
     /// Optional callback for text-to-speech functionality, triggered when play button is tapped on text items
     var speakAction: (() -> Void)? = nil
+    /// Whether this item is currently being spoken (for play/pause toggle)
+    var isSpeakingThisItem: Bool = false
+    /// Whether speech is currently paused for this item
+    var isSpeechPaused: Bool = false
     var linkPreviewAction: (() -> Void)? = nil
     var onTagLongPress: ((String) -> Void)? = nil
     /// Callback when link preview title is fetched - used for auto-rename
@@ -156,6 +160,15 @@ struct ClipboardItemRow: View {
         }
         // Default to true for unknown types (treat as text)
         return true
+    }
+    
+    // Determine the icon to show for the play/pause button
+    private var playPauseIconName: String {
+        // Show pause icon only when actively speaking this item (not paused)
+        if isSpeakingThisItem && !isSpeechPaused {
+            return "pause.circle.fill"
+        }
+        return "play.circle.fill"
     }
     
     // Get content preview text based on item type
@@ -327,10 +340,10 @@ struct ClipboardItemRow: View {
         VStack(spacing: 4) {
             typeIconButton
             
-            // Play button for text items (shows below the type icon)
+            // Play/Pause button for text items (shows below the type icon)
             if isTextType, let speakAction = speakAction {
                 Button(action: speakAction) {
-                    Image(systemName: "play.circle.fill")
+                    Image(systemName: playPauseIconName)
                         .font(.system(size: 20))
                         .foregroundColor(themeColor)
                 }

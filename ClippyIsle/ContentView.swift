@@ -599,10 +599,22 @@ struct ContentView: View {
                             tagAction: { openTagSheet(for: item) },
                             shareAction: { shareItem(item: item) },
                             speakAction: {
-                                // Text-to-speech: read the item content aloud
-                                let title = item.displayName ?? String(item.content.prefix(30))
-                                speechManager.play(text: item.content, title: title, itemID: item.id)
+                                // Text-to-speech: play/pause toggle
+                                let isCurrentItem = speechManager.currentItemID == item.id
+                                if isCurrentItem && speechManager.isSpeaking {
+                                    // Currently speaking this item - pause
+                                    speechManager.pause()
+                                } else if isCurrentItem && speechManager.isPaused {
+                                    // Paused on this item - resume
+                                    speechManager.resume()
+                                } else {
+                                    // Start playing this item (stops any other playback)
+                                    let title = item.displayName ?? String(item.content.prefix(30))
+                                    speechManager.play(text: item.content, title: title, itemID: item.id)
+                                }
                             },
+                            isSpeakingThisItem: speechManager.currentItemID == item.id && (speechManager.isSpeaking || speechManager.isPaused),
+                            isSpeechPaused: speechManager.currentItemID == item.id && speechManager.isPaused,
                             linkPreviewAction: {
                                 // Toggle inline preview for URL items
                                 if item.type == UTType.url.identifier, URL(string: item.content) != nil {
