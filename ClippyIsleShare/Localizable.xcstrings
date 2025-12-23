@@ -2638,7 +2638,14 @@
       }
     },
     "Unpin" : {
-
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "釘選"
+          }
+        }
+      }
     },
     "Upgrade to Pro" : {
       "comment" : "A button label that allows users to upgrade to the Pro version of the app.",
