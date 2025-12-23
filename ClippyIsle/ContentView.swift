@@ -413,85 +413,83 @@ struct ContentView: View {
                     ZStack(alignment: .bottom) { 
                         listContent
                     }
-                    .overlay {
-                        // Radial Menu FAB - manages its own positioning
-                        RadialMenuView(
-                            themeColor: themeColor,
-                            onVoiceMemo: {
-                                // Open microphone for voice-to-text memo
-                                if isTranscribing && isVoiceMemoMode {
-                                    // Stop and save voice memo
-                                    saveVoiceMemo()
-                                } else {
-                                    // Start voice memo transcription
-                                    voiceMemoTranscript = ""
-                                    isVoiceMemoMode = true
-                                    isTranscribing = true
-                                    speechRecognizer.transcript = ""  // Clear previous transcript
-                                    speechRecognizer.startTranscribing()
-                                }
-                            },
-                            onNewItem: {
-                                trackAndHighlightNewItem {
-                                    clipboardManager.addNewItem(content: String(localized: "New Item"), type: UTType.text.identifier)
-                                }
-                            },
-                            onPasteFromClipboard: {
-                                trackAndHighlightNewItem {
-                                    clipboardManager.checkClipboard(isManual: true)
-                                }
-                            }
-                        )
+                }
+            }
+            
+            // Radial Menu FAB - positioned relative to full screen, not scroll content
+            RadialMenuView(
+                themeColor: themeColor,
+                onVoiceMemo: {
+                    // Open microphone for voice-to-text memo
+                    if isTranscribing && isVoiceMemoMode {
+                        // Stop and save voice memo
+                        saveVoiceMemo()
+                    } else {
+                        // Start voice memo transcription
+                        voiceMemoTranscript = ""
+                        isVoiceMemoMode = true
+                        isTranscribing = true
+                        speechRecognizer.transcript = ""  // Clear previous transcript
+                        speechRecognizer.startTranscribing()
                     }
-                    .overlay {
-                        // Voice Memo Recording Indicator
-                        if isVoiceMemoMode && isTranscribing {
-                            VStack {
-                                Spacer()
-                                VStack(spacing: 12) {
-                                    HStack(spacing: 8) {
-                                        Circle()
-                                            .fill(Color.red)
-                                            .frame(width: 12, height: 12)
-                                            .opacity(0.8)
-                                        Text("Recording Voice Memo...")
-                                            .font(.headline)
-                                            .foregroundColor(.white)
-                                    }
-                                    if !voiceMemoTranscript.isEmpty {
-                                        Text(voiceMemoTranscript)
-                                            .font(.body)
-                                            .foregroundColor(.white.opacity(0.9))
-                                            .multilineTextAlignment(.center)
-                                            .lineLimit(3)
-                                            .padding(.horizontal)
-                                    }
-                                    Button(action: saveVoiceMemo) {
-                                        HStack {
-                                            Image(systemName: "stop.circle.fill")
-                                            Text("Stop & Save")
-                                        }
-                                        .font(.headline)
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 20)
-                                        .padding(.vertical, 10)
-                                        .background(Color.red)
-                                        .cornerRadius(20)
-                                    }
-                                }
-                                .padding(.vertical, 20)
-                                .padding(.horizontal, 30)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .fill(Color.black.opacity(0.8))
-                                )
-                                .padding(.bottom, 120)
-                            }
-                            .transition(.opacity.combined(with: .move(edge: .bottom)))
-                            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isVoiceMemoMode)
-                        }
+                },
+                onNewItem: {
+                    trackAndHighlightNewItem {
+                        clipboardManager.addNewItem(content: String(localized: "New Item"), type: UTType.text.identifier)
+                    }
+                },
+                onPasteFromClipboard: {
+                    trackAndHighlightNewItem {
+                        clipboardManager.checkClipboard(isManual: true)
                     }
                 }
+            )
+            
+            // Voice Memo Recording Indicator
+            if isVoiceMemoMode && isTranscribing {
+                VStack {
+                    Spacer()
+                    VStack(spacing: 12) {
+                        HStack(spacing: 8) {
+                            Circle()
+                                .fill(Color.red)
+                                .frame(width: 12, height: 12)
+                                .opacity(0.8)
+                            Text("Recording Voice Memo...")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                        }
+                        if !voiceMemoTranscript.isEmpty {
+                            Text(voiceMemoTranscript)
+                                .font(.body)
+                                .foregroundColor(.white.opacity(0.9))
+                                .multilineTextAlignment(.center)
+                                .lineLimit(3)
+                                .padding(.horizontal)
+                        }
+                        Button(action: saveVoiceMemo) {
+                            HStack {
+                                Image(systemName: "stop.circle.fill")
+                                Text("Stop & Save")
+                            }
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(Color.red)
+                            .cornerRadius(20)
+                        }
+                    }
+                    .padding(.vertical, 20)
+                    .padding(.horizontal, 30)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.black.opacity(0.8))
+                    )
+                    .padding(.bottom, 120)
+                }
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isVoiceMemoMode)
             }
         }
         .navigationTitle(navigationTitle).navigationBarTitleDisplayMode(selectedTagFilter == nil ? .large : .inline)
