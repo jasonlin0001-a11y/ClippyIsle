@@ -170,6 +170,10 @@ struct ContentView: View {
             configureNavigationBarAppearance()
             checkActivityStatus()
             NotificationCenter.default.addObserver(forName: .didRequestUndo, object: nil, queue: .main) { _ in undoManager?.undo() }
+            // Handle widget audio playback request
+            NotificationCenter.default.addObserver(forName: .widgetPlayAudioRequested, object: nil, queue: .main) { _ in
+                startCyclePlayingAudioFiles()
+            }
             LaunchLogger.log("ContentView.onAppear - END")
         }
         .onChange(of: scenePhase) { oldPhase, newPhase in
@@ -569,6 +573,22 @@ struct ContentView: View {
     }
     
     private var navigationTitle: String { selectedTagFilter.map { "Tag: \($0)" } ?? "CC Isle" }
+    
+    // Custom title view with slogan
+    @ViewBuilder
+    private var navigationTitleWithSlogan: some View {
+        if selectedTagFilter == nil {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("CC Isle")
+                    .font(.largeTitle.weight(.bold))
+                Text("The Feed Curated by You.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+        } else {
+            Text("Tag: \(selectedTagFilter!)")
+        }
+    }
     private var dataErrorView: some View {
         VStack(spacing: 15) {
             Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 50)).foregroundColor(.orange)
@@ -580,6 +600,19 @@ struct ContentView: View {
     private var listContent: some View {
         ScrollViewReader { proxy in
             List {
+                // Slogan header - only shown when not filtering by tag
+                if selectedTagFilter == nil {
+                    Section {
+                        EmptyView()
+                    } header: {
+                        Text("The Feed Curated by You.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .textCase(nil)
+                            .listRowInsets(EdgeInsets())
+                    }
+                }
+                
                 ForEach(filteredItems) { item in
                     VStack(spacing: 0) {
                         ClipboardItemRow(
@@ -899,6 +932,44 @@ struct ContentView: View {
             provider.registerDataRepresentation(forTypeIdentifier: UTType.png.identifier, visibility: .all) { completion in completion(data, nil); return nil }; return provider
         } else if item.type == UTType.url.identifier, let url = URL(string: item.content) { return NSItemProvider(object: url as NSURL) }
         else { return NSItemProvider(object: item.content as NSString) }
+    }
+    
+    /// Starts playing downloaded audio files in cycle from the widget
+    func startCyclePlayingAudioFiles() {
+        // Get audio files from cache directory
+        guard let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else { return }
+        let folder = cacheDir.appendingPathComponent("LocalAudio")
+        
+        do {
+            let fileURLs = try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: [.creationDateKey])
+            let audioFiles = fileURLs.filter { $0.pathExtension == "caf" }
+                .sorted { url1, url2 in
+                    let date1 = (try? url1.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? Date.distantPast
+                    let date2 = (try? url2.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? Date.distantPast
+                    return date1 > date2
+                }
+            
+            guard let firstFile = audioFiles.first else {
+                print("🎵 No audio files found to play")
+                return
+            }
+            
+            // Get display title from clipboard item if available
+            let filename = firstFile.lastPathComponent
+            let uuidString = filename.components(separatedBy: "_").first?.components(separatedBy: ".").first ?? ""
+            var title = "Audio File"
+            if let uuid = UUID(uuidString: uuidString),
+               let item = clipboardManager.items.first(where: { $0.id == uuid }) {
+                title = item.displayName ?? String(item.content.prefix(30))
+            }
+            
+            // Play the first audio file
+            speechManager.playExistingFile(url: firstFile, title: title)
+            print("🎵 Widget: Started playing audio file: \(title)")
+            
+        } catch {
+            print("🎵 Error loading audio files: \(error)")
+        }
     }
 }
 

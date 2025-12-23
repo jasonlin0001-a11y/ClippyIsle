@@ -7,11 +7,11 @@ struct Provider: TimelineProvider {
     typealias Entry = SimpleEntry
 
     func placeholder(in context: Context) -> SimpleEntry {
-        SimpleEntry(date: Date(), itemCount: 0, themeColorName: "blue")
+        SimpleEntry(date: Date(), itemCount: 0, audioFileCount: 0, themeColorName: "blue")
     }
 
     func getSnapshot(in context: Context, completion: @escaping (SimpleEntry) -> ()) {
-        let entry = SimpleEntry(date: Date(), itemCount: 10, themeColorName: "blue")
+        let entry = SimpleEntry(date: Date(), itemCount: 10, audioFileCount: 5, themeColorName: "blue")
         completion(entry)
     }
 
@@ -22,8 +22,9 @@ struct Provider: TimelineProvider {
             try? JSONDecoder().decode([ClipboardItem].self, from: $0).count
         } ?? 0
         let themeColorName = userDefaults?.string(forKey: "themeColorName") ?? "green"
+        let audioFileCount = userDefaults?.integer(forKey: "audioFileCount") ?? 0
 
-        let entry = SimpleEntry(date: Date(), itemCount: itemCount, themeColorName: themeColorName)
+        let entry = SimpleEntry(date: Date(), itemCount: itemCount, audioFileCount: audioFileCount, themeColorName: themeColorName)
         let timeline = Timeline(entries: [entry], policy: .atEnd)
         completion(timeline)
     }
@@ -32,5 +33,6 @@ struct Provider: TimelineProvider {
 struct SimpleEntry: TimelineEntry {
     let date: Date
     let itemCount: Int
+    let audioFileCount: Int
     let themeColorName: String
 }

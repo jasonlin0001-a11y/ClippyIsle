@@ -44,6 +44,8 @@ class SpeechManager: NSObject, ObservableObject, AVSpeechSynthesizerDelegate, AV
         synthesizer.usesApplicationAudioSession = true
         setupAudioSession()
         setupRemoteCommandCenter()
+        // Sync audio file count with App Group on init
+        updateAudioFileCountInAppGroup()
     }
     
     private func setupAudioSession() {
@@ -202,6 +204,7 @@ class SpeechManager: NSObject, ObservableObject, AVSpeechSynthesizerDelegate, AV
         let key = getUniqueKey(itemID: itemID, url: url)
         progressCache.removeValue(forKey: key)
         print("🗑️ Deleted local audio file for key: \(key)")
+        updateAudioFileCountInAppGroup()
     }
     
     func generateAudioFile(text: String, itemID: UUID, url: URL? = nil) async throws {
@@ -224,6 +227,29 @@ class SpeechManager: NSObject, ObservableObject, AVSpeechSynthesizerDelegate, AV
                 }
             }
              continuation.resume()
+             updateAudioFileCountInAppGroup()
+        }
+    }
+    
+    // MARK: - App Group Audio File Count Sync
+    
+    /// Returns the count of downloaded audio files
+    func getAudioFileCount() -> Int {
+        guard let cacheDir = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first else { return 0 }
+        let folder = cacheDir.appendingPathComponent("LocalAudio")
+        do {
+            let files = try fileManager.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
+            return files.filter { $0.pathExtension == "caf" }.count
+        } catch {
+            return 0
+        }
+    }
+    
+    /// Updates the audio file count in App Group UserDefaults for widget access
+    func updateAudioFileCountInAppGroup() {
+        let count = getAudioFileCount()
+        if let defaults = UserDefaults(suiteName: appGroupID) {
+            defaults.set(count, forKey: "audioFileCount")
         }
     }
     

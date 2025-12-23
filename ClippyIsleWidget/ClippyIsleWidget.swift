@@ -9,7 +9,7 @@ struct ClippyIsleWidget: Widget {
             ClippyIsleWidgetEntryView(entry: entry)
         }
         .configurationDisplayName("CC Isle")
-        .description("View your clipboard item count.")
+        .description("Quick access to CC Isle with audio playback.")
         .supportedFamilies([.systemSmall])
     }
 }
@@ -38,14 +38,51 @@ struct ClippyIsleWidgetEntryView : View {
     }
 
     var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "c.circle.fill")
-                .font(.system(size: 50))
-                .foregroundColor(themeColor)
-            Text("\(entry.itemCount) items")
-                .font(.headline)
-                .foregroundColor(.secondary)
+        VStack(spacing: 6) {
+            // Header: CC Isle + Item Count
+            HStack {
+                Text("CC Isle")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                Spacer()
+                Text("\(entry.audioFileCount)Item")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            // Buttons
+            VStack(spacing: 6) {
+                // Click & CC me button - opens main app
+                Link(destination: URL(string: "ccisle://open")!) {
+                    Text("Click & CC me")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                        .background(themeColor.opacity(0.2))
+                        .foregroundColor(themeColor)
+                        .cornerRadius(8)
+                }
+                
+                // Listen button - plays audio
+                Link(destination: URL(string: "ccisle://playaudio")!) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 10))
+                        Text("Listen")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+                    .background(themeColor)
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+                }
+            }
         }
-        .padding()
+        .padding(12)
     }
 }
