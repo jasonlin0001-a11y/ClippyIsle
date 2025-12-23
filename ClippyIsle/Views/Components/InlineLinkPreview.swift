@@ -146,7 +146,7 @@ struct InlineLinkPreview: View {
                     .clipShape(RoundedRectangle(cornerRadius: 8))
             }
             
-            // Text content
+            // Text content: Title + Description (no URL as per user request)
             VStack(alignment: .leading, spacing: 4) {
                 // Title
                 if let title = metadata.title {
@@ -162,20 +162,7 @@ struct InlineLinkPreview: View {
                     Text(description)
                         .font(.caption)
                         .foregroundColor(.secondary)
-                        .lineLimit(2)
-                }
-                
-                // URL
-                if let url = metadata.url {
-                    HStack(spacing: 4) {
-                        Image(systemName: "link")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                        Text(url.host ?? url.absoluteString)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                    }
+                        .lineLimit(3)
                 }
             }
             

@@ -113,25 +113,11 @@ struct LinkPreviewCard: View {
                             .lineLimit(3)
                     }
                     
-                    // Description (from waterfall extraction)
+                    // Description (from waterfall extraction) - show more lines, no URL needed
                     if let description = enhanced.description {
                         Text(description)
                             .font(.body)
                             .foregroundColor(.secondary)
-                            .lineLimit(5)
-                    }
-                    
-                    // URL as subtitle
-                    if let url = metadata.url {
-                        HStack(spacing: 6) {
-                            Image(systemName: "link")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Text(url.absoluteString)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .lineLimit(2)
-                        }
                     }
                 }
                 .padding()

@@ -619,6 +619,13 @@ struct ContentView: View {
                                 } else {
                                     selectedTagFilter = tag
                                 }
+                            },
+                            onLinkTitleFetched: { title in
+                                // Auto-rename item to fetched title if name wasn't manually set
+                                // A name is considered "manually set" if displayName is not nil
+                                if item.displayName == nil {
+                                    clipboardManager.renameItem(item: item, newName: title)
+                                }
                             }
                         )
                         

@@ -130,6 +130,8 @@ struct ClipboardItemRow: View {
     var shareAction: () -> Void
     var linkPreviewAction: (() -> Void)? = nil
     var onTagLongPress: ((String) -> Void)? = nil
+    /// Callback when link preview title is fetched - used for auto-rename
+    var onLinkTitleFetched: ((String) -> Void)? = nil
     @Environment(\.colorScheme) var colorScheme
     
     // Check if item is a URL type
@@ -294,7 +296,7 @@ struct ClipboardItemRow: View {
             
             // Link Preview - loaded asynchronously, only for URL items in feed mode
             if isLinkType && showLinkPreview, let url = URL(string: item.content) {
-                CompactLinkPreviewRow(url: url)
+                CompactLinkPreviewRow(url: url, onTitleFetched: onLinkTitleFetched)
                     .padding(.top, 8)
                     .padding(.leading, 59) // Align with content (44 icon + 15 spacing)
             }
@@ -376,9 +378,13 @@ class LinkPreviewLoadingQueue {
 
 // MARK: - Compact Link Preview Row (for feed style)
 /// A smaller inline preview for links that loads metadata asynchronously with lazy loading
+/// Enhanced with waterfall description extraction
 struct CompactLinkPreviewRow: View {
     let url: URL
-    @State private var metadata: LPLinkMetadata?
+    /// Callback when title is fetched - used to auto-update item name
+    var onTitleFetched: ((String) -> Void)? = nil
+    
+    @State private var enhancedMetadata: EnhancedLinkMetadata?
     @State private var isLoading = false
     @State private var hasStartedLoading = false
     @State private var hasError = false
@@ -411,29 +417,30 @@ struct CompactLinkPreviewRow: View {
                     Spacer()
                 }
                 .padding(8)
-            } else if let metadata = metadata {
+            } else if let enhanced = enhancedMetadata {
                 HStack(alignment: .center, spacing: 10) {
                     // Image (if available)
-                    if let imageProvider = metadata.imageProvider {
+                    if let imageProvider = enhanced.lpMetadata.imageProvider {
                         CompactPreviewImage(imageProvider: imageProvider)
                             .frame(width: 48, height: 48)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
                     }
                     
-                    // Text content
+                    // Text content: Title + Description (no URL as per user request)
                     VStack(alignment: .leading, spacing: 2) {
-                        if let title = metadata.title {
+                        if let title = enhanced.lpMetadata.title {
                             Text(title)
                                 .font(.caption)
                                 .fontWeight(.medium)
-                                .lineLimit(1)
+                                .lineLimit(2)
                                 .foregroundColor(.primary)
                         }
-                        if let url = metadata.url {
-                            Text(url.host ?? url.absoluteString)
+                        // Show description from waterfall extraction
+                        if let description = enhanced.description {
+                            Text(description)
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
-                                .lineLimit(1)
+                                .lineLimit(2)
                         }
                     }
                     
@@ -465,8 +472,8 @@ struct CompactLinkPreviewRow: View {
         )
         .onAppear {
             // Check cache immediately on appear - if cached, show it
-            if let cached = LinkMetadataManager.shared.getCachedMetadata(for: url) {
-                metadata = cached
+            if let cached = LinkMetadataManager.shared.getCachedEnhancedMetadata(for: url) {
+                enhancedMetadata = cached
                 hasStartedLoading = true
                 isLoading = false
             }
@@ -490,15 +497,15 @@ struct CompactLinkPreviewRow: View {
         await LinkPreviewLoadingQueue.shared.enqueue {
             do {
                 // Use task group with timeout - whichever finishes first wins
-                let result = try await withThrowingTaskGroup(of: LPLinkMetadata?.self) { group in
-                    // Task 1: Fetch metadata
+                let result = try await withThrowingTaskGroup(of: EnhancedLinkMetadata?.self) { group in
+                    // Task 1: Fetch enhanced metadata (with description)
                     group.addTask {
-                        await LinkMetadataManager.shared.fetchMetadata(for: self.url)
+                        await LinkMetadataManager.shared.fetchEnhancedMetadata(for: self.url)
                     }
                     
-                    // Task 2: Timeout after 5 seconds
+                    // Task 2: Timeout after 10 seconds (increased for enhanced fetch)
                     group.addTask {
-                        try await Task.sleep(for: .seconds(5))
+                        try await Task.sleep(for: .seconds(10))
                         throw TimeoutError()
                     }
                     
@@ -513,7 +520,11 @@ struct CompactLinkPreviewRow: View {
                 }
                 
                 if let fetchedMetadata = result {
-                    self.metadata = fetchedMetadata
+                    self.enhancedMetadata = fetchedMetadata
+                    // Notify callback with fetched title for auto-rename
+                    if let title = fetchedMetadata.lpMetadata.title {
+                        self.onTitleFetched?(title)
+                    }
                 } else {
                     self.hasError = true
                 }
