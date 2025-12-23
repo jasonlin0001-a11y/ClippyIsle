@@ -159,21 +159,29 @@ exports.sendTestNotification = functions.https.onRequest(async (req, res) => {
  * Callable function: Fetches Open Graph metadata from a URL
  *
  * Input: { url: string }
- * Output: { success: true, data: { title, image, description, siteName, url, favicon } }
- *         or throws HttpsError on failure
+ * Output: { success: true, data: { title, image, description, url } }
+ *         or { success: false, error: '...' } on failure
  *
  * Usage from iOS:
  *   functions.httpsCallable("fetchLinkPreview").call(["url": urlString])
  */
 exports.fetchLinkPreview = functions.https.onCall(async (data, context) => {
+  // Check if user is authenticated
+  if (!context.auth) {
+    return {
+      success: false,
+      error: "User must be authenticated to fetch link previews.",
+    };
+  }
+
   const url = data.url;
 
   // Validate URL input
   if (!url || typeof url !== "string") {
-    throw new functions.https.HttpsError(
-        "invalid-argument",
-        "The function must be called with a valid URL string.",
-    );
+    return {
+      success: false,
+      error: "The function must be called with a valid URL string.",
+    };
   }
 
   // Validate URL format
@@ -182,13 +190,16 @@ exports.fetchLinkPreview = functions.https.onCall(async (data, context) => {
     parsedUrl = new URL(url);
     // Only allow http and https protocols
     if (!["http:", "https:"].includes(parsedUrl.protocol)) {
-      throw new Error("Invalid protocol");
+      return {
+        success: false,
+        error: "URL must use http or https protocol.",
+      };
     }
   } catch (error) {
-    throw new functions.https.HttpsError(
-        "invalid-argument",
-        "The provided URL is not valid.",
-    );
+    return {
+      success: false,
+      error: "The provided URL is not valid.",
+    };
   }
 
   // Fetch Open Graph metadata using open-graph-scraper
@@ -207,10 +218,10 @@ exports.fetchLinkPreview = functions.https.onCall(async (data, context) => {
 
     if (error) {
       console.error("OGS error for URL:", url, result);
-      throw new functions.https.HttpsError(
-          "internal",
-          "Failed to fetch link preview metadata.",
-      );
+      return {
+        success: false,
+        error: "Failed to fetch link preview metadata.",
+      };
     }
 
     // Extract Open Graph data
@@ -219,9 +230,7 @@ exports.fetchLinkPreview = functions.https.onCall(async (data, context) => {
       image: result.ogImage?.[0]?.url || result.twitterImage?.[0]?.url || null,
       description: result.ogDescription || result.dcDescription ||
                    result.twitterDescription || null,
-      siteName: result.ogSiteName || null,
       url: result.ogUrl || result.requestUrl || url,
-      favicon: result.favicon || null,
     };
 
     console.log("Successfully fetched OG data for:", url);
@@ -231,15 +240,10 @@ exports.fetchLinkPreview = functions.https.onCall(async (data, context) => {
       data: ogData,
     };
   } catch (error) {
-    // Handle specific error types
-    if (error instanceof functions.https.HttpsError) {
-      throw error;
-    }
-
     console.error("Error fetching link preview for URL:", url, error);
-    throw new functions.https.HttpsError(
-        "internal",
-        "An error occurred while fetching the link preview.",
-    );
+    return {
+      success: false,
+      error: "An error occurred while fetching the link preview.",
+    };
   }
 });
