@@ -12,6 +12,7 @@ struct ClippyIsleWidget: Widget {
         .configurationDisplayName("CC Isle")
         .description("Quick access to CC Isle with audio playback.")
         .supportedFamilies([.systemSmall])
+        .contentMarginsDisabled() // Ensure content fills the widget
     }
 }
 
@@ -86,4 +87,11 @@ struct ClippyIsleWidgetEntryView : View {
         }
         .padding(12)
     }
+}
+
+// MARK: - Widget Preview
+#Preview(as: .systemSmall) {
+    ClippyIsleWidget()
+} timeline: {
+    SimpleEntry(date: .now, itemCount: 25, audioFileCount: 10, themeColorName: "green")
 }
