@@ -3,6 +3,7 @@
 //  ClippyIsle
 //
 //  SwiftUI view for displaying URL metadata in a card format
+//  Enhanced with waterfall description extraction
 //
 
 import SwiftUI
@@ -22,8 +23,8 @@ struct LinkPreviewCard: View {
                     loadingView
                 } else if let error = metadataManager.error {
                     errorView(error: error)
-                } else if let metadata = metadataManager.metadata {
-                    contentView(metadata: metadata)
+                } else if let enhanced = metadataManager.enhancedMetadata {
+                    contentView(enhanced: enhanced)
                 }
             }
             .navigationTitle("Link Preview")
@@ -37,7 +38,7 @@ struct LinkPreviewCard: View {
             }
         }
         .onAppear {
-            metadataManager.fetchMetadata(for: url)
+            metadataManager.fetchEnhancedMetadata(for: url)
         }
         .onDisappear {
             metadataManager.cancel()
@@ -74,7 +75,7 @@ struct LinkPreviewCard: View {
                 .padding(.horizontal)
             
             Button(action: {
-                metadataManager.fetchMetadata(for: url)
+                metadataManager.fetchEnhancedMetadata(for: url)
             }) {
                 Label("Retry", systemImage: "arrow.clockwise")
                     .padding(.horizontal, 20)
@@ -88,9 +89,10 @@ struct LinkPreviewCard: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
-    // MARK: - Content View
-    private func contentView(metadata: LPLinkMetadata) -> some View {
-        ScrollView {
+    // MARK: - Content View (Enhanced)
+    private func contentView(enhanced: EnhancedLinkMetadata) -> some View {
+        let metadata = enhanced.lpMetadata
+        return ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 // Card
                 VStack(alignment: .leading, spacing: 12) {
@@ -109,6 +111,14 @@ struct LinkPreviewCard: View {
                             .font(.title2)
                             .fontWeight(.bold)
                             .lineLimit(3)
+                    }
+                    
+                    // Description (from waterfall extraction)
+                    if let description = enhanced.description {
+                        Text(description)
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .lineLimit(5)
                     }
                     
                     // URL as subtitle

@@ -3,6 +3,7 @@
 //  ClippyIsle
 //
 //  Inline compact preview for URL metadata
+//  Enhanced with waterfall description extraction
 //
 
 import SwiftUI
@@ -11,13 +12,13 @@ import LinkPresentation
 /// A compact inline view that displays link metadata between list items
 struct InlineLinkPreview: View {
     let url: URL
-    @State private var metadata: LPLinkMetadata?
+    @State private var enhancedMetadata: EnhancedLinkMetadata?
     @State private var isLoading = true
     @State private var hasError = false
     @Environment(\.colorScheme) var colorScheme
     
     // Constants for timeout handling
-    private static let fetchTimeoutSeconds: TimeInterval = 10.0
+    private static let fetchTimeoutSeconds: TimeInterval = 15.0
     
     var body: some View {
         VStack(spacing: 0) {
@@ -25,8 +26,8 @@ struct InlineLinkPreview: View {
                 loadingView
             } else if hasError {
                 errorView
-            } else if let metadata = metadata {
-                contentView(metadata: metadata)
+            } else if let enhanced = enhancedMetadata {
+                contentView(enhanced: enhanced)
             }
         }
         .background(
@@ -41,12 +42,12 @@ struct InlineLinkPreview: View {
         .padding(.vertical, 8)
         .task {
             // Check cache first (synchronous, outside async to avoid Task overhead)
-            if let cached = LinkMetadataManager.shared.getCachedMetadata(for: url) {
-                metadata = cached
+            if let cached = LinkMetadataManager.shared.getCachedEnhancedMetadata(for: url) {
+                enhancedMetadata = cached
                 isLoading = false
-                LaunchLogger.log("InlineLinkPreview.task - Using cached metadata for \(url)")
+                LaunchLogger.log("InlineLinkPreview.task - Using cached enhanced metadata for \(url)")
             } else {
-                // Fetch metadata if not cached
+                // Fetch enhanced metadata if not cached
                 await fetchMetadata()
             }
         }
@@ -54,27 +55,27 @@ struct InlineLinkPreview: View {
     
     @MainActor
     private func fetchMetadata() async {
-        LaunchLogger.log("InlineLinkPreview.task - START fetching metadata for \(url)")
+        LaunchLogger.log("InlineLinkPreview.task - START fetching enhanced metadata for \(url)")
         
         do {
             // Use async/await pattern with timeout
             let result = try await withTimeout(seconds: Self.fetchTimeoutSeconds) {
-                await LinkMetadataManager.shared.fetchMetadata(for: url)
+                await LinkMetadataManager.shared.fetchEnhancedMetadata(for: url)
             }
             
             if let fetchedMetadata = result {
-                metadata = fetchedMetadata
+                enhancedMetadata = fetchedMetadata
                 isLoading = false
-                LaunchLogger.log("InlineLinkPreview.task - SUCCESS fetching metadata for \(url)")
+                LaunchLogger.log("InlineLinkPreview.task - SUCCESS fetching enhanced metadata for \(url)")
             } else {
                 hasError = true
                 isLoading = false
-                LaunchLogger.log("InlineLinkPreview.task - FAILED fetching metadata for \(url)")
+                LaunchLogger.log("InlineLinkPreview.task - FAILED fetching enhanced metadata for \(url)")
             }
         } catch {
             hasError = true
             isLoading = false
-            LaunchLogger.log("InlineLinkPreview.task - TIMEOUT fetching metadata for \(url)")
+            LaunchLogger.log("InlineLinkPreview.task - TIMEOUT fetching enhanced metadata for \(url)")
         }
     }
     
@@ -134,9 +135,10 @@ struct InlineLinkPreview: View {
         .padding(12)
     }
     
-    // MARK: - Content View
-    private func contentView(metadata: LPLinkMetadata) -> some View {
-        HStack(alignment: .top, spacing: 12) {
+    // MARK: - Content View (Enhanced)
+    private func contentView(enhanced: EnhancedLinkMetadata) -> some View {
+        let metadata = enhanced.lpMetadata
+        return HStack(alignment: .top, spacing: 12) {
             // Image (if available)
             if let imageProvider = metadata.imageProvider {
                 CompactLinkImageView(imageProvider: imageProvider)
@@ -145,7 +147,7 @@ struct InlineLinkPreview: View {
             }
             
             // Text content
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 // Title
                 if let title = metadata.title {
                     Text(title)
@@ -153,6 +155,14 @@ struct InlineLinkPreview: View {
                         .fontWeight(.semibold)
                         .lineLimit(2)
                         .foregroundColor(.primary)
+                }
+                
+                // Description (from waterfall extraction)
+                if let description = enhanced.description {
+                    Text(description)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
                 }
                 
                 // URL

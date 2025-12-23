@@ -3,6 +3,7 @@
 //  ClippyIsle
 //
 //  Manager for fetching URL metadata using LinkPresentation framework
+//  Enhanced with custom waterfall extraction strategy for better description support
 //
 
 import Foundation
@@ -10,19 +11,35 @@ import LinkPresentation
 import SwiftUI
 import Combine
 
+/// Combined metadata result containing both LP metadata and custom extracted description
+struct EnhancedLinkMetadata {
+    let lpMetadata: LPLinkMetadata
+    let customDescription: String?
+    
+    /// Returns the best available description
+    var description: String? {
+        // LPLinkMetadata doesn't expose description publicly, so use custom extraction
+        return customDescription
+    }
+}
+
 /// Manager class for fetching URL metadata asynchronously with caching
+/// Enhanced with waterfall extraction strategy for better description support
 @MainActor
 class LinkMetadataManager: ObservableObject {
     static let shared = LinkMetadataManager()
     
     // Published properties for UI binding (only used by non-shared instances)
     @Published var metadata: LPLinkMetadata?
+    @Published var enhancedMetadata: EnhancedLinkMetadata?
     @Published var isLoading: Bool = false
     @Published var error: Error?
     
     // Cache to store fetched metadata by URL string (shared across all instances)
     private static var metadataCache: [String: LPLinkMetadata] = [:]
+    private static var enhancedMetadataCache: [String: EnhancedLinkMetadata] = [:]
     private static var activeRequests: [String: Task<LPLinkMetadata?, Never>] = [:]
+    private static var activeEnhancedRequests: [String: Task<EnhancedLinkMetadata?, Never>] = [:]
     
     private let provider = LPMetadataProvider()
     
@@ -123,5 +140,119 @@ class LinkMetadataManager: ObservableObject {
     func cancel() {
         provider.cancel()
         isLoading = false
+    }
+    
+    // MARK: - Enhanced Metadata Fetching (with custom description extraction)
+    
+    /// Fetches enhanced metadata including custom description extraction
+    /// Uses waterfall strategy for better description support
+    /// - Parameter url: The URL to fetch metadata for
+    /// - Returns: Enhanced metadata with LP metadata and custom description
+    func fetchEnhancedMetadata(for url: URL) async -> EnhancedLinkMetadata? {
+        let urlString = url.absoluteString
+        
+        // Return cached enhanced metadata if available
+        if let cached = Self.enhancedMetadataCache[urlString] {
+            LaunchLogger.log("LinkMetadataManager.fetchEnhancedMetadata() - CACHE HIT for URL: \(url)")
+            return cached
+        }
+        
+        // Check if enhanced request is already in progress
+        if let existingTask = Self.activeEnhancedRequests[urlString] {
+            LaunchLogger.log("LinkMetadataManager.fetchEnhancedMetadata() - AWAITING IN-PROGRESS for URL: \(url)")
+            return await existingTask.value
+        }
+        
+        LaunchLogger.log("LinkMetadataManager.fetchEnhancedMetadata() - START for URL: \(url)")
+        let localProvider = LPMetadataProvider()
+        
+        let task = Task { () -> EnhancedLinkMetadata? in
+            do {
+                try Task.checkCancellation()
+                
+                // Fetch LP metadata and custom metadata concurrently
+                async let lpMetadataTask = localProvider.startFetchingMetadata(for: url)
+                async let customMetadataTask = URLMetadataFetcher.fetchMetadata(for: url)
+                
+                // Wait for LP metadata (required)
+                let lpMetadata = try await lpMetadataTask
+                
+                try Task.checkCancellation()
+                
+                // Get custom description (optional, don't fail if it errors)
+                var customDescription: String?
+                do {
+                    let customMetadata = try await customMetadataTask
+                    customDescription = customMetadata.description
+                    LaunchLogger.log("LinkMetadataManager.fetchEnhancedMetadata() - Custom description extracted: \(customDescription ?? "nil")")
+                } catch {
+                    LaunchLogger.log("LinkMetadataManager.fetchEnhancedMetadata() - Custom fetch failed, continuing with LP only: \(error)")
+                }
+                
+                let enhanced = EnhancedLinkMetadata(
+                    lpMetadata: lpMetadata,
+                    customDescription: customDescription
+                )
+                
+                Self.enhancedMetadataCache[urlString] = enhanced
+                Self.metadataCache[urlString] = lpMetadata  // Also cache LP metadata separately
+                Self.activeEnhancedRequests[urlString] = nil
+                LaunchLogger.log("LinkMetadataManager.fetchEnhancedMetadata() - SUCCESS for URL: \(url)")
+                return enhanced
+                
+            } catch is CancellationError {
+                localProvider.cancel()
+                Self.activeEnhancedRequests[urlString] = nil
+                LaunchLogger.log("LinkMetadataManager.fetchEnhancedMetadata() - CANCELLED for URL: \(url)")
+                return nil
+            } catch {
+                Self.activeEnhancedRequests[urlString] = nil
+                LaunchLogger.log("LinkMetadataManager.fetchEnhancedMetadata() - FAILED for URL: \(url) - \(error)")
+                return nil
+            }
+        }
+        
+        Self.activeEnhancedRequests[urlString] = task
+        return await task.value
+    }
+    
+    /// Fetches enhanced metadata with state updates (for UI components)
+    /// - Parameter url: The URL to fetch metadata for
+    func fetchEnhancedMetadata(for url: URL) {
+        LaunchLogger.log("LinkMetadataManager.fetchEnhancedMetadata() - START (with state) for URL: \(url)")
+        isLoading = true
+        error = nil
+        metadata = nil
+        enhancedMetadata = nil
+        
+        Task {
+            // Check cache first
+            if let cached = Self.enhancedMetadataCache[url.absoluteString] {
+                self.enhancedMetadata = cached
+                self.metadata = cached.lpMetadata
+                self.isLoading = false
+                LaunchLogger.log("LinkMetadataManager.fetchEnhancedMetadata() - CACHE HIT (with state) for URL: \(url)")
+                return
+            }
+            
+            // Fetch enhanced metadata
+            if let enhanced = await fetchEnhancedMetadata(for: url) {
+                self.enhancedMetadata = enhanced
+                self.metadata = enhanced.lpMetadata
+                self.isLoading = false
+                LaunchLogger.log("LinkMetadataManager.fetchEnhancedMetadata() - SUCCESS (with state) for URL: \(url)")
+            } else {
+                self.error = URLMetadataError.invalidResponse
+                self.isLoading = false
+                LaunchLogger.log("LinkMetadataManager.fetchEnhancedMetadata() - FAILED (with state) for URL: \(url)")
+            }
+        }
+    }
+    
+    /// Gets cached enhanced metadata for a URL without triggering a fetch
+    /// - Parameter url: The URL to get cached metadata for
+    /// - Returns: Cached enhanced metadata if available, nil otherwise
+    func getCachedEnhancedMetadata(for url: URL) -> EnhancedLinkMetadata? {
+        return Self.enhancedMetadataCache[url.absoluteString]
     }
 }
