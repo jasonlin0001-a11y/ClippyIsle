@@ -65,6 +65,9 @@ struct ContentView: View {
     // Track expanded inline preview item
     @State private var expandedPreviewItemID: UUID?
     
+    // Feed tab selection for paged view
+    @State private var selectedFeedTab: FeedTab = .discovery
+    
     // Timer for auto-stopping speech search
     @State private var silenceTimer: Timer?
     
@@ -410,8 +413,15 @@ struct ContentView: View {
             VStack(spacing: 0) {
                 if clipboardManager.dataLoadError != nil { dataErrorView }
                 else { 
-                    ZStack(alignment: .bottom) { 
-                        listContent
+                    // Paged feed with Discovery and Following tabs
+                    MainFeedView(
+                        selectedTab: $selectedFeedTab,
+                        themeColor: themeColor
+                    ) {
+                        // Discovery tab content (existing list)
+                        ZStack(alignment: .bottom) { 
+                            listContent
+                        }
                     }
                 }
             }

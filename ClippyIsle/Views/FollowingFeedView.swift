@@ -1,0 +1,301 @@
+//
+//  FollowingFeedView.swift
+//  ClippyIsle
+//
+//  Following Feed View - displays posts from followed creators.
+//
+
+import SwiftUI
+import SafariServices
+
+// MARK: - Following Feed View
+/// Displays the feed of posts from creators the user follows
+struct FollowingFeedView: View {
+    @StateObject private var viewModel = FeedViewModel()
+    @State private var selectedURL: URL?
+    @State private var showSafari = false
+    
+    let themeColor: Color
+    @Environment(\.colorScheme) private var colorScheme
+    
+    var body: some View {
+        ZStack {
+            if viewModel.isLoading && viewModel.feedPosts.isEmpty {
+                loadingView
+            } else if viewModel.isEmpty {
+                emptyStateView
+            } else if let error = viewModel.error {
+                errorView(error)
+            } else {
+                feedList
+            }
+        }
+        .task {
+            await viewModel.fetchFollowingFeed()
+        }
+        .sheet(isPresented: $showSafari) {
+            if let url = selectedURL {
+                SafariView(url: url)
+            }
+        }
+    }
+    
+    // MARK: - Feed List
+    private var feedList: some View {
+        ScrollView {
+            LazyVStack(spacing: 16) {
+                ForEach(viewModel.feedPosts) { post in
+                    CreatorPostCell(
+                        post: post,
+                        themeColor: themeColor,
+                        onTap: {
+                            if let url = URL(string: post.contentUrl) {
+                                selectedURL = url
+                                showSafari = true
+                            }
+                        }
+                    )
+                    .padding(.horizontal, 16)
+                }
+            }
+            .padding(.vertical, 16)
+        }
+        .refreshable {
+            await viewModel.refreshFeed()
+        }
+    }
+    
+    // MARK: - Loading View
+    private var loadingView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .scaleEffect(1.2)
+            Text("Loading feed...")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+    }
+    
+    // MARK: - Empty State View
+    private var emptyStateView: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "person.2.slash")
+                .font(.system(size: 60))
+                .foregroundColor(.secondary)
+            
+            Text("No posts yet")
+                .font(.title2)
+                .fontWeight(.semibold)
+            
+            Text("Follow creators to see their posts here.\nSwipe to Discovery to find interesting creators!")
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+        }
+    }
+    
+    // MARK: - Error View
+    private func errorView(_ error: String) -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 50))
+                .foregroundColor(.orange)
+            
+            Text("Error loading feed")
+                .font(.headline)
+            
+            Text(error)
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+            
+            Button("Retry") {
+                Task {
+                    await viewModel.fetchFollowingFeed()
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(themeColor)
+        }
+        .padding()
+    }
+}
+
+// MARK: - Creator Post Cell
+/// Cell design for creator posts with header, body, and link preview
+struct CreatorPostCell: View {
+    let post: FeedPost
+    let themeColor: Color
+    let onTap: () -> Void
+    
+    @Environment(\.colorScheme) private var colorScheme
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Header: Creator Avatar + Name + Time
+            HStack(spacing: 12) {
+                // Avatar
+                creatorAvatar
+                
+                // Name and time
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(post.creatorName)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    
+                    Text(post.createdAt.timeAgoDisplay())
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+            }
+            
+            // Body: Curator Note (if available)
+            if let curatorNote = post.curatorNote, !curatorNote.isEmpty {
+                Text(curatorNote)
+                    .font(.body)
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.leading)
+            }
+            
+            // Attachment: Rich Link Preview Card
+            linkPreviewCard
+        }
+        .padding(16)
+        .background(cardBackground)
+        .shadow(
+            color: colorScheme == .dark ? .black.opacity(0.3) : .black.opacity(0.1),
+            radius: colorScheme == .dark ? 5 : 4,
+            x: 0,
+            y: 2
+        )
+    }
+    
+    // MARK: - Creator Avatar
+    private var creatorAvatar: some View {
+        Group {
+            if let avatarUrlString = post.creatorAvatarUrl,
+               let avatarUrl = URL(string: avatarUrlString) {
+                AsyncImage(url: avatarUrl) { phase in
+                    switch phase {
+                    case .empty:
+                        avatarPlaceholder
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    case .failure:
+                        avatarPlaceholder
+                    @unknown default:
+                        avatarPlaceholder
+                    }
+                }
+                .frame(width: 44, height: 44)
+                .clipShape(Circle())
+            } else {
+                avatarPlaceholder
+            }
+        }
+    }
+    
+    private var avatarPlaceholder: some View {
+        Circle()
+            .fill(themeColor.opacity(0.2))
+            .frame(width: 44, height: 44)
+            .overlay(
+                Text(String(post.creatorName.prefix(1)).uppercased())
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundColor(themeColor)
+            )
+    }
+    
+    // MARK: - Link Preview Card
+    private var linkPreviewCard: some View {
+        Button(action: onTap) {
+            HStack(spacing: 12) {
+                // Link icon
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(themeColor.opacity(0.1))
+                        .frame(width: 60, height: 60)
+                    
+                    Image(systemName: "link")
+                        .font(.title2)
+                        .foregroundColor(themeColor)
+                }
+                
+                // Title and URL
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(post.title)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                    
+                    Text(formattedUrl)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+                
+                Spacer()
+                
+                // Chevron indicator
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.systemGray6).opacity(colorScheme == .dark ? 1.0 : 0.5))
+            )
+        }
+        .buttonStyle(.plain)
+    }
+    
+    // MARK: - Card Background
+    private var cardBackground: some View {
+        Group {
+            if colorScheme == .dark {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(UIColor.systemGray6))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(themeColor.opacity(0.15))
+                    )
+            } else {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.white)
+            }
+        }
+    }
+    
+    // MARK: - Formatted URL
+    private var formattedUrl: String {
+        if let url = URL(string: post.contentUrl) {
+            return url.host ?? post.contentUrl
+        }
+        return post.contentUrl
+    }
+}
+
+// MARK: - Safari View
+/// UIViewControllerRepresentable for SFSafariViewController
+struct SafariView: UIViewControllerRepresentable {
+    let url: URL
+    
+    func makeUIViewController(context: Context) -> SFSafariViewController {
+        let config = SFSafariViewController.Configuration()
+        config.entersReaderIfAvailable = false
+        let safari = SFSafariViewController(url: url, configuration: config)
+        return safari
+    }
+    
+    func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
+}
