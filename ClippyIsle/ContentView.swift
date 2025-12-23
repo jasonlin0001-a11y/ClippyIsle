@@ -572,7 +572,12 @@ struct ContentView: View {
         }
     }
     
-    private var navigationTitle: String { selectedTagFilter.map { "Tag: \($0)" } ?? "CC Isle" }
+    private var navigationTitle: String { 
+        if let tag = selectedTagFilter {
+            return "Tag: \(tag)"
+        }
+        return "CC Isle - The Feed Curated by You."
+    }
     
     private var dataErrorView: some View {
         VStack(spacing: 15) {
@@ -585,19 +590,6 @@ struct ContentView: View {
     private var listContent: some View {
         ScrollViewReader { proxy in
             List {
-                // Slogan header - only shown when not filtering by tag
-                if selectedTagFilter == nil {
-                    Section {
-                        EmptyView()
-                    } header: {
-                        Text("The Feed Curated by You.")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                            .textCase(nil)
-                            .listRowInsets(EdgeInsets())
-                    }
-                }
-                
                 ForEach(filteredItems) { item in
                     VStack(spacing: 0) {
                         ClipboardItemRow(

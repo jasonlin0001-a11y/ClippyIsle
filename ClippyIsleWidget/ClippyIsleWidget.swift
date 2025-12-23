@@ -7,6 +7,7 @@ struct ClippyIsleWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
             ClippyIsleWidgetEntryView(entry: entry)
+                .containerBackground(.fill.tertiary, for: .widget)
         }
         .configurationDisplayName("CC Isle")
         .description("Quick access to CC Isle with audio playback.")
