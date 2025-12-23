@@ -669,12 +669,16 @@ struct ContentView: View {
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                    // Right swipe: Share action (matches Tag Management style - text only, no icons)
+                    // Right swipe: Pin and Share actions (matches Tag Management style - text only, no icons)
                     .swipeActions(edge: .leading, allowsFullSwipe: false) {
                         Button("Share") {
                             shareItem(item: item)
                         }
                         .tint(Color(UIColor.systemBlue).opacity(0.55))
+                        Button(item.isPinned ? "Unpin" : "Pin") {
+                            clipboardManager.togglePin(for: item)
+                        }
+                        .tint(item.isPinned ? Color.orange : Color(UIColor.systemBlue).opacity(0.55))
                     }
                     // Left swipe: Rename, Tag, Delete actions (matches Tag Management style - text only, no icons)
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
