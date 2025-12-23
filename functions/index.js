@@ -12,7 +12,7 @@
  * - fetchLinkPreview: Fetches Open Graph metadata from a URL
  */
 
-const functions = require("firebase-functions");
+const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 const ogs = require("open-graph-scraper");
 
