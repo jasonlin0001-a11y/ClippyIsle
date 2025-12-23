@@ -85,12 +85,17 @@ actor URLMetadataFetcher {
         }
         
         // Try to decode with response encoding, fallback to UTF-8
-        let encoding = httpResponse.textEncodingName.flatMap { 
-            String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(
-                CFStringConvertIANACharSetNameToEncoding($0 as CFString)
-            ))
-        } ?? .utf8
+        // First, attempt to use the encoding specified in the HTTP response header
+        var encoding: String.Encoding = .utf8
+        if let textEncodingName = httpResponse.textEncodingName {
+            let cfEncoding = CFStringConvertIANACharSetNameToEncoding(textEncodingName as CFString)
+            if cfEncoding != kCFStringEncodingInvalidId {
+                encoding = String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(cfEncoding))
+            }
+            // If encoding detection failed, we'll use UTF-8 as default (already set)
+        }
         
+        // Try the detected encoding first, then UTF-8 as fallback
         guard let html = String(data: data, encoding: encoding) ?? String(data: data, encoding: .utf8) else {
             throw URLMetadataError.invalidData
         }
@@ -342,14 +347,21 @@ actor URLMetadataFetcher {
         // Remove common non-content elements
         var cleanedHTML = html
         
-        // Remove script, style, nav, header, footer, aside tags
+        // Remove script, style, nav, header, footer, aside tags to avoid extracting non-content text
         let tagsToRemove = ["script", "style", "nav", "header", "footer", "aside", "noscript", "iframe"]
         for tag in tagsToRemove {
             let pattern = "<\(tag)[^>]*>[\\s\\S]*?</\(tag)>"
             cleanedHTML = cleanedHTML.replacingOccurrences(of: pattern, with: "", options: [.regularExpression, .caseInsensitive])
         }
         
-        // Find paragraph tags
+        // Find paragraph tags with their content
+        // Pattern breakdown:
+        // - <p[^>]*> : Match opening <p> tag with optional attributes
+        // - ([^<]* : Capture text that doesn't contain < (start of any tag)
+        // - (?:<[^/p][^>]*>[^<]*</[^p][^>]*>)* : Allow nested tags that are NOT </p> (e.g., <strong>, <a>)
+        // - [^<]*) : More text after nested tags
+        // - </p> : Match closing </p> tag
+        // This pattern extracts paragraph content including inline elements like <a>, <strong>, <em>
         let paragraphPattern = "<p[^>]*>([^<]*(?:<[^/p][^>]*>[^<]*</[^p][^>]*>)*[^<]*)</p>"
         let regex = try? NSRegularExpression(pattern: paragraphPattern, options: [.caseInsensitive])
         let nsHTML = cleanedHTML as NSString
