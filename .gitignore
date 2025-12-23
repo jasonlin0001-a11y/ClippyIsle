@@ -1,13 +1,8 @@
 .DS_Store
 *.xcuserstate
-*.xcuserstate
-*.xcuserstate
-*.xcuserstate
-*.xcuserstate
-*.xcuserstate
-*.xcuserstate
-*.xcuserstate
-*.xcuserstate
-*.xcuserstate
-*.xcuserstate
-*.xcuserstate
+
+# Cloud Functions
+functions/node_modules/
+functions/.eslintcache
+firebase-debug.log
+firebase-debug.*.log
