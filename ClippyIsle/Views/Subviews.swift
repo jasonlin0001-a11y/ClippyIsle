@@ -439,6 +439,19 @@ struct CompactLinkPreviewRow: View {
     @State private var hasError = false
     @Environment(\.colorScheme) var colorScheme
     
+    // Custom initializer to check cache and auto-load previously saved previews
+    init(url: URL, onTitleFetched: ((String) -> Void)? = nil) {
+        self.url = url
+        self.onTitleFetched = onTitleFetched
+        
+        // Check cache on init - if cached data exists, initialize state to show it immediately
+        if let cached = LinkMetadataManager.shared.getCachedEnhancedMetadata(for: url) {
+            _enhancedMetadata = State(initialValue: cached)
+            _hasStartedLoading = State(initialValue: true)
+            _isLoading = State(initialValue: false)
+        }
+    }
+    
     var body: some View {
         Group {
             if !hasStartedLoading {
@@ -520,13 +533,13 @@ struct CompactLinkPreviewRow: View {
                 .fill(Color(.systemGray6).opacity(colorScheme == .dark ? 1.0 : 0.5))
         )
         .onAppear {
-            // Check cache immediately on appear - if cached, show it
-            if let cached = LinkMetadataManager.shared.getCachedEnhancedMetadata(for: url) {
+            // Fallback cache check - also helps when view is reused with different URL
+            // Primary cache check is done in init() for immediate display
+            if enhancedMetadata == nil, let cached = LinkMetadataManager.shared.getCachedEnhancedMetadata(for: url) {
                 enhancedMetadata = cached
                 hasStartedLoading = true
                 isLoading = false
             }
-            // Don't auto-load - user needs to tap to load preview
         }
     }
     

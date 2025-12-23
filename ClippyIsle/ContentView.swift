@@ -609,6 +609,9 @@ struct ContentView: View {
                                     speechManager.resume()
                                 } else {
                                     // Start playing this item (stops any other playback)
+                                    // Check if local audio file exists - prefer playing audio file if available
+                                    let hasLocalAudio = speechManager.hasAudioFile(for: item.id, url: nil)
+                                    speechManager.preferLocalFile = hasLocalAudio
                                     let title = item.displayName ?? String(item.content.prefix(30))
                                     speechManager.play(text: item.content, title: title, itemID: item.id)
                                 }
