@@ -558,7 +558,7 @@ struct ContentView: View {
                         )
                 )
             }
-            // Custom title with slogan when not filtering by tag (inline mode shows this)
+            // Custom title with slogan when not filtering by tag
             ToolbarItem(placement: .principal) {
                 if selectedTagFilter == nil {
                     navigationTitleWithSlogan
