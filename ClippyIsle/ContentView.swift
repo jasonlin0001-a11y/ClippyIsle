@@ -574,21 +574,6 @@ struct ContentView: View {
     
     private var navigationTitle: String { selectedTagFilter.map { "Tag: \($0)" } ?? "CC Isle" }
     
-    // Custom title view with slogan
-    @ViewBuilder
-    private var navigationTitleWithSlogan: some View {
-        if selectedTagFilter == nil {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("CC Isle")
-                    .font(.largeTitle.weight(.bold))
-                Text("The Feed Curated by You.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-        } else {
-            Text("Tag: \(selectedTagFilter!)")
-        }
-    }
     private var dataErrorView: some View {
         VStack(spacing: 15) {
             Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 50)).foregroundColor(.orange)
@@ -955,13 +940,7 @@ struct ContentView: View {
             }
             
             // Get display title from clipboard item if available
-            let filename = firstFile.lastPathComponent
-            let uuidString = filename.components(separatedBy: "_").first?.components(separatedBy: ".").first ?? ""
-            var title = "Audio File"
-            if let uuid = UUID(uuidString: uuidString),
-               let item = clipboardManager.items.first(where: { $0.id == uuid }) {
-                title = item.displayName ?? String(item.content.prefix(30))
-            }
+            let title = getAudioFileTitle(for: firstFile)
             
             // Play the first audio file
             speechManager.playExistingFile(url: firstFile, title: title)
@@ -970,6 +949,23 @@ struct ContentView: View {
         } catch {
             print("🎵 Error loading audio files: \(error)")
         }
+    }
+    
+    /// Extracts the item UUID from an audio filename and returns the display title.
+    /// Audio files are named using format: "{itemUUID}.caf" or "{itemUUID}_{urlHash}.caf"
+    /// - Parameter fileURL: The URL of the audio file
+    /// - Returns: The display title from the associated clipboard item, or "Audio File" if not found
+    private func getAudioFileTitle(for fileURL: URL) -> String {
+        let filename = fileURL.lastPathComponent
+        // Extract UUID portion: before underscore (if present) or before .caf extension
+        // Format: "{itemUUID}.caf" or "{itemUUID}_{urlHash}.caf"
+        let uuidString = filename.components(separatedBy: "_").first?.components(separatedBy: ".").first ?? ""
+        
+        if let uuid = UUID(uuidString: uuidString),
+           let item = clipboardManager.items.first(where: { $0.id == uuid }) {
+            return item.displayName ?? String(item.content.prefix(30))
+        }
+        return "Audio File"
     }
 }
 
