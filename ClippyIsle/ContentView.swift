@@ -558,6 +558,12 @@ struct ContentView: View {
                         )
                 )
             }
+            // Custom title with slogan when not filtering by tag (inline mode shows this)
+            ToolbarItem(placement: .principal) {
+                if selectedTagFilter == nil {
+                    navigationTitleWithSlogan
+                }
+            }
         }
     }
     
@@ -576,7 +582,20 @@ struct ContentView: View {
         if let tag = selectedTagFilter {
             return "Tag: \(tag)"
         }
-        return "CC Isle - The Feed Curated by You."
+        return "CC Isle"
+    }
+    
+    // Custom navigation title view with slogan (smaller font)
+    @ViewBuilder
+    private var navigationTitleWithSlogan: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text("CC Isle")
+                .font(.headline)
+                .fontWeight(.bold)
+            Text("- The Feed Curated by You.")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
     }
     
     private var dataErrorView: some View {
