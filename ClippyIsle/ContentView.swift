@@ -598,6 +598,11 @@ struct ContentView: View {
                             // **MODIFIED**: Tag Limit Logic
                             tagAction: { openTagSheet(for: item) },
                             shareAction: { shareItem(item: item) },
+                            speakAction: {
+                                // Text-to-speech: read the item content aloud
+                                let title = item.displayName ?? String(item.content.prefix(30))
+                                speechManager.play(text: item.content, title: title, itemID: item.id)
+                            },
                             linkPreviewAction: {
                                 // Toggle inline preview for URL items
                                 if item.type == UTType.url.identifier, URL(string: item.content) != nil {

@@ -128,6 +128,8 @@ struct ClipboardItemRow: View {
     var renameAction: () -> Void
     var tagAction: () -> Void
     var shareAction: () -> Void
+    /// Optional callback for text-to-speech functionality, triggered when play button is tapped on text items
+    var speakAction: (() -> Void)? = nil
     var linkPreviewAction: (() -> Void)? = nil
     var onTagLongPress: ((String) -> Void)? = nil
     /// Callback when link preview title is fetched - used for auto-rename
@@ -137,6 +139,23 @@ struct ClipboardItemRow: View {
     // Check if item is a URL type
     private var isLinkType: Bool {
         item.type == UTType.url.identifier
+    }
+    
+    // Check if item is a text type (can be read aloud)
+    // Uses UTType conformance for robust type detection
+    private var isTextType: Bool {
+        let type = item.type
+        // Explicitly exclude non-text types
+        if type == UTType.url.identifier { return false }
+        if type == UTType.pdf.identifier { return false }
+        // Check if it's an image type using UTType conformance
+        if let utType = UTType(type), utType.conforms(to: .image) { return false }
+        // Check if it conforms to text type, or treat as text if unknown
+        if let utType = UTType(type) {
+            return utType.conforms(to: .text) || utType.conforms(to: .plainText)
+        }
+        // Default to true for unknown types (treat as text)
+        return true
     }
     
     // Get content preview text based on item type
@@ -176,7 +195,7 @@ struct ClipboardItemRow: View {
     // MARK: - Compact Layout (Original style)
     private var compactLayout: some View {
         HStack(spacing: 15) {
-            typeIconButton
+            typeIconWithPlayButton
             
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
@@ -227,8 +246,8 @@ struct ClipboardItemRow: View {
     private var feedLayout: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 15) {
-                // Type Icon - top-aligned to match title position in social feed layout
-                typeIconButton
+                // Type Icon with play button - top-aligned to match title position in social feed layout
+                typeIconWithPlayButton
 
                 // Content area - VStack for social feed style
                 VStack(alignment: .leading, spacing: 6) {
@@ -299,6 +318,23 @@ struct ClipboardItemRow: View {
                 CompactLinkPreviewRow(url: url, onTitleFetched: onLinkTitleFetched)
                     .padding(.top, 8)
                     .padding(.leading, 59) // Align with content (44 icon + 15 spacing)
+            }
+        }
+    }
+    
+    // MARK: - Type Icon with Play Button (for text items)
+    private var typeIconWithPlayButton: some View {
+        VStack(spacing: 4) {
+            typeIconButton
+            
+            // Play button for text items (shows below the type icon)
+            if isTextType, let speakAction = speakAction {
+                Button(action: speakAction) {
+                    Image(systemName: "play.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(themeColor)
+                }
+                .buttonStyle(.plain)
             }
         }
     }
