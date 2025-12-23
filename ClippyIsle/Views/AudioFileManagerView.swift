@@ -222,6 +222,7 @@ struct AudioFileManagerView: View {
         if let index = audioFiles.firstIndex(of: file) { audioFiles.remove(at: index) }
         recalculateTotal()
         itemToDelete = nil
+        speechManager.updateAudioFileCountInAppGroup()
     }
     
     private func deleteAllFiles() {
@@ -229,6 +230,7 @@ struct AudioFileManagerView: View {
         for file in audioFiles { try? FileManager.default.removeItem(at: file.url) }
         audioFiles.removeAll()
         recalculateTotal()
+        speechManager.updateAudioFileCountInAppGroup()
     }
     
     private func recalculateTotal() { totalSize = audioFiles.reduce(0) { $0 + $1.size } }

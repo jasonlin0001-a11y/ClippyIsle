@@ -170,6 +170,10 @@ struct ContentView: View {
             configureNavigationBarAppearance()
             checkActivityStatus()
             NotificationCenter.default.addObserver(forName: .didRequestUndo, object: nil, queue: .main) { _ in undoManager?.undo() }
+            // Handle widget audio playback request
+            NotificationCenter.default.addObserver(forName: .widgetPlayAudioRequested, object: nil, queue: .main) { _ in
+                startCyclePlayingAudioFiles()
+            }
             LaunchLogger.log("ContentView.onAppear - END")
         }
         .onChange(of: scenePhase) { oldPhase, newPhase in
@@ -554,6 +558,12 @@ struct ContentView: View {
                         )
                 )
             }
+            // Custom title with slogan when not filtering by tag
+            ToolbarItem(placement: .principal) {
+                if selectedTagFilter == nil {
+                    navigationTitleWithSlogan
+                }
+            }
         }
     }
     
@@ -568,7 +578,26 @@ struct ContentView: View {
         }
     }
     
-    private var navigationTitle: String { selectedTagFilter.map { "Tag: \($0)" } ?? "CC Isle" }
+    private var navigationTitle: String { 
+        if let tag = selectedTagFilter {
+            return "Tag: \(tag)"
+        }
+        return "CC Isle"
+    }
+    
+    // Custom navigation title view with slogan (smaller font)
+    @ViewBuilder
+    private var navigationTitleWithSlogan: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text("CC Isle")
+                .font(.headline)
+                .fontWeight(.bold)
+            Text("- The Feed Curated by You.")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+    }
+    
     private var dataErrorView: some View {
         VStack(spacing: 15) {
             Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 50)).foregroundColor(.orange)
@@ -899,6 +928,55 @@ struct ContentView: View {
             provider.registerDataRepresentation(forTypeIdentifier: UTType.png.identifier, visibility: .all) { completion in completion(data, nil); return nil }; return provider
         } else if item.type == UTType.url.identifier, let url = URL(string: item.content) { return NSItemProvider(object: url as NSURL) }
         else { return NSItemProvider(object: item.content as NSString) }
+    }
+    
+    /// Starts playing downloaded audio files in cycle from the widget
+    func startCyclePlayingAudioFiles() {
+        // Get audio files from cache directory
+        guard let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else { return }
+        let folder = cacheDir.appendingPathComponent("LocalAudio")
+        
+        do {
+            let fileURLs = try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: [.creationDateKey])
+            let audioFiles = fileURLs.filter { $0.pathExtension == "caf" }
+                .sorted { url1, url2 in
+                    let date1 = (try? url1.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? Date.distantPast
+                    let date2 = (try? url2.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? Date.distantPast
+                    return date1 > date2
+                }
+            
+            guard let firstFile = audioFiles.first else {
+                print("🎵 No audio files found to play")
+                return
+            }
+            
+            // Get display title from clipboard item if available
+            let title = getAudioFileTitle(for: firstFile)
+            
+            // Play the first audio file
+            speechManager.playExistingFile(url: firstFile, title: title)
+            print("🎵 Widget: Started playing audio file: \(title)")
+            
+        } catch {
+            print("🎵 Error loading audio files: \(error)")
+        }
+    }
+    
+    /// Extracts the item UUID from an audio filename and returns the display title.
+    /// Audio files are named using format: "{itemUUID}.caf" or "{itemUUID}_{urlHash}.caf"
+    /// - Parameter fileURL: The URL of the audio file
+    /// - Returns: The display title from the associated clipboard item, or "Audio File" if not found
+    private func getAudioFileTitle(for fileURL: URL) -> String {
+        let filename = fileURL.lastPathComponent
+        // Extract UUID portion: before underscore (if present) or before .caf extension
+        // Format: "{itemUUID}.caf" or "{itemUUID}_{urlHash}.caf"
+        let uuidString = filename.components(separatedBy: "_").first?.components(separatedBy: ".").first ?? ""
+        
+        if let uuid = UUID(uuidString: uuidString),
+           let item = clipboardManager.items.first(where: { $0.id == uuid }) {
+            return item.displayName ?? String(item.content.prefix(30))
+        }
+        return "Audio File"
     }
 }
 

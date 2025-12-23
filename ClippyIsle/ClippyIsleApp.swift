@@ -113,6 +113,23 @@ struct ClippyIsleApp: App {
     
     // MARK: - Deep Link Handling
     private func handleDeepLink(_ url: URL) {
+        // Handle widget deep links
+        if url.scheme == "ccisle" {
+            if url.host == "open" {
+                // Simply open the app - no additional action needed
+                print("📱 Widget: Opening app from ccisle://open")
+                return
+            }
+            
+            if url.host == "playaudio" {
+                // Trigger audio playback
+                print("🎵 Widget: Playing audio from ccisle://playaudio")
+                // Post notification that will be handled in ContentView
+                NotificationCenter.default.post(name: .widgetPlayAudioRequested, object: nil)
+                return
+            }
+        }
+        
         var shareId: String?
         
         // Handle Firebase Hosting URL: https://cc-isle.web.app/share?id=DOC_ID
@@ -231,4 +248,9 @@ struct ClippyIsleApp: App {
             }
         }
     }
+}
+
+// MARK: - Notification Names
+extension Notification.Name {
+    static let widgetPlayAudioRequested = Notification.Name("widgetPlayAudioRequested")
 }
