@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 import AVFoundation
 import UIKit
 import StoreKit
+import FirebaseFunctions
 
 // MARK: - Extensions for Identifiable URL
 extension URL: @retroactive Identifiable {
@@ -116,6 +117,11 @@ struct SettingsView: View {
     @State private var isPurgingCloud = false
     @State private var purgeCloudResult: String?
     @State private var isShowingPurgeResultAlert = false
+    
+    // Debug: Link Preview Test
+    @State private var isTestingLinkPreview = false
+    @State private var linkPreviewTestResult: String?
+    @State private var isShowingLinkPreviewResult = false
 
     let countOptions = [50, 100, 200, 0]
     let dayOptions = [7, 30, 90, 0]
@@ -183,12 +189,17 @@ struct SettingsView: View {
                 }
                 
                 Section(header: Text("General"), footer: Text("When enabled, the app will automatically detect and add new items from the clipboard. When disabled, you must add items manually from the '+' menu on the main screen.")) { Toggle("Auto Add from Clipboard", isOn: $askToAddFromClipboard) }
-                storagePolicySection; appearanceSection; previewSettingsSection; speechSettingsSection; iCloudSection; backupAndRestoreSection; firebaseSettingsSection; dataManagementSection; appInfoSection
+                storagePolicySection; appearanceSection; previewSettingsSection; speechSettingsSection; iCloudSection; backupAndRestoreSection; firebaseSettingsSection; dataManagementSection; debugToolsSection; appInfoSection
             }
             .navigationTitle("Settings").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() } } }
             .background(SettingsModalPresenterView(isShowingTrash: $isShowingTrash, exportURL: $exportURL, isImporting: $isImporting, isShowingImportAlert: $isShowingImportAlert, importAlertMessage: $importAlertMessage, isShowingClearCacheAlert: $isShowingClearCacheAlert, isShowingCacheClearedAlert: $isShowingCacheClearedAlert, isShowingHardResetAlert: $isShowingHardResetAlert, confirmationText: $confirmationText, isShowingTagExport: $isShowingTagExport, clipboardManager: clipboardManager, dismissAction: { dismiss() }))
             .sheet(isPresented: $showPaywall) { PaywallView() }
+            .alert("Link Preview Test Result", isPresented: $isShowingLinkPreviewResult) {
+                Button("OK") {}
+            } message: {
+                Text(linkPreviewTestResult ?? "No result")
+            }
             .onAppear {
                 WebServerManager.shared.clipboardManager = clipboardManager
                 // Initialize nickname from AuthenticationManager or fallback to local storage
@@ -546,6 +557,84 @@ struct SettingsView: View {
             }
         }
     }
+    
+    #if DEBUG
+    private var debugToolsSection: some View {
+        Section(header: Text("Debug Tools"), footer: Text("Testing tools for Cloud Function development. Only visible in debug builds.")) {
+            Button {
+                testLinkPreview()
+            } label: {
+                HStack {
+                    Text("Test Link Preview")
+                    Spacer()
+                    if isTestingLinkPreview {
+                        ProgressView()
+                    }
+                }
+            }
+            .disabled(isTestingLinkPreview)
+        }
+    }
+    
+    private func testLinkPreview() {
+        isTestingLinkPreview = true
+        
+        // Call the fetchLinkPreview Cloud Function
+        let functions = Functions.functions()
+        let callable = functions.httpsCallable("fetchLinkPreview")
+        
+        callable.call(["url": "https://www.apple.com"]) { result, error in
+            DispatchQueue.main.async {
+                isTestingLinkPreview = false
+                
+                if let error = error {
+                    // Handle error
+                    let errorMessage = "❌ Error: \(error.localizedDescription)"
+                    print(errorMessage)
+                    linkPreviewTestResult = errorMessage
+                    isShowingLinkPreviewResult = true
+                    return
+                }
+                
+                guard let data = result?.data as? [String: Any] else {
+                    let errorMessage = "❌ Error: Invalid response format"
+                    print(errorMessage)
+                    linkPreviewTestResult = errorMessage
+                    isShowingLinkPreviewResult = true
+                    return
+                }
+                
+                // Check success flag
+                if let success = data["success"] as? Bool, success {
+                    if let responseData = data["data"] as? [String: Any] {
+                        let title = responseData["title"] as? String ?? "N/A"
+                        let image = responseData["image"] as? String ?? "N/A"
+                        let description = responseData["description"] as? String ?? "N/A"
+                        
+                        // Print to console
+                        print("✅ Link Preview Test Success!")
+                        print("   Title: \(title)")
+                        print("   Image: \(image)")
+                        print("   Description: \(description)")
+                        
+                        // Show in alert
+                        linkPreviewTestResult = "✅ Success!\n\nTitle: \(title)\n\nImage: \(String(image.prefix(50)))...\n\nDescription: \(String(description.prefix(100)))..."
+                        isShowingLinkPreviewResult = true
+                    }
+                } else {
+                    let errorMsg = data["error"] as? String ?? "Unknown error"
+                    print("❌ Link Preview Error: \(errorMsg)")
+                    linkPreviewTestResult = "❌ Error: \(errorMsg)"
+                    isShowingLinkPreviewResult = true
+                }
+            }
+        }
+    }
+    #else
+    private var debugToolsSection: some View {
+        EmptyView()
+    }
+    #endif
     
     private func exportAllData() {
         do { exportURL = try clipboardManager.exportData() } catch { importAlertMessage = "Export failed.\nError: \(error.localizedDescription)"; isShowingImportAlert = true }
