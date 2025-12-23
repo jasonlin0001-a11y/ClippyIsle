@@ -2438,9 +2438,6 @@
         }
       }
     },
-    "The Feed Curated by You." : {
-
-    },
     "The item exceeds the 900KB limit for Firebase sharing. Please use JSON export instead." : {
       "comment" : "An alert message that appears when the selected item exceeds the 900KB limit for Firebase sharing.",
       "localizations" : {
