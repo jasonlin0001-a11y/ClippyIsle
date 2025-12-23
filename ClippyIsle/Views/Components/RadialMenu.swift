@@ -177,6 +177,13 @@ struct RadialMenuView: View {
                     
                     // Main FAB button - 30% transparent (70% opacity)
                     ZStack {
+                        // Red ring indicator for drag mode (visible especially for iPad without haptic feedback)
+                        if isDragging {
+                            Circle()
+                                .stroke(Color.red, lineWidth: 3)
+                                .frame(width: fabSize + 8, height: fabSize + 8)
+                        }
+                        
                         Circle()
                             .fill(themeColor.opacity(0.7))  // 70% opacity = 30% transparent
                             .frame(width: fabSize, height: fabSize)

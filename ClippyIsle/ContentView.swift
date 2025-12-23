@@ -676,7 +676,7 @@ struct ContentView: View {
                         Button(item.isPinned ? "Unpin" : "Pin") {
                             clipboardManager.togglePin(for: item)
                         }
-                        .tint(item.isPinned ? Color.orange : Color(UIColor.systemBlue).opacity(0.55))
+                        .tint(Color(UIColor.systemBlue).opacity(0.55))
                     }
                     // Left swipe: Rename, Tag, Delete actions (matches Tag Management style - text only, no icons)
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
