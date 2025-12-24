@@ -9,7 +9,6 @@ import Foundation
 import Combine
 import FirebaseFirestore
 import FirebaseMessaging
-import Combine
 
 // MARK: - Creator Post Model
 /// Represents a post created by a creator
