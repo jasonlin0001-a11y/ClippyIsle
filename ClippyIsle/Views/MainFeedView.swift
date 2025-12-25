@@ -2,16 +2,17 @@
 //  MainFeedView.swift
 //  ClippyIsle
 //
-//  Paged TabView container for Discovery and Following feeds.
+//  Paged TabView container for Discovery, Following, and CC Feed tabs.
 //
 
 import SwiftUI
 
 // MARK: - Feed Tab
-/// Enum representing the two feed tabs
+/// Enum representing the three feed tabs
 enum FeedTab: Int, CaseIterable {
     case discovery = 0
     case following = 1
+    case ccFeed = 2
     
     var title: String {
         switch self {
@@ -19,24 +20,59 @@ enum FeedTab: Int, CaseIterable {
             return "Discovery"
         case .following:
             return "Following"
+        case .ccFeed:
+            return "CC FEED"
         }
     }
 }
 
+// MARK: - Scroll Offset Preference Key
+/// Tracks scroll offset for collapsing header animation
+struct ScrollOffsetPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
 // MARK: - Main Feed View
-/// Container view with paged TabView for Discovery and Following feeds
-struct MainFeedView<DiscoveryContent: View, FollowingContent: View>: View {
+/// Container view with paged TabView for Discovery, Following, and CC Feed tabs
+struct MainFeedView<DiscoveryContent: View, FollowingContent: View, CCFeedContent: View>: View {
     @Binding var selectedTab: FeedTab
     let themeColor: Color
     let discoveryContent: () -> DiscoveryContent
     let followingContent: () -> FollowingContent
+    let ccFeedContent: () -> CCFeedContent
     
     @Environment(\.colorScheme) private var colorScheme
     
+    // Track scroll offset for collapsing header
+    @State private var scrollOffset: CGFloat = 0
+    
+    // Threshold for collapsing header (how far to scroll before title hides)
+    private let collapseThreshold: CGFloat = 60
+    
+    // Calculate header opacity based on scroll offset
+    private var headerOpacity: Double {
+        let progress = min(max(-scrollOffset / collapseThreshold, 0), 1)
+        return 1 - progress
+    }
+    
+    // Calculate small title opacity (inverse of header)
+    var smallTitleOpacity: Double {
+        let progress = min(max(-scrollOffset / collapseThreshold, 0), 1)
+        return progress
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
-            // Custom Header with title and segmented picker
-            customHeader
+            // Custom Header with title and segmented picker (collapsible)
+            if headerOpacity > 0 {
+                customHeader
+                    .opacity(headerOpacity)
+                    .frame(height: headerOpacity > 0.1 ? nil : 0, alignment: .top)
+                    .clipped()
+            }
             
             // Paged TabView content
             TabView(selection: $selectedTab) {
@@ -44,9 +80,13 @@ struct MainFeedView<DiscoveryContent: View, FollowingContent: View>: View {
                 discoveryContent()
                     .tag(FeedTab.discovery)
                 
-                // Tab 1: Following (local clipboard items)
+                // Tab 1: Following (social subscription feed)
                 followingContent()
                     .tag(FeedTab.following)
+                
+                // Tab 2: CC FEED (local clipboard items)
+                ccFeedContent()
+                    .tag(FeedTab.ccFeed)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .animation(.easeInOut(duration: 0.3), value: selectedTab)
@@ -56,26 +96,31 @@ struct MainFeedView<DiscoveryContent: View, FollowingContent: View>: View {
     // MARK: - Custom Header
     private var customHeader: some View {
         HStack {
-            Text("CC Isle")
+            Text("CC 島")
                 .font(.largeTitle)
                 .fontWeight(.bold)
             
             Spacer()
             
-            // Segmented Picker for Discovery/Following
+            // Segmented Picker for Discovery/Following/CC FEED
             Picker("Feed", selection: $selectedTab) {
                 ForEach(FeedTab.allCases, id: \.rawValue) { tab in
                     Text(tab.title).tag(tab)
                 }
             }
             .pickerStyle(.segmented)
-            .frame(width: 170)
+            .frame(width: 240)
             
             Spacer()
         }
         .padding(.horizontal, 16)
         .padding(.top, 8)
         .padding(.bottom, 4)
+    }
+    
+    // MARK: - Update Scroll Offset
+    func updateScrollOffset(_ offset: CGFloat) {
+        scrollOffset = offset
     }
 }
 
@@ -111,11 +156,11 @@ struct CompactTabPicker: View {
             }
         } label: {
             Text(tab.title)
-                .font(.caption)
+                .font(.caption2)
                 .fontWeight(selectedTab == tab ? .semibold : .regular)
                 .foregroundColor(selectedTab == tab ? .white : .primary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 4)
                 .background(
                     Group {
                         if selectedTab == tab {
@@ -141,6 +186,8 @@ struct MainFeedView_Previews: PreviewProvider {
             Text("Discovery Content")
         } followingContent: {
             Text("Following Content")
+        } ccFeedContent: {
+            Text("CC FEED Content")
         }
     }
 }

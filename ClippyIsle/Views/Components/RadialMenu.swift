@@ -99,8 +99,10 @@ struct RadialMenuButton: View {
 /// A floating action button with radial menu expansion and draggable positioning
 struct RadialMenuView: View {
     let themeColor: Color
+    let selectedTab: FeedTab  // Track which tab is selected for FAB behavior
     let onVoiceMemo: () -> Void  // Voice memo - opens microphone for voice-to-text memo
-    let onNewItem: () -> Void
+    let onNewItem: () -> Void    // Create new text item (local clipboard) - for CC FEED tab
+    let onCreatePost: () -> Void // Create social post - for Discovery/Following tabs
     let onPasteFromClipboard: () -> Void
     
     @State private var isExpanded = false
@@ -123,13 +125,23 @@ struct RadialMenuView: View {
     // Reusable haptic feedback generator
     private let hapticGenerator = UIImpactFeedbackGenerator(style: .medium)
     
+    // Dynamic label based on selected tab
+    private var newItemLabel: LocalizedStringKey {
+        selectedTab == .ccFeed ? "New Item" : "Create Post"
+    }
+    
+    // Dynamic action based on selected tab
+    private var newItemAction: () -> Void {
+        selectedTab == .ccFeed ? onNewItem : onCreatePost
+    }
+    
     private var menuItems: [RadialMenuItem] {
         [
             RadialMenuItem(localizedKey: "Paste", action: {
                 closeMenuAndExecute(onPasteFromClipboard)
             }),
-            RadialMenuItem(localizedKey: "Create Post", action: {
-                closeMenuAndExecute(onNewItem)
+            RadialMenuItem(localizedKey: newItemLabel, action: {
+                closeMenuAndExecute(newItemAction)
             }),
             RadialMenuItem(localizedKey: "Voice Memo", action: {
                 closeMenuAndExecute(onVoiceMemo)
@@ -332,8 +344,10 @@ struct RadialMenuView: View {
         
         RadialMenuView(
             themeColor: .blue,
+            selectedTab: .ccFeed,
             onVoiceMemo: { print("Voice Memo tapped") },
             onNewItem: { print("New Item tapped") },
+            onCreatePost: { print("Create Post tapped") },
             onPasteFromClipboard: { print("Paste tapped") }
         )
     }

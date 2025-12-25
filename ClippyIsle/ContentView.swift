@@ -420,7 +420,7 @@ struct ContentView: View {
             VStack(spacing: 0) {
                 if clipboardManager.dataLoadError != nil { dataErrorView }
                 else { 
-                    // Paged feed with Discovery and Following tabs
+                    // Paged feed with Discovery, Following, and CC FEED tabs
                     MainFeedView(
                         selectedTab: $selectedFeedTab,
                         themeColor: themeColor
@@ -428,7 +428,20 @@ struct ContentView: View {
                         // Discovery tab content - real Firestore data from creator_posts
                         DiscoveryFeedView(themeColor: themeColor)
                     } followingContent: {
-                        // Following tab content - local clipboard items with floating search bar
+                        // Following tab content - social subscription feed (placeholder for now)
+                        VStack {
+                            Spacer()
+                            Text("Following Feed")
+                                .font(.title2)
+                                .foregroundColor(.secondary)
+                            Text("Coming soon - posts from creators you follow")
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                            Spacer()
+                        }
+                    } ccFeedContent: {
+                        // CC FEED tab content - local clipboard items with floating search bar
                         ZStack(alignment: .bottom) { 
                             listContent
                             
@@ -447,6 +460,7 @@ struct ContentView: View {
             // Radial Menu FAB - positioned relative to full screen, not scroll content
             RadialMenuView(
                 themeColor: themeColor,
+                selectedTab: selectedFeedTab,
                 onVoiceMemo: {
                     // Open microphone for voice-to-text memo
                     if isTranscribing && isVoiceMemoMode {
@@ -462,7 +476,13 @@ struct ContentView: View {
                     }
                 },
                 onNewItem: {
-                    // Open Create Post view with link preview
+                    // Create new text item (local clipboard function)
+                    trackAndHighlightNewItem {
+                        clipboardManager.addNewItem(content: "New Item", type: UTType.text.identifier)
+                    }
+                },
+                onCreatePost: {
+                    // Open Create Post view with link preview (social posting function)
                     showCreatePostSheet = true
                 },
                 onPasteFromClipboard: {
