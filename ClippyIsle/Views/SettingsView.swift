@@ -231,6 +231,42 @@ struct SettingsView: View {
 
     private var nicknameSection: some View {
         Section(header: Text("User Profile"), footer: Text("Your nickname will be displayed when sharing items (e.g., 'Shared by Alex').")) {
+            // Edit Profile Link
+            NavigationLink {
+                EditProfileView(themeColor: themeColor)
+            } label: {
+                HStack {
+                    // Avatar preview
+                    if let avatarUrl = authManager.userProfile?.avatarUrl, !avatarUrl.isEmpty, let url = URL(string: avatarUrl) {
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                            case .failure, .empty:
+                                profileAvatarPlaceholder
+                            @unknown default:
+                                profileAvatarPlaceholder
+                            }
+                        }
+                        .frame(width: 40, height: 40)
+                        .clipShape(Circle())
+                    } else {
+                        profileAvatarPlaceholder
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(authManager.userProfile?.nickname ?? "User")
+                            .fontWeight(.medium)
+                        Text("Edit Profile")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.leading, 8)
+                }
+            }
+            
             HStack {
                 Text("Nickname")
                 TextField("Enter your name", text: $nicknameInput)
@@ -300,6 +336,24 @@ struct SettingsView: View {
                     .font(.caption2)
             }
         }
+    }
+    
+    @ViewBuilder
+    private var profileAvatarPlaceholder: some View {
+        Circle()
+            .fill(
+                LinearGradient(
+                    gradient: Gradient(colors: [themeColor.opacity(0.6), themeColor]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .frame(width: 40, height: 40)
+            .overlay(
+                Text(String((authManager.userProfile?.nickname ?? "U").prefix(1)).uppercased())
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(.white)
+            )
     }
     
     private func saveNickname() {

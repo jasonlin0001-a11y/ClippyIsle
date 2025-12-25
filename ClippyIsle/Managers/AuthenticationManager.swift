@@ -7,6 +7,8 @@ import Combine
 struct UserProfile: Codable {
     var uid: String
     var nickname: String
+    var bio: String?
+    var avatarUrl: String?
     var referral_count: Int
     var discovery_impact: Int
     var created_at: Date
@@ -14,10 +16,12 @@ struct UserProfile: Codable {
     var followersCount: Int
     var followingCount: Int
     
-    init(uid: String, nickname: String? = nil, referral_count: Int = 0, discovery_impact: Int = 0, created_at: Date = Date(), fcm_token: String? = nil, followersCount: Int = 0, followingCount: Int = 0) {
+    init(uid: String, nickname: String? = nil, bio: String? = nil, avatarUrl: String? = nil, referral_count: Int = 0, discovery_impact: Int = 0, created_at: Date = Date(), fcm_token: String? = nil, followersCount: Int = 0, followingCount: Int = 0) {
         self.uid = uid
         // Default nickname: 'User_[Last4CharsOfUID]'
         self.nickname = nickname ?? "User_\(String(uid.suffix(4)))"
+        self.bio = bio
+        self.avatarUrl = avatarUrl
         self.referral_count = referral_count
         self.discovery_impact = discovery_impact
         self.created_at = created_at
@@ -183,6 +187,8 @@ class AuthenticationManager: ObservableObject {
                 self?.userProfile = UserProfile(
                     uid: data["uid"] as? String ?? uid,
                     nickname: data["nickname"] as? String,
+                    bio: data["bio"] as? String,
+                    avatarUrl: data["avatar_url"] as? String ?? data["profileImageUrl"] as? String,
                     referral_count: data["referral_count"] as? Int ?? 0,
                     discovery_impact: data["discovery_impact"] as? Int ?? 0,
                     created_at: createdAt,
