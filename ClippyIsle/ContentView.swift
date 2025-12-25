@@ -427,6 +427,11 @@ struct ContentView: View {
                     ) {
                         // Discovery tab content - real Firestore data from creator_posts
                         DiscoveryFeedView(themeColor: themeColor)
+                    } followingContent: {
+                        // Following tab content - local clipboard items
+                        ZStack(alignment: .bottom) { 
+                            listContent
+                        }
                     }
                 }
             }
@@ -516,12 +521,21 @@ struct ContentView: View {
                         .clipShape(Capsule())
                 }
                 else { 
-                    Button { clipboardManager.isLiveActivityOn.toggle() } label: { 
-                        Image(systemName: "c.circle.fill")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(clipboardManager.isLiveActivityOn ? Color.green : Color.red) 
+                    // HStack with Live Activity button and Tab Picker
+                    HStack(spacing: 12) {
+                        Button { clipboardManager.isLiveActivityOn.toggle() } label: { 
+                            Image(systemName: "c.circle.fill")
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(clipboardManager.isLiveActivityOn ? Color.green : Color.red) 
+                        }
+                        .disabled(!areActivitiesEnabled)
+                        
+                        // Compact Tab Picker in header area
+                        CompactTabPicker(
+                            selectedTab: $selectedFeedTab,
+                            themeColor: themeColor
+                        )
                     }
-                    .disabled(!areActivitiesEnabled) 
                 }
             }
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -835,9 +849,13 @@ struct ContentView: View {
     
     @ViewBuilder
     private var bottomToolbarBackground: some View {
-        // Glassmorphism style - semi-transparent in both dark and light modes
+        // Semi-transparent glass capsule with 50% opacity
         Capsule()
-            .fill(.ultraThinMaterial)
+            .fill(colorScheme == .dark ? Color.black.opacity(0.5) : Color.white.opacity(0.5))
+            .background(
+                Capsule()
+                    .fill(.ultraThinMaterial)
+            )
     }
     
     @ViewBuilder private func previewSheetContent(isFullscreen: Bool, onToggleFullscreen: @escaping () -> Void) -> some View {

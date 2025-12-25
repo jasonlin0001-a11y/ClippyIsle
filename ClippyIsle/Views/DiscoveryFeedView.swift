@@ -64,7 +64,6 @@ struct DiscoveryFeedView: View {
                 }
             }
             .padding(.vertical, 16)
-            .padding(.top, 60) // Account for floating header
         }
         .refreshable {
             await viewModel.fetchDiscoveryFeed()
