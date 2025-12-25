@@ -428,18 +428,8 @@ struct ContentView: View {
                         // Discovery tab content - real Firestore data from creator_posts
                         DiscoveryFeedView(themeColor: themeColor)
                     } followingContent: {
-                        // Following tab content - social subscription feed (placeholder for now)
-                        VStack {
-                            Spacer()
-                            Text("Following Feed")
-                                .font(.title2)
-                                .foregroundColor(.secondary)
-                            Text("Coming soon - posts from creators you follow")
-                                .font(.body)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
-                            Spacer()
-                        }
+                        // Following tab content - posts from creators the user follows
+                        FollowingFeedView(themeColor: themeColor)
                     } ccFeedContent: {
                         // CC FEED tab content - local clipboard items
                         listContent

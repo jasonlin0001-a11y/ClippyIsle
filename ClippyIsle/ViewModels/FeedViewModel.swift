@@ -155,15 +155,22 @@ class FeedViewModel: ObservableObject {
     }
     
     // MARK: - Get Followed Creator UIDs
-    /// Queries the followers collection to get UIDs of creators the user follows
+    /// Queries the users/{currentUid}/following subcollection to get UIDs of creators the user follows
     private func getFollowedCreatorUids(currentUid: String) async -> [String] {
         do {
-            let snapshot = try await db.collection(followersCollection)
-                .whereField("follower_uid", isEqualTo: currentUid)
+            // Use subcollection path: users/{currentUid}/following/{targetUserId}
+            let snapshot = try await db.collection(usersCollection)
+                .document(currentUid)
+                .collection("following")
                 .getDocuments()
             
+            // Document IDs are the target user IDs, or use "uid" field
             return snapshot.documents.compactMap { doc -> String? in
-                return doc.data()["creator_uid"] as? String
+                // Prefer document ID as it's the target user ID
+                let docId = doc.documentID
+                // Fallback to "uid" field if available
+                let uidField = doc.data()["uid"] as? String
+                return uidField ?? docId
             }
         } catch {
             print("❌ Get followed creators failed: \(error.localizedDescription)")

@@ -84,11 +84,11 @@ struct FollowingFeedView: View {
                 .font(.system(size: 60))
                 .foregroundColor(.secondary)
             
-            Text("No posts yet")
+            Text("尚未有訂閱")
                 .font(.title2)
                 .fontWeight(.semibold)
             
-            Text("Follow creators to see their posts here.\nSwipe to Discovery to find interesting creators!")
+            Text("尚未有訂閱，去 Discovery 探索更多創作者！\n\nNo subscriptions yet. Go to Discovery to find creators!")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
