@@ -250,7 +250,19 @@ class CreatorSubscriptionManager: ObservableObject {
     ///   - title: The title of the post
     ///   - contentUrl: URL to the content/article
     ///   - curatorNote: Optional note/review from the curator
-    func createPost(title: String, contentUrl: String, curatorNote: String? = nil) async throws {
+    ///   - linkTitle: The OG title from link preview
+    ///   - linkImage: The OG image URL from link preview
+    ///   - linkDescription: The OG description from link preview
+    ///   - linkDomain: The domain name (e.g., "youtube.com")
+    func createPost(
+        title: String,
+        contentUrl: String,
+        curatorNote: String? = nil,
+        linkTitle: String? = nil,
+        linkImage: String? = nil,
+        linkDescription: String? = nil,
+        linkDomain: String? = nil
+    ) async throws {
         guard let currentUid = AuthenticationManager.shared.currentUID else {
             throw CreatorSubscriptionError.noAuthenticatedUser
         }
@@ -274,6 +286,20 @@ class CreatorSubscriptionManager: ObservableObject {
         // Only add curator_note if it has a value
         if let note = post.curator_note {
             postData["curator_note"] = note
+        }
+        
+        // Add link preview data if available
+        if let linkTitle = linkTitle {
+            postData["link_title"] = linkTitle
+        }
+        if let linkImage = linkImage {
+            postData["link_image"] = linkImage
+        }
+        if let linkDescription = linkDescription {
+            postData["link_description"] = linkDescription
+        }
+        if let linkDomain = linkDomain {
+            postData["link_domain"] = linkDomain
         }
         
         try await docRef.setData(postData)

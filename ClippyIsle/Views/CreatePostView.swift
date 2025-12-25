@@ -173,12 +173,19 @@ class CreatePostViewModel: ObservableObject {
             error = nil
         }
         
+        // Extract domain from URL
+        let linkDomain = URL(string: preview.url)?.host
+        
         do {
-            // Use CreatorSubscriptionManager to create the post
+            // Use CreatorSubscriptionManager to create the post with link preview data
             try await CreatorSubscriptionManager.shared.createPost(
                 title: preview.title,
                 contentUrl: preview.url,
-                curatorNote: curatorNote.isEmpty ? nil : curatorNote
+                curatorNote: curatorNote.isEmpty ? nil : curatorNote,
+                linkTitle: preview.title,
+                linkImage: preview.image,
+                linkDescription: preview.description,
+                linkDomain: linkDomain
             )
             
             await MainActor.run {
@@ -186,7 +193,7 @@ class CreatePostViewModel: ObservableObject {
                 publishSuccess = true
             }
             
-            print("✅ Post published successfully")
+            print("✅ Post published successfully with link preview data")
             return true
         } catch {
             await MainActor.run {
