@@ -4,9 +4,42 @@ This document describes the implementation of the Creator Subscription Backend a
 
 ## Firestore Schema
 
-### 1. `followers` Collection
+### 1. User Following (Subcollection Approach)
 
-Tracks follow relationships between creators and followers.
+For scalable following relationships, we use a subcollection-based approach.
+
+**Path:** `users/{currentUserId}/following/{targetUserId}`
+
+**Fields:**
+| Field | Type | Description |
+|-------|------|-------------|
+| `uid` | String | The UID of the user being followed |
+| `timestamp` | Timestamp | When the follow relationship was created |
+| `displayName` | String (Optional) | Cached display name for quick listing |
+
+**Example Document:**
+```json
+// Path: users/myUser123/following/creator456
+{
+  "uid": "creator456",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "displayName": "Cool Creator"
+}
+```
+
+### 2. User Profile (with follow counts)
+
+**Path:** `users/{uid}`
+
+**Additional Fields:**
+| Field | Type | Description |
+|-------|------|-------------|
+| `followersCount` | Int | Number of followers |
+| `followingCount` | Int | Number of users being followed |
+
+### 3. `followers` Collection (Legacy - for FCM Topics)
+
+Tracks follow relationships for FCM topic-based push notifications.
 
 **Document ID:** `{creator_uid}_{follower_uid}` (Composite key to ensure unique relationship)
 
@@ -17,16 +50,7 @@ Tracks follow relationships between creators and followers.
 | `follower_uid` | String | The UID of the user following the creator |
 | `created_at` | Timestamp | When the follow relationship was created |
 
-**Example Document:**
-```json
-{
-  "creator_uid": "abc123",
-  "follower_uid": "xyz789",
-  "created_at": "2024-01-15T10:30:00Z"
-}
-```
-
-### 2. `creator_posts` Collection
+### 4. `creator_posts` Collection
 
 Stores content posted by creators for their feed.
 
@@ -39,6 +63,10 @@ Stores content posted by creators for their feed.
 | `title` | String | Title of the post/article |
 | `content_url` | String | Link to the article or content |
 | `curator_note` | String (Optional) | Creator's review or comment about the content |
+| `link_title` | String (Optional) | OG title from link preview |
+| `link_image` | String (Optional) | OG image URL from link preview |
+| `link_description` | String (Optional) | OG description from link preview |
+| `link_domain` | String (Optional) | Domain name (e.g., "youtube.com") |
 | `created_at` | Timestamp | When the post was created |
 
 **Example Document:**
@@ -48,13 +76,71 @@ Stores content posted by creators for their feed.
   "title": "Amazing Article About Swift",
   "content_url": "https://example.com/swift-article",
   "curator_note": "This article changed how I think about async/await!",
+  "link_title": "Swift Async/Await Guide",
+  "link_image": "https://example.com/image.jpg",
+  "link_domain": "example.com",
   "created_at": "2024-01-15T14:00:00Z"
 }
 ```
 
 ## Swift Implementation
 
-### CreatorSubscriptionManager
+### SocialService (New - Subcollection Approach)
+
+Located at: `ClippyIsle/Managers/SocialService.swift`
+
+#### Key Functions:
+
+```swift
+// Follow a user - adds to subcollection and increments followersCount
+func followUser(targetUid: String, displayName: String?) async throws
+
+// Unfollow a user - removes from subcollection and decrements followersCount
+func unfollowUser(targetUid: String) async throws
+
+// Check if following (local cache)
+func checkIfFollowing(targetUid: String) -> Bool
+
+// Check if following (server verification)
+func checkIfFollowingAsync(targetUid: String) async -> Bool
+
+// Load all following entries for current user
+func loadFollowingList() async
+
+// Setup real-time listener for following subcollection
+func setupFollowingListener()
+
+// Get following count
+func getFollowingCount() -> Int
+
+// Get followers count for a user
+func getFollowersCount(uid: String) async -> Int
+```
+
+#### Usage Example:
+
+```swift
+// In a SwiftUI View
+struct CreatorProfileView: View {
+    let creatorUid: String
+    let creatorName: String
+    
+    var body: some View {
+        VStack {
+            // Creator info...
+            
+            // Follow/Unfollow button
+            FollowButton(targetUid: creatorUid, targetDisplayName: creatorName)
+        }
+        .onAppear {
+            // Setup listener when view appears
+            SocialService.shared.setupFollowingListener()
+        }
+    }
+}
+```
+
+### CreatorSubscriptionManager (Legacy - for FCM)
 
 Located at: `ClippyIsle/Managers/CreatorSubscriptionManager.swift`
 
@@ -77,7 +163,7 @@ func loadFollowedCreators() async
 func getFollowerCount(creatorUid: String) async -> Int
 
 // Create a new post (triggers push notification via Cloud Function)
-func createPost(title: String, contentUrl: String, curatorNote: String?) async throws
+func createPost(title: String, contentUrl: String, curatorNote: String?, linkTitle: String?, linkImage: String?, linkDescription: String?, linkDomain: String?) async throws
 ```
 
 #### FCM Topic Naming Convention:
@@ -87,6 +173,31 @@ func createPost(title: String, contentUrl: String, curatorNote: String?) async t
 ## Cloud Functions
 
 Located at: `functions/index.js`
+
+### `fetchLinkPreview`
+
+**Type:** HTTPS Callable Function
+
+**Input:** `{ url: string }`
+
+**Logic:**
+1. Validates URL and user authentication
+2. Fetches HTML using axios with browser User-Agent
+3. Parses Open Graph tags using cheerio
+4. Falls back to twitter:* and meta description tags
+
+**Output:**
+```javascript
+{
+  success: true,
+  data: {
+    title: "Page Title",
+    image: "https://example.com/og-image.jpg",
+    description: "Page description",
+    url: "https://example.com"
+  }
+}
+```
 
 ### `onCreatorPostCreated`
 
@@ -113,20 +224,6 @@ Located at: `functions/index.js`
 }
 ```
 
-### `sendTestNotification` (Debug Only)
-
-HTTP endpoint for testing notifications during development.
-
-**Usage:**
-```bash
-POST /sendTestNotification
-{
-  "creatorUid": "abc123",
-  "title": "Test Title",
-  "body": "Test Body"
-}
-```
-
 ## Deployment
 
 ### Deploy Cloud Functions:
@@ -141,7 +238,27 @@ firebase deploy --only functions
 Add to your Firestore rules:
 
 ```javascript
-// Followers collection
+// Users collection and following subcollection
+match /users/{userId} {
+  // Users can read any profile
+  allow read: if true;
+  // Users can only update their own profile
+  allow update: if request.auth != null && request.auth.uid == userId;
+  // Users can create their own profile
+  allow create: if request.auth != null && request.auth.uid == userId;
+  
+  // Following subcollection
+  match /following/{targetId} {
+    // Anyone can read following relationships
+    allow read: if true;
+    // Users can only manage their own following list
+    allow create, delete: if request.auth != null && request.auth.uid == userId;
+    // No updates allowed
+    allow update: if false;
+  }
+}
+
+// Legacy followers collection (for FCM)
 match /followers/{docId} {
   // Anyone can read follower relationships
   allow read: if true;

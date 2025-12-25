@@ -11,8 +11,10 @@ struct UserProfile: Codable {
     var discovery_impact: Int
     var created_at: Date
     var fcm_token: String?
+    var followersCount: Int
+    var followingCount: Int
     
-    init(uid: String, nickname: String? = nil, referral_count: Int = 0, discovery_impact: Int = 0, created_at: Date = Date(), fcm_token: String? = nil) {
+    init(uid: String, nickname: String? = nil, referral_count: Int = 0, discovery_impact: Int = 0, created_at: Date = Date(), fcm_token: String? = nil, followersCount: Int = 0, followingCount: Int = 0) {
         self.uid = uid
         // Default nickname: 'User_[Last4CharsOfUID]'
         self.nickname = nickname ?? "User_\(String(uid.suffix(4)))"
@@ -20,6 +22,8 @@ struct UserProfile: Codable {
         self.discovery_impact = discovery_impact
         self.created_at = created_at
         self.fcm_token = fcm_token
+        self.followersCount = followersCount
+        self.followingCount = followingCount
     }
 }
 
@@ -127,7 +131,9 @@ class AuthenticationManager: ObservableObject {
                 "referral_count": profile.referral_count,
                 "discovery_impact": profile.discovery_impact,
                 "created_at": Timestamp(date: profile.created_at),
-                "fcm_token": profile.fcm_token as Any
+                "fcm_token": profile.fcm_token as Any,
+                "followersCount": profile.followersCount,
+                "followingCount": profile.followingCount
             ]
             
             try await docRef.setData(profileData)
@@ -180,7 +186,9 @@ class AuthenticationManager: ObservableObject {
                     referral_count: data["referral_count"] as? Int ?? 0,
                     discovery_impact: data["discovery_impact"] as? Int ?? 0,
                     created_at: createdAt,
-                    fcm_token: data["fcm_token"] as? String
+                    fcm_token: data["fcm_token"] as? String,
+                    followersCount: data["followersCount"] as? Int ?? 0,
+                    followingCount: data["followingCount"] as? Int ?? 0
                 )
                 print("🔐 Fetched user profile: \(self?.userProfile?.nickname ?? "Unknown")")
             }
