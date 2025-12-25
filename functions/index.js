@@ -14,7 +14,8 @@
 
 const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
-const ogs = require("open-graph-scraper");
+const axios = require("axios");
+const cheerio = require("cheerio");
 
 admin.initializeApp();
 
@@ -202,35 +203,48 @@ exports.fetchLinkPreview = functions.https.onCall(async (data, context) => {
     };
   }
 
-  // Fetch Open Graph metadata using open-graph-scraper
+  // Fetch HTML and parse Open Graph metadata using axios and cheerio
   try {
-    const options = {
-      url: url,
+    const response = await axios.get(url, {
       timeout: 10000, // 10 second timeout
-      fetchOptions: {
-        headers: {
-          "user-agent": "Mozilla/5.0 (compatible; ClippyIsle/1.0; +https://ccisle.app)",
-        },
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) " +
+          "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
       },
-    };
+      maxRedirects: 5,
+      validateStatus: (status) => status >= 200 && status < 400,
+    });
 
-    const {error, result} = await ogs(options);
+    const html = response.data;
+    const $ = cheerio.load(html);
 
-    if (error) {
-      console.error("OGS error for URL:", url, result);
-      return {
-        success: false,
-        error: "Failed to fetch link preview metadata.",
-      };
-    }
+    // Extract Open Graph metadata with fallbacks
+    const ogTitle = $("meta[property=\"og:title\"]").attr("content") ||
+                    $("meta[name=\"twitter:title\"]").attr("content") ||
+                    $("title").text() ||
+                    null;
 
-    // Extract Open Graph data
+    const ogDescription = $("meta[property=\"og:description\"]").attr("content") ||
+                          $("meta[name=\"twitter:description\"]").attr("content") ||
+                          $("meta[name=\"description\"]").attr("content") ||
+                          null;
+
+    const ogImage = $("meta[property=\"og:image\"]").attr("content") ||
+                    $("meta[name=\"twitter:image\"]").attr("content") ||
+                    $("meta[name=\"twitter:image:src\"]").attr("content") ||
+                    null;
+
+    const ogUrl = $("meta[property=\"og:url\"]").attr("content") ||
+                  $("link[rel=\"canonical\"]").attr("href") ||
+                  url;
+
     const ogData = {
-      title: result.ogTitle || result.dcTitle || result.twitterTitle || null,
-      image: result.ogImage?.[0]?.url || result.twitterImage?.[0]?.url || null,
-      description: result.ogDescription || result.dcDescription ||
-                   result.twitterDescription || null,
-      url: result.ogUrl || result.requestUrl || url,
+      title: ogTitle ? ogTitle.trim() : null,
+      image: ogImage ? ogImage.trim() : null,
+      description: ogDescription ? ogDescription.trim() : null,
+      url: ogUrl ? ogUrl.trim() : url,
     };
 
     console.log("Successfully fetched OG data for:", url);
@@ -240,7 +254,7 @@ exports.fetchLinkPreview = functions.https.onCall(async (data, context) => {
       data: ogData,
     };
   } catch (error) {
-    console.error("Error fetching link preview for URL:", url, error);
+    console.error("Error fetching link preview for URL:", url, error.message);
     return {
       success: false,
       error: "An error occurred while fetching the link preview.",
