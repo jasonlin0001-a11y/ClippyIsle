@@ -128,7 +128,7 @@ struct RadialMenuView: View {
             RadialMenuItem(localizedKey: "Paste", action: {
                 closeMenuAndExecute(onPasteFromClipboard)
             }),
-            RadialMenuItem(localizedKey: "New Item", action: {
+            RadialMenuItem(localizedKey: "Create Post", action: {
                 closeMenuAndExecute(onNewItem)
             }),
             RadialMenuItem(localizedKey: "Voice Memo", action: {

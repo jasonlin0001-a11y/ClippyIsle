@@ -89,6 +89,9 @@ struct ContentView: View {
     // Message Center state
     @State private var isShowingMessageCenter = false
     @StateObject private var notificationManager = NotificationManager.shared
+    
+    // Create Post sheet state
+    @State private var showCreatePostSheet = false
 
     @AppStorage("themeColorName") private var themeColorName: String = "green"
     
@@ -368,6 +371,10 @@ struct ContentView: View {
                 clipboardManager: clipboardManager
             )
         }
+        // Create Post sheet with link preview integration
+        .sheet(isPresented: $showCreatePostSheet) {
+            CreatePostView(themeColor: themeColor)
+        }
     }
     
     private func stopTranscription() {
@@ -444,9 +451,8 @@ struct ContentView: View {
                     }
                 },
                 onNewItem: {
-                    trackAndHighlightNewItem {
-                        clipboardManager.addNewItem(content: String(localized: "New Item"), type: UTType.text.identifier)
-                    }
+                    // Open Create Post view with link preview
+                    showCreatePostSheet = true
                 },
                 onPasteFromClipboard: {
                     trackAndHighlightNewItem {
