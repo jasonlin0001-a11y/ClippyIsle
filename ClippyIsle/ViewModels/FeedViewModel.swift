@@ -25,6 +25,11 @@ struct FeedPost: Identifiable {
     var linkImage: String?
     var linkDescription: String?
     var linkDomain: String?
+    // Additional optional fields with defaults
+    var likes: Int
+    var views: Int
+    var tags: [String]
+    var feedType: String
     
     init(from creatorPost: CreatorPost, creatorName: String = "Unknown Creator", creatorAvatarUrl: String? = nil) {
         self.id = creatorPost.id
@@ -39,6 +44,42 @@ struct FeedPost: Identifiable {
         self.linkImage = creatorPost.link_image
         self.linkDescription = creatorPost.link_description
         self.linkDomain = creatorPost.link_domain
+        self.likes = 0
+        self.views = 0
+        self.tags = []
+        self.feedType = "text"
+    }
+    
+    /// Initialize directly from Firestore document data with robust decoding
+    init(id: String, data: [String: Any], creatorName: String = "Unknown Creator", creatorAvatarUrl: String? = nil) {
+        self.id = id
+        self.creatorUid = data["creator_uid"] as? String ?? ""
+        self.creatorName = creatorName
+        self.creatorAvatarUrl = creatorAvatarUrl
+        self.title = data["title"] as? String ?? data["link_title"] as? String ?? "Untitled"
+        self.contentUrl = data["content_url"] as? String ?? ""
+        self.curatorNote = data["curator_note"] as? String
+        
+        // Handle created_at carefully - it might be a Timestamp object or missing
+        if let timestamp = data["created_at"] as? Timestamp {
+            self.createdAt = timestamp.dateValue()
+        } else if let dateValue = data["created_at"] as? Date {
+            self.createdAt = dateValue
+        } else {
+            self.createdAt = Date() // Default to now if missing
+        }
+        
+        // Link preview fields
+        self.linkTitle = data["link_title"] as? String
+        self.linkImage = data["link_image"] as? String
+        self.linkDescription = data["link_description"] as? String
+        self.linkDomain = data["link_domain"] as? String
+        
+        // Optional fields with defaults
+        self.likes = data["likes"] as? Int ?? 0
+        self.views = data["views"] as? Int ?? 0
+        self.tags = data["tags"] as? [String] ?? []
+        self.feedType = data["feed_type"] as? String ?? "text"
     }
 }
 
@@ -243,5 +284,190 @@ class FeedViewModel: ObservableObject {
         // Clear cache to get fresh data
         creatorProfileCache.removeAll()
         await fetchFollowingFeed()
+    }
+    
+    // MARK: - Discovery Feed with Real-time Listener
+    
+    /// Snapshot listener registration
+    private var discoveryListener: ListenerRegistration?
+    
+    /// Discovery feed posts (all creator_posts)
+    @Published var discoveryPosts: [FeedPost] = []
+    @Published var isDiscoveryLoading: Bool = false
+    @Published var discoveryError: String?
+    @Published var isDiscoveryEmpty: Bool = false
+    
+    /// Sets up a real-time listener for Discovery feed (all creator_posts)
+    /// - Returns: ListenerRegistration that can be used to remove the listener
+    func setupDiscoveryListener() {
+        print("🔄 Setting up Discovery feed listener...")
+        
+        isDiscoveryLoading = true
+        discoveryError = nil
+        
+        // Remove existing listener if any
+        discoveryListener?.remove()
+        
+        // Setup snapshot listener on creator_posts collection, ordered by created_at descending
+        discoveryListener = db.collection(creatorPostsCollection)
+            .order(by: "created_at", descending: true)
+            .limit(to: 50)
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self = self else { return }
+                
+                Task { @MainActor in
+                    self.isDiscoveryLoading = false
+                    
+                    if let error = error {
+                        print("❌ Discovery listener error: \(error.localizedDescription)")
+                        self.discoveryError = error.localizedDescription
+                        return
+                    }
+                    
+                    guard let documents = snapshot?.documents else {
+                        print("⚠️ Discovery: No documents in snapshot")
+                        self.discoveryPosts = []
+                        self.isDiscoveryEmpty = true
+                        return
+                    }
+                    
+                    print("📦 Discovery: Fetched \(documents.count) documents from Firestore")
+                    
+                    // Decode documents with robust error handling
+                    var posts: [FeedPost] = []
+                    var decodingErrors: [String] = []
+                    
+                    for doc in documents {
+                        let data = doc.data()
+                        
+                        // Debug: Print raw document data for first document
+                        if posts.isEmpty {
+                            print("📄 Sample document ID: \(doc.documentID)")
+                            print("📄 Sample document fields: \(data.keys.joined(separator: ", "))")
+                        }
+                        
+                        // Create FeedPost with robust decoding
+                        let post = FeedPost(
+                            id: doc.documentID,
+                            data: data,
+                            creatorName: "Creator", // Will be enriched later
+                            creatorAvatarUrl: nil
+                        )
+                        
+                        // Validate we have at least a content_url or title
+                        if !post.contentUrl.isEmpty || !post.title.isEmpty {
+                            posts.append(post)
+                        } else {
+                            decodingErrors.append("Document \(doc.documentID) missing required fields")
+                        }
+                    }
+                    
+                    if !decodingErrors.isEmpty {
+                        print("⚠️ Discovery: \(decodingErrors.count) decoding errors:")
+                        for error in decodingErrors.prefix(5) {
+                            print("   - \(error)")
+                        }
+                    }
+                    
+                    // Enrich posts with creator info
+                    await self.enrichDiscoveryPosts(posts: posts)
+                }
+            }
+    }
+    
+    /// Enriches discovery posts with creator profile data
+    private func enrichDiscoveryPosts(posts: [FeedPost]) async {
+        // Get unique creator UIDs
+        let uniqueCreatorUids = Set(posts.map { $0.creatorUid }).filter { !$0.isEmpty }
+        
+        // Fetch profiles for creators not in cache
+        for uid in uniqueCreatorUids {
+            if creatorProfileCache[uid] == nil {
+                let profile = await fetchCreatorProfile(uid: uid)
+                creatorProfileCache[uid] = profile
+            }
+        }
+        
+        // Enrich posts with creator data
+        let enrichedPosts = posts.map { post -> FeedPost in
+            var enrichedPost = post
+            if let profile = creatorProfileCache[post.creatorUid] {
+                enrichedPost.creatorName = profile.name
+                enrichedPost.creatorAvatarUrl = profile.avatarUrl
+            }
+            return enrichedPost
+        }
+        
+        await MainActor.run {
+            self.discoveryPosts = enrichedPosts
+            self.isDiscoveryEmpty = enrichedPosts.isEmpty
+            print("✅ Discovery: Loaded \(enrichedPosts.count) posts")
+        }
+    }
+    
+    /// Removes the Discovery listener
+    func removeDiscoveryListener() {
+        discoveryListener?.remove()
+        discoveryListener = nil
+        print("🔴 Discovery listener removed")
+    }
+    
+    /// Fetches Discovery feed once (without listener)
+    func fetchDiscoveryFeed() async {
+        print("🔄 Fetching Discovery feed...")
+        
+        await MainActor.run {
+            isDiscoveryLoading = true
+            discoveryError = nil
+        }
+        
+        do {
+            let snapshot = try await db.collection(creatorPostsCollection)
+                .order(by: "created_at", descending: true)
+                .limit(to: 50)
+                .getDocuments()
+            
+            print("📦 Discovery: Fetched \(snapshot.documents.count) documents")
+            
+            var posts: [FeedPost] = []
+            
+            for doc in snapshot.documents {
+                let data = doc.data()
+                
+                // Debug: Print first document details
+                if posts.isEmpty {
+                    print("📄 First doc ID: \(doc.documentID)")
+                    print("📄 First doc keys: \(data.keys.sorted().joined(separator: ", "))")
+                    for (key, value) in data {
+                        print("   \(key): \(type(of: value)) = \(value)")
+                    }
+                }
+                
+                let post = FeedPost(
+                    id: doc.documentID,
+                    data: data,
+                    creatorName: "Creator",
+                    creatorAvatarUrl: nil
+                )
+                
+                if !post.contentUrl.isEmpty || !post.title.isEmpty {
+                    posts.append(post)
+                }
+            }
+            
+            // Enrich with creator info
+            await enrichDiscoveryPosts(posts: posts)
+            
+            await MainActor.run {
+                isDiscoveryLoading = false
+            }
+            
+        } catch {
+            print("❌ Fetch Discovery feed failed: \(error.localizedDescription)")
+            await MainActor.run {
+                discoveryError = error.localizedDescription
+                isDiscoveryLoading = false
+            }
+        }
     }
 }

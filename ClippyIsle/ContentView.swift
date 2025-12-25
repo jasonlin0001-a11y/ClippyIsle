@@ -425,10 +425,8 @@ struct ContentView: View {
                         selectedTab: $selectedFeedTab,
                         themeColor: themeColor
                     ) {
-                        // Discovery tab content (existing list)
-                        ZStack(alignment: .bottom) { 
-                            listContent
-                        }
+                        // Discovery tab content - real Firestore data from creator_posts
+                        DiscoveryFeedView(themeColor: themeColor)
                     }
                 }
             }
