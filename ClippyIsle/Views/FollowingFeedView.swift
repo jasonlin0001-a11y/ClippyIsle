@@ -149,7 +149,7 @@ struct FollowingFeedView: View {
     
     // MARK: - Show Save Toast
     private func showSaveToastMessage(isSaved: Bool) {
-        saveToastMessage = isSaved ? "Saved to CC FEED 🔖" : "Removed from CC FEED"
+        saveToastMessage = isSaved ? "Saved to MY ISLE 🔖" : "Removed from MY ISLE"
         showSaveToast = true
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {

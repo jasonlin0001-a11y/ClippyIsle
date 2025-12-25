@@ -12,7 +12,7 @@ import SwiftUI
 enum FeedTab: Int, CaseIterable {
     case discovery = 0
     case following = 1
-    case ccFeed = 2
+    case myIsle = 2
     
     var title: String {
         switch self {
@@ -20,8 +20,8 @@ enum FeedTab: Int, CaseIterable {
             return "Discovery"
         case .following:
             return "Following"
-        case .ccFeed:
-            return "CC FEED"
+        case .myIsle:
+            return "MY ISLE"
         }
     }
 }
@@ -37,12 +37,12 @@ struct ScrollOffsetPreferenceKey: PreferenceKey {
 
 // MARK: - Main Feed View
 /// Container view with paged TabView for Discovery, Following, and CC Feed tabs
-struct MainFeedView<DiscoveryContent: View, FollowingContent: View, CCFeedContent: View>: View {
+struct MainFeedView<DiscoveryContent: View, FollowingContent: View, MyIsleContent: View>: View {
     @Binding var selectedTab: FeedTab
     let themeColor: Color
     let discoveryContent: () -> DiscoveryContent
     let followingContent: () -> FollowingContent
-    let ccFeedContent: () -> CCFeedContent
+    let myIsleContent: () -> MyIsleContent
     
     @Environment(\.colorScheme) private var colorScheme
     
@@ -84,9 +84,9 @@ struct MainFeedView<DiscoveryContent: View, FollowingContent: View, CCFeedConten
                 followingContent()
                     .tag(FeedTab.following)
                 
-                // Tab 2: CC FEED (local clipboard items)
-                ccFeedContent()
-                    .tag(FeedTab.ccFeed)
+                // Tab 2: MY ISLE (personal scrapbook - local items + saved posts)
+                myIsleContent()
+                    .tag(FeedTab.myIsle)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .animation(.easeInOut(duration: 0.3), value: selectedTab)
@@ -102,7 +102,7 @@ struct MainFeedView<DiscoveryContent: View, FollowingContent: View, CCFeedConten
             
             Spacer()
             
-            // Segmented Picker for Discovery/Following/CC FEED - aligned to far right
+            // Segmented Picker for Discovery/Following/MY ISLE - aligned to far right
             Picker("Feed", selection: $selectedTab) {
                 ForEach(FeedTab.allCases, id: \.rawValue) { tab in
                     Text(tab.title).tag(tab)
@@ -184,8 +184,8 @@ struct MainFeedView_Previews: PreviewProvider {
             Text("Discovery Content")
         } followingContent: {
             Text("Following Content")
-        } ccFeedContent: {
-            Text("CC FEED Content")
+        } myIsleContent: {
+            Text("MY ISLE Content")
         }
     }
 }

@@ -2,7 +2,7 @@
 //  EngagementService.swift
 //  ClippyIsle
 //
-//  Service for managing post engagement: Likes and Saves (to CC FEED).
+//  Service for managing post engagement: Likes and Saves (to MY ISLE).
 //
 
 import Foundation
@@ -10,7 +10,7 @@ import Combine
 import FirebaseFirestore
 
 // MARK: - Saved Post Model
-/// Represents a saved post in the user's CC FEED
+/// Represents a saved post in the user's MY ISLE
 struct SavedPost: Codable, Identifiable {
     var id: String
     var type: SavedItemType
@@ -33,7 +33,7 @@ struct SavedPost: Codable, Identifiable {
 }
 
 // MARK: - Engagement Service
-/// Manages post likes and saves to CC FEED
+/// Manages post likes and saves to MY ISLE
 @MainActor
 class EngagementService: ObservableObject {
     static let shared = EngagementService()
@@ -41,7 +41,7 @@ class EngagementService: ObservableObject {
     private let db = Firestore.firestore()
     private let usersCollection = "users"
     private let creatorPostsCollection = "creator_posts"
-    private let ccFeedSubcollection = "cc_feed_items"
+    private let myIsleSubcollection = "cc_feed_items"  // Keep collection name for backward compatibility
     private let likesSubcollection = "likes"
     
     /// Set of post IDs that the current user has liked
@@ -50,7 +50,7 @@ class EngagementService: ObservableObject {
     /// Set of post IDs that the current user has saved
     @Published var savedPostIds: Set<String> = []
     
-    /// Saved posts for CC FEED display
+    /// Saved posts for MY ISLE display
     @Published var savedPosts: [SavedPost] = []
     
     /// Loading state
@@ -182,7 +182,7 @@ class EngagementService: ObservableObject {
             // Path: users/{currentUid}/cc_feed_items/{savedPostId}
             let ccFeedDocRef = db.collection(usersCollection)
                 .document(currentUid)
-                .collection(ccFeedSubcollection)
+                .collection(myIsleSubcollection)
                 .document(savedPost.id)
             
             let data: [String: Any] = [
@@ -236,7 +236,7 @@ class EngagementService: ObservableObject {
             // Path: users/{currentUid}/cc_feed_items/{savedPostId}
             let ccFeedDocRef = db.collection(usersCollection)
                 .document(currentUid)
-                .collection(ccFeedSubcollection)
+                .collection(myIsleSubcollection)
                 .document(savedPost.id)
             
             try await ccFeedDocRef.delete()
@@ -277,7 +277,7 @@ class EngagementService: ObservableObject {
         do {
             let snapshot = try await db.collection(usersCollection)
                 .document(currentUid)
-                .collection(ccFeedSubcollection)
+                .collection(myIsleSubcollection)
                 .whereField("type", isEqualTo: SavedPost.SavedItemType.savedPost.rawValue)
                 .order(by: "timestamp", descending: true)
                 .getDocuments()

@@ -97,6 +97,10 @@ struct ContentView: View {
     // Create Post sheet state
     @State private var showCreatePostSheet = false
     
+    // Curator Required alert state (for non-curators trying to create posts)
+    @State private var showCuratorRequiredAlert = false
+    @State private var showUpgradeView = false
+    
     // Global Search ViewModel (for Users and Posts search)
     @StateObject private var searchViewModel = SearchResultsViewModel()
 
@@ -392,6 +396,20 @@ struct ContentView: View {
         .sheet(isPresented: $showCreatePostSheet) {
             CreatePostView(themeColor: themeColor)
         }
+        // Curator Required alert - shown when non-curator tries to create a post
+        .alert("Curator Access Required", isPresented: $showCuratorRequiredAlert) {
+            Button("Upgrade to Curator") {
+                // Close alert then show upgrade view
+                showUpgradeView = true
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Publishing posts requires a Curator subscription.\n\nUpgrade to Curator (TWD 300/month) to unlock publishing tools and share content with the community.\n\n成為策展人即可發佈貼文。")
+        }
+        // Upgrade View sheet (for Curator Required flow)
+        .sheet(isPresented: $showUpgradeView) {
+            UpgradeView(themeColor: themeColor)
+        }
     }
     
     private func stopTranscription() {
@@ -441,7 +459,7 @@ struct ContentView: View {
                     SearchResultsView(viewModel: searchViewModel, themeColor: themeColor)
                 }
                 else { 
-                    // Paged feed with Discovery, Following, and CC FEED tabs
+                    // Paged feed with Discovery, Following, and MY ISLE tabs
                     MainFeedView(
                         selectedTab: $selectedFeedTab,
                         themeColor: themeColor
@@ -451,8 +469,8 @@ struct ContentView: View {
                     } followingContent: {
                         // Following tab content - posts from creators the user follows
                         FollowingFeedView(themeColor: themeColor)
-                    } ccFeedContent: {
-                        // CC FEED tab content - local clipboard items
+                    } myIsleContent: {
+                        // MY ISLE tab content - local clipboard items + saved posts
                         listContent
                     }
                 }
@@ -485,14 +503,18 @@ struct ContentView: View {
                     }
                 },
                 onNewItem: {
-                    // Create new text item (local clipboard function)
+                    // Create new text item (local clipboard function) - MY ISLE tab
                     trackAndHighlightNewItem {
                         clipboardManager.addNewItem(content: "New Item", type: UTType.text.identifier)
                     }
                 },
                 onCreatePost: {
-                    // Open Create Post view with link preview (social posting function)
+                    // Open Create Post view with link preview (social posting function for curators)
                     showCreatePostSheet = true
+                },
+                onCuratorRequired: {
+                    // Show alert when non-curator tries to create a post on Discovery/Following
+                    showCuratorRequiredAlert = true
                 },
                 onPasteFromClipboard: {
                     trackAndHighlightNewItem {

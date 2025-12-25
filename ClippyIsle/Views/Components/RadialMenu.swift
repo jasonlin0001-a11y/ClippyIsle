@@ -101,9 +101,13 @@ struct RadialMenuView: View {
     let themeColor: Color
     let selectedTab: FeedTab  // Track which tab is selected for FAB behavior
     let onVoiceMemo: () -> Void  // Voice memo - opens microphone for voice-to-text memo
-    let onNewItem: () -> Void    // Create new text item (local clipboard) - for CC FEED tab
-    let onCreatePost: () -> Void // Create social post - for Discovery/Following tabs
+    let onNewItem: () -> Void    // Create new text item (local clipboard) - for MY ISLE tab
+    let onCreatePost: () -> Void // Create social post - for Discovery/Following tabs (curators only)
+    let onCuratorRequired: () -> Void // Callback when non-curator tries to create a post
     let onPasteFromClipboard: () -> Void
+    
+    // Access curator subscription status
+    @StateObject private var curatorService = CuratorSubscriptionService.shared
     
     @State private var isExpanded = false
     @State private var isDragging = false
@@ -127,12 +131,22 @@ struct RadialMenuView: View {
     
     // Dynamic label based on selected tab
     private var newItemLabel: LocalizedStringKey {
-        selectedTab == .ccFeed ? "New Item" : "Create Post"
+        selectedTab == .myIsle ? "New Item" : "Create Post"
     }
     
-    // Dynamic action based on selected tab
+    // Dynamic action based on selected tab (with curator permission check)
     private var newItemAction: () -> Void {
-        selectedTab == .ccFeed ? onNewItem : onCreatePost
+        if selectedTab == .myIsle {
+            // MY ISLE tab: anyone can create local notes
+            return onNewItem
+        } else {
+            // Discovery/Following tabs: check curator status
+            if curatorService.canPublish {
+                return onCreatePost
+            } else {
+                return onCuratorRequired
+            }
+        }
     }
     
     private var menuItems: [RadialMenuItem] {
@@ -344,10 +358,11 @@ struct RadialMenuView: View {
         
         RadialMenuView(
             themeColor: .blue,
-            selectedTab: .ccFeed,
+            selectedTab: .myIsle,
             onVoiceMemo: { print("Voice Memo tapped") },
             onNewItem: { print("New Item tapped") },
             onCreatePost: { print("Create Post tapped") },
+            onCuratorRequired: { print("Curator Required") },
             onPasteFromClipboard: { print("Paste tapped") }
         )
     }
