@@ -341,21 +341,8 @@ struct FullUserSearchResultsView: View {
     }
 }
 
-// MARK: - Safari View
-/// Simple Safari view wrapper for opening links
-import SafariServices
-
-struct SafariView: UIViewControllerRepresentable {
-    let url: URL
-    
-    func makeUIViewController(context: Context) -> SFSafariViewController {
-        return SFSafariViewController(url: url)
-    }
-    
-    func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
-}
-
 // MARK: - Preview
+// Note: SafariView is declared in FollowingFeedView.swift and reused here
 #if DEBUG
 struct SearchResultsView_Previews: PreviewProvider {
     static var previews: some View {
