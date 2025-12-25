@@ -161,7 +161,7 @@ struct ContentView: View {
     var body: some View {
         NavigationView { mainContent }
         .navigationViewStyle(.stack).tint(themeColor).preferredColorScheme(preferredColorScheme)
-        .searchable(text: $searchText, prompt: "Search...")
+        // Note: Removed .searchable() modifier - using custom floating search bar instead
         .task(priority: .userInitiated) {
             // ✅ PERFORMANCE FIX: Initialize data asynchronously after UI rendering
             // Note: Runs on MainActor but doesn't block initial view rendering
