@@ -51,7 +51,7 @@ struct FollowButton: View {
         .onAppear {
             isFollowing = socialService.checkIfFollowing(targetUid: targetUid)
         }
-        .onChange(of: socialService.followingSet) { newSet in
+        .onChange(of: socialService.followingSet) { _, newSet in
             isFollowing = newSet.contains(targetUid)
         }
     }
@@ -124,7 +124,7 @@ struct CompactFollowButton: View {
         .onAppear {
             isFollowing = socialService.checkIfFollowing(targetUid: targetUid)
         }
-        .onChange(of: socialService.followingSet) { newSet in
+        .onChange(of: socialService.followingSet) { _, newSet in
             isFollowing = newSet.contains(targetUid)
         }
     }

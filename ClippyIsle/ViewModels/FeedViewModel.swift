@@ -114,44 +114,35 @@ class FeedViewModel: ObservableObject {
             error = nil
         }
         
-        do {
-            // Step A: Get the list of creator UIDs the user follows
-            let followedCreatorUids = await getFollowedCreatorUids(currentUid: currentUid)
-            
-            guard !followedCreatorUids.isEmpty else {
-                await MainActor.run {
-                    feedPosts = []
-                    isEmpty = true
-                    isLoading = false
-                }
-                return
-            }
-            
-            // Step B: Query creator_posts where creator_uid is in the list
-            // Firestore 'in' query is limited to 30 items
-            let posts = await fetchPostsFromCreators(creatorUids: followedCreatorUids)
-            
-            // Step C: Enrich posts with creator profile data
-            let enrichedPosts = await enrichPostsWithCreatorInfo(posts: posts)
-            
-            // Sort by date (newest first)
-            let sortedPosts = enrichedPosts.sorted { $0.createdAt > $1.createdAt }
-            
+        // Step A: Get the list of creator UIDs the user follows
+        let followedCreatorUids = await getFollowedCreatorUids(currentUid: currentUid)
+        
+        guard !followedCreatorUids.isEmpty else {
             await MainActor.run {
-                feedPosts = sortedPosts
-                isEmpty = sortedPosts.isEmpty
+                feedPosts = []
+                isEmpty = true
                 isLoading = false
             }
-            
-            print("✅ Fetched \(sortedPosts.count) posts from \(followedCreatorUids.count) followed creators")
-            
-        } catch {
-            await MainActor.run {
-                self.error = error.localizedDescription
-                isLoading = false
-            }
-            print("❌ Fetch following feed failed: \(error.localizedDescription)")
+            return
         }
+        
+        // Step B: Query creator_posts where creator_uid is in the list
+        // Firestore 'in' query is limited to 30 items
+        let posts = await fetchPostsFromCreators(creatorUids: followedCreatorUids)
+        
+        // Step C: Enrich posts with creator profile data
+        let enrichedPosts = await enrichPostsWithCreatorInfo(posts: posts)
+        
+        // Sort by date (newest first)
+        let sortedPosts = enrichedPosts.sorted { $0.createdAt > $1.createdAt }
+        
+        await MainActor.run {
+            feedPosts = sortedPosts
+            isEmpty = sortedPosts.isEmpty
+            isLoading = false
+        }
+        
+        print("✅ Fetched \(sortedPosts.count) posts from \(followedCreatorUids.count) followed creators")
     }
     
     // MARK: - Get Followed Creator UIDs

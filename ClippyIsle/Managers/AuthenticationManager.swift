@@ -134,7 +134,7 @@ class AuthenticationManager: ObservableObject {
         
         if docSnapshot.exists {
             // Profile already exists, fetch it
-            await fetchUserProfile(uid: uid)
+            fetchUserProfile(uid: uid)
         } else {
             // Create new profile
             let profileData: [String: Any] = [
@@ -163,7 +163,7 @@ class AuthenticationManager: ObservableObject {
         let docSnapshot = try await docRef.getDocument()
         
         if docSnapshot.exists {
-            await fetchUserProfile(uid: uid)
+            fetchUserProfile(uid: uid)
         } else {
             try await createUserProfile(uid: uid)
         }

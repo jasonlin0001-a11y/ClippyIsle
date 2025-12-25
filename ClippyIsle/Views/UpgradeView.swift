@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import ConfettiSwiftUI
 
 // MARK: - Upgrade View (Paywall)
 struct UpgradeView: View {
@@ -16,38 +15,44 @@ struct UpgradeView: View {
     
     let themeColor: Color
     
-    @State private var confettiCounter = 0
+    @State private var showSuccessAnimation = false
     @State private var showSuccessAlert = false
     @State private var purchaseError: String?
     @State private var showErrorAlert = false
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                // Header Image/Icon
-                headerSection
-                
-                // Benefits Section
-                benefitsSection
-                
-                // Pricing Card
-                pricingCard
-                
-                // Subscribe Button
-                subscribeButton
-                
-                // Terms & Conditions
-                termsSection
-                
-                Spacer(minLength: 40)
+        ZStack {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Header Image/Icon
+                    headerSection
+                    
+                    // Benefits Section
+                    benefitsSection
+                    
+                    // Pricing Card
+                    pricingCard
+                    
+                    // Subscribe Button
+                    subscribeButton
+                    
+                    // Terms & Conditions
+                    termsSection
+                    
+                    Spacer(minLength: 40)
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 24)
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 24)
+            .background(colorScheme == .dark ? Color.black : Color(.systemGroupedBackground))
+            
+            // Success animation overlay
+            if showSuccessAnimation {
+                successOverlay
+            }
         }
-        .background(colorScheme == .dark ? Color.black : Color(.systemGroupedBackground))
         .navigationTitle("成為策展人")
         .navigationBarTitleDisplayMode(.inline)
-        .confettiCannon(counter: $confettiCounter, num: 50, confettiSize: 10, openingAngle: .degrees(60), closingAngle: .degrees(120))
         .alert("🎉 恭喜！", isPresented: $showSuccessAlert) {
             Button("太棒了！") {
                 dismiss()
@@ -60,6 +65,24 @@ struct UpgradeView: View {
         } message: {
             Text(purchaseError ?? "發生未知錯誤，請稍後再試。")
         }
+    }
+    
+    // MARK: - Success Overlay
+    private var successOverlay: some View {
+        VStack {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 80))
+                .foregroundColor(.green)
+                .scaleEffect(showSuccessAnimation ? 1.0 : 0.5)
+                .animation(.spring(response: 0.5, dampingFraction: 0.6), value: showSuccessAnimation)
+            
+            Text("🎉")
+                .font(.system(size: 60))
+                .scaleEffect(showSuccessAnimation ? 1.0 : 0.3)
+                .animation(.spring(response: 0.6, dampingFraction: 0.5).delay(0.2), value: showSuccessAnimation)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.black.opacity(0.3))
     }
     
     // MARK: - Header Section
@@ -261,8 +284,13 @@ struct UpgradeView: View {
         do {
             try await curatorService.purchaseCuratorPlan()
             // Success!
-            confettiCounter += 1
-            showSuccessAlert = true
+            showSuccessAnimation = true
+            
+            // Show alert after brief animation
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                showSuccessAnimation = false
+                showSuccessAlert = true
+            }
         } catch {
             purchaseError = error.localizedDescription
             showErrorAlert = true

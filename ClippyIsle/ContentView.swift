@@ -812,7 +812,7 @@ struct ContentView: View {
             )
             .ignoresSafeArea(.keyboard, edges: .bottom)
             .refreshable { await clipboardManager.performCloudSync() }
-            .onChange(of: filteredItems) { items in if let first = items.first, first.id != lastTopItemID { withAnimation { proxy.scrollTo(first.id, anchor: .top) }; lastTopItemID = first.id } }
+            .onChange(of: filteredItems) { _, items in if let first = items.first, first.id != lastTopItemID { withAnimation { proxy.scrollTo(first.id, anchor: .top) }; lastTopItemID = first.id } }
             .onChange(of: newlyAddedItemID) { oldID, newID in
                 if let id = newID {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {

@@ -332,7 +332,7 @@ class EngagementService: ObservableObject {
     // MARK: - Load Liked Posts
     /// Loads the IDs of posts the current user has liked
     func loadLikedPosts() async {
-        guard let currentUid = AuthenticationManager.shared.currentUID else { return }
+        guard AuthenticationManager.shared.currentUID != nil else { return }
         
         // For performance, we query the user's liked posts from a dedicated collection
         // or check individual posts they've interacted with
