@@ -399,17 +399,21 @@ struct ContentView: View {
         // Curator Required alert - shown when non-curator tries to create a post
         .alert("Curator Access Required", isPresented: $showCuratorRequiredAlert) {
             Button("Upgrade to Curator") {
-                // Close alert then show upgrade view
                 showUpgradeView = true
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Publishing posts requires a Curator subscription.\n\nUpgrade to Curator (TWD 300/month) to unlock publishing tools and share content with the community.\n\n成為策展人即可發佈貼文。")
+            Text(curatorAlertMessage)
         }
         // Upgrade View sheet (for Curator Required flow)
         .sheet(isPresented: $showUpgradeView) {
             UpgradeView(themeColor: themeColor)
         }
+    }
+    
+    // Constant for curator alert message to help compiler
+    private var curatorAlertMessage: String {
+        "Publishing posts requires a Curator subscription. Upgrade to Curator (TWD 300/month) to unlock publishing tools."
     }
     
     private func stopTranscription() {
@@ -966,7 +970,7 @@ struct ContentView: View {
     
     func checkActivityStatus() {
         Task {
-            let enabled = await ActivityAuthorizationInfo().areActivitiesEnabled; self.areActivitiesEnabled = enabled
+            let enabled = ActivityAuthorizationInfo().areActivitiesEnabled; self.areActivitiesEnabled = enabled
             if enabled { await clipboardManager.ensureLiveActivityIsRunningIfNeeded() } else { await clipboardManager.endActivity() }
         }
     }

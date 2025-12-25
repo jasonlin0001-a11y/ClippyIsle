@@ -184,7 +184,7 @@ struct SearchPostCard: View {
     
     var body: some View {
         Button {
-            if let url = URL(string: post.contentUrl), !post.contentUrl.isEmpty {
+            if URL(string: post.contentUrl) != nil, !post.contentUrl.isEmpty {
                 showSafariSheet = true
             }
         } label: {

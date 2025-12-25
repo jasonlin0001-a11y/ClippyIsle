@@ -565,7 +565,9 @@ struct PreviewView: View {
             do { try data.write(to: tempURL, options: .atomic); itemsToShare.append(tempURL) } catch { itemsToShare.append(data) }
         } else if isWebItem || isYouTubeItem || isFacebookItem || isTwitterItem, let url = URL(string: item.content) { itemsToShare.append(url) } else { itemsToShare.append(item.content) }
         
-        guard !itemsToShare.isEmpty, let sourceView = UIApplication.shared.windows.first?.rootViewController?.view else { return }
+        guard !itemsToShare.isEmpty,
+              let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let sourceView = windowScene.windows.first?.rootViewController?.view else { return }
         let activityVC = UIActivityViewController(activityItems: itemsToShare, applicationActivities: nil)
         if let popover = activityVC.popoverPresentationController {
             popover.sourceView = sourceView; popover.sourceRect = CGRect(x: sourceView.bounds.midX, y: sourceView.bounds.midY, width: 0, height: 0); popover.permittedArrowDirections = []
