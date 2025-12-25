@@ -34,18 +34,48 @@ struct MainFeedView<DiscoveryContent: View, FollowingContent: View>: View {
     @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
-        // Paged TabView - no floating header (moved to navigation bar)
-        TabView(selection: $selectedTab) {
-            // Tab 0: Discovery (creator_posts from Firestore)
-            discoveryContent()
-                .tag(FeedTab.discovery)
+        VStack(spacing: 0) {
+            // Custom Header with title and segmented picker
+            customHeader
             
-            // Tab 1: Following (local clipboard items)
-            followingContent()
-                .tag(FeedTab.following)
+            // Paged TabView content
+            TabView(selection: $selectedTab) {
+                // Tab 0: Discovery (creator_posts from Firestore)
+                discoveryContent()
+                    .tag(FeedTab.discovery)
+                
+                // Tab 1: Following (local clipboard items)
+                followingContent()
+                    .tag(FeedTab.following)
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .animation(.easeInOut(duration: 0.3), value: selectedTab)
         }
-        .tabViewStyle(.page(indexDisplayMode: .never))
-        .animation(.easeInOut(duration: 0.3), value: selectedTab)
+    }
+    
+    // MARK: - Custom Header
+    private var customHeader: some View {
+        HStack {
+            Text("CC Isle")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+            
+            Spacer()
+            
+            // Segmented Picker for Discovery/Following
+            Picker("Feed", selection: $selectedTab) {
+                ForEach(FeedTab.allCases, id: \.rawValue) { tab in
+                    Text(tab.title).tag(tab)
+                }
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 170)
+            
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 4)
     }
 }
 

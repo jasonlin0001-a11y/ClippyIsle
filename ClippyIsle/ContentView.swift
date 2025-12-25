@@ -428,9 +428,17 @@ struct ContentView: View {
                         // Discovery tab content - real Firestore data from creator_posts
                         DiscoveryFeedView(themeColor: themeColor)
                     } followingContent: {
-                        // Following tab content - local clipboard items
+                        // Following tab content - local clipboard items with floating search bar
                         ZStack(alignment: .bottom) { 
                             listContent
+                            
+                            // Floating Search Bar
+                            VStack {
+                                Spacer()
+                                bottomToolbar
+                                    .padding(.bottom, 10)
+                            }
+                            .background(Color.clear)
                         }
                     }
                 }
@@ -511,7 +519,8 @@ struct ContentView: View {
                 .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isVoiceMemoMode)
             }
         }
-        .navigationTitle(navigationTitle).navigationBarTitleDisplayMode(selectedTagFilter == nil ? .large : .inline)
+        .navigationTitle(selectedTagFilter != nil ? navigationTitle : "")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 if selectedTagFilter != nil { 
@@ -521,21 +530,13 @@ struct ContentView: View {
                         .clipShape(Capsule())
                 }
                 else { 
-                    // HStack with Live Activity button and Tab Picker
-                    HStack(spacing: 12) {
-                        Button { clipboardManager.isLiveActivityOn.toggle() } label: { 
-                            Image(systemName: "c.circle.fill")
-                                .font(.system(size: 20, weight: .bold))
-                                .foregroundColor(clipboardManager.isLiveActivityOn ? Color.green : Color.red) 
-                        }
-                        .disabled(!areActivitiesEnabled)
-                        
-                        // Compact Tab Picker in header area
-                        CompactTabPicker(
-                            selectedTab: $selectedFeedTab,
-                            themeColor: themeColor
-                        )
+                    // Live Activity button only (tab picker moved to custom header)
+                    Button { clipboardManager.isLiveActivityOn.toggle() } label: { 
+                        Image(systemName: "c.circle.fill")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(clipboardManager.isLiveActivityOn ? Color.green : Color.red) 
                     }
+                    .disabled(!areActivitiesEnabled)
                 }
             }
             ToolbarItem(placement: .navigationBarTrailing) {
