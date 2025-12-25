@@ -21,7 +21,7 @@ enum FeedTab: Int, CaseIterable {
         case .following:
             return "Following"
         case .myIsle:
-            return "MY ISLE"
+            return "My Isle"
         }
     }
 }
@@ -84,7 +84,7 @@ struct MainFeedView<DiscoveryContent: View, FollowingContent: View, MyIsleConten
                 followingContent()
                     .tag(FeedTab.following)
                 
-                // Tab 2: MY ISLE (personal scrapbook - local items + saved posts)
+                // Tab 2: My Isle (personal scrapbook - local items + saved posts)
                 myIsleContent()
                     .tag(FeedTab.myIsle)
             }
@@ -102,7 +102,7 @@ struct MainFeedView<DiscoveryContent: View, FollowingContent: View, MyIsleConten
             
             Spacer()
             
-            // Segmented Picker for Discovery/Following/MY ISLE - aligned to far right
+            // Segmented Picker for Discovery/Following/My Isle - aligned to far right
             Picker("Feed", selection: $selectedTab) {
                 ForEach(FeedTab.allCases, id: \.rawValue) { tab in
                     Text(tab.title).tag(tab)
@@ -185,7 +185,7 @@ struct MainFeedView_Previews: PreviewProvider {
         } followingContent: {
             Text("Following Content")
         } myIsleContent: {
-            Text("MY ISLE Content")
+            Text("My Isle Content")
         }
     }
 }

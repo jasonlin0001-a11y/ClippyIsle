@@ -156,7 +156,7 @@ struct DiscoveryFeedView: View {
     
     // MARK: - Show Save Toast
     private func showSaveToastMessage(isSaved: Bool) {
-        saveToastMessage = isSaved ? "Saved to MY ISLE 🔖" : "Removed from MY ISLE"
+        saveToastMessage = isSaved ? "Saved to My Isle 🔖" : "Removed from My Isle"
         showSaveToast = true
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {

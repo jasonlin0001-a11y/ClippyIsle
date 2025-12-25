@@ -2,7 +2,7 @@
 //  EngagementService.swift
 //  ClippyIsle
 //
-//  Service for managing post engagement: Likes and Saves (to MY ISLE).
+//  Service for managing post engagement: Likes and Saves (to My Isle).
 //
 
 import Foundation
@@ -10,7 +10,7 @@ import Combine
 import FirebaseFirestore
 
 // MARK: - Saved Post Model
-/// Represents a saved post in the user's MY ISLE
+/// Represents a saved post in the user's My Isle
 struct SavedPost: Codable, Identifiable {
     var id: String
     var type: SavedItemType
@@ -33,7 +33,7 @@ struct SavedPost: Codable, Identifiable {
 }
 
 // MARK: - Engagement Service
-/// Manages post likes and saves to MY ISLE
+/// Manages post likes and saves to My Isle
 @MainActor
 class EngagementService: ObservableObject {
     static let shared = EngagementService()
@@ -50,7 +50,7 @@ class EngagementService: ObservableObject {
     /// Set of post IDs that the current user has saved
     @Published var savedPostIds: Set<String> = []
     
-    /// Saved posts for MY ISLE display
+    /// Saved posts for My Isle display
     @Published var savedPosts: [SavedPost] = []
     
     /// Loading state

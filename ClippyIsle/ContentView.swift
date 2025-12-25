@@ -198,6 +198,10 @@ struct ContentView: View {
             NotificationCenter.default.addObserver(forName: .didRequestUndo, object: nil, queue: .main) { _ in undoManager?.undo() }
             // Start listening for social notifications (new followers)
             socialNotificationService.listenToNotifications()
+            // Load saved posts for My Isle
+            Task {
+                await EngagementService.shared.loadSavedPosts()
+            }
             LaunchLogger.log("ContentView.onAppear - END")
         }
         .onChange(of: scenePhase) { oldPhase, newPhase in
@@ -426,7 +430,7 @@ struct ContentView: View {
                     SearchResultsView(viewModel: searchViewModel, themeColor: themeColor)
                 }
                 else { 
-                    // Paged feed with Discovery, Following, and MY ISLE tabs
+                    // Paged feed with Discovery, Following, and My Isle tabs
                     MainFeedView(
                         selectedTab: $selectedFeedTab,
                         themeColor: themeColor
@@ -437,7 +441,7 @@ struct ContentView: View {
                         // Following tab content - posts from creators the user follows
                         FollowingFeedView(themeColor: themeColor)
                     } myIsleContent: {
-                        // MY ISLE tab content - local clipboard items + saved posts
+                        // My Isle tab content - local clipboard items + saved posts
                         listContent
                     }
                 }
@@ -470,7 +474,7 @@ struct ContentView: View {
                     }
                 },
                 onNewItem: {
-                    // Create new text item (local clipboard function) - MY ISLE tab
+                    // Create new text item (local clipboard function) - My Isle tab
                     trackAndHighlightNewItem {
                         clipboardManager.addNewItem(content: "New Item", type: UTType.text.identifier)
                     }

@@ -101,7 +101,7 @@ struct RadialMenuView: View {
     let themeColor: Color
     let selectedTab: FeedTab  // Track which tab is selected for FAB behavior
     let onVoiceMemo: () -> Void  // Voice memo - opens microphone for voice-to-text memo
-    let onNewItem: () -> Void    // Create new text item (local clipboard) - for MY ISLE tab
+    let onNewItem: () -> Void    // Create new text item (local clipboard) - for My Isle tab
     let onCreatePost: () -> Void // Create social post - for Discovery/Following tabs (curators only)
     let onCuratorRequired: () -> Void // Callback when non-curator tries to create a post
     let onPasteFromClipboard: () -> Void
@@ -137,7 +137,7 @@ struct RadialMenuView: View {
     // Dynamic action based on selected tab (with curator permission check)
     private var newItemAction: () -> Void {
         if selectedTab == .myIsle {
-            // MY ISLE tab: anyone can create local notes
+            // My Isle tab: anyone can create local notes
             return onNewItem
         } else {
             // Discovery/Following tabs: check curator status
