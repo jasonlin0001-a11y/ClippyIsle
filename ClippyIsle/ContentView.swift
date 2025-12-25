@@ -364,7 +364,7 @@ struct ContentView: View {
             .alert("Confirm Deletion", isPresented: $isShowingDeleteConfirm, presenting: itemToDelete) { item in
                 Button("Delete", role: .destructive) { clipboardManager.moveItemToTrash(item: item) }
                 Button("Cancel", role: .cancel) {}
-            } message: { item in Text("Are you sure you want to move "\(item.displayName ?? item.content.prefix(20).description)..." to the trash?") }
+            } message: { item in Text("Are you sure you want to move \"\(item.displayName ?? String(item.content.prefix(20)))...\" to the trash?") }
             .alert("Size Limit Exceeded", isPresented: $showFirebaseSizeError) {
                 Button("OK") {}
             } message: { Text("The item exceeds the 900KB limit for Firebase sharing. Please use JSON export instead.") }
