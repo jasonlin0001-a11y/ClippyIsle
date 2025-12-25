@@ -18,14 +18,16 @@ struct CreatorProfile {
     var avatarUrl: String?
     var followersCount: Int
     var followingCount: Int
+    var isCurator: Bool
     
-    init(uid: String, displayName: String = "Unknown", bio: String? = nil, avatarUrl: String? = nil, followersCount: Int = 0, followingCount: Int = 0) {
+    init(uid: String, displayName: String = "Unknown", bio: String? = nil, avatarUrl: String? = nil, followersCount: Int = 0, followingCount: Int = 0, isCurator: Bool = false) {
         self.uid = uid
         self.displayName = displayName
         self.bio = bio
         self.avatarUrl = avatarUrl
         self.followersCount = followersCount
         self.followingCount = followingCount
+        self.isCurator = isCurator
     }
 }
 
@@ -76,7 +78,8 @@ class CreatorProfileViewModel: ObservableObject {
                     bio: data["bio"] as? String,
                     avatarUrl: data["avatar_url"] as? String ?? data["profileImageUrl"] as? String,
                     followersCount: data["followersCount"] as? Int ?? 0,
-                    followingCount: data["followingCount"] as? Int ?? 0
+                    followingCount: data["followingCount"] as? Int ?? 0,
+                    isCurator: data["isCurator"] as? Bool ?? false
                 )
                 
                 await MainActor.run {

@@ -16,11 +16,17 @@ struct CreatorProfileView: View {
     let themeColor: Color
     
     @StateObject private var viewModel: CreatorProfileViewModel
+    @ObservedObject private var authManager = AuthenticationManager.shared
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     
     @State private var selectedURL: URL?
     @State private var showSafari = false
+    
+    // Check if viewing own profile
+    private var isOwnProfile: Bool {
+        authManager.currentUID == targetUserId
+    }
     
     init(targetUserId: String, targetUserName: String, themeColor: Color = .blue) {
         self.targetUserId = targetUserId
@@ -37,6 +43,13 @@ struct CreatorProfileView: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
                     .padding(.bottom, 24)
+                
+                // Upgrade Banner (for own profile if not curator)
+                if isOwnProfile && !(viewModel.profile?.isCurator ?? false) {
+                    UpgradeBanner(themeColor: themeColor)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 16)
+                }
                 
                 // Divider
                 Divider()
@@ -108,11 +121,18 @@ struct CreatorProfileView: View {
             
             // Name and Bio
             VStack(alignment: .leading, spacing: 8) {
-                // Display Name
-                Text(viewModel.profile?.displayName ?? targetUserName)
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
+                // Display Name with Curator Badge
+                HStack(spacing: 6) {
+                    Text(viewModel.profile?.displayName ?? targetUserName)
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                    
+                    // Curator Badge
+                    if viewModel.profile?.isCurator == true {
+                        CuratorBadge(size: 18)
+                    }
+                }
                 
                 // Bio
                 if let bio = viewModel.profile?.bio, !bio.isEmpty {
@@ -129,9 +149,11 @@ struct CreatorProfileView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             
-            // Follow Button
-            FollowButton(targetUid: targetUserId, targetDisplayName: viewModel.profile?.displayName ?? targetUserName)
-                .frame(maxWidth: .infinity)
+            // Follow Button (hide for own profile)
+            if !isOwnProfile {
+                FollowButton(targetUid: targetUserId, targetDisplayName: viewModel.profile?.displayName ?? targetUserName)
+                    .frame(maxWidth: .infinity)
+            }
         }
     }
     

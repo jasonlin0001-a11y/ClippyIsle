@@ -16,7 +16,12 @@ struct UserProfile: Codable {
     var followersCount: Int
     var followingCount: Int
     
-    init(uid: String, nickname: String? = nil, bio: String? = nil, avatarUrl: String? = nil, referral_count: Int = 0, discovery_impact: Int = 0, created_at: Date = Date(), fcm_token: String? = nil, followersCount: Int = 0, followingCount: Int = 0) {
+    // Curator subscription fields
+    var isCurator: Bool
+    var subscriptionStatus: String  // "free", "active", "expired"
+    var subscriptionExpiryDate: Date?
+    
+    init(uid: String, nickname: String? = nil, bio: String? = nil, avatarUrl: String? = nil, referral_count: Int = 0, discovery_impact: Int = 0, created_at: Date = Date(), fcm_token: String? = nil, followersCount: Int = 0, followingCount: Int = 0, isCurator: Bool = false, subscriptionStatus: String = "free", subscriptionExpiryDate: Date? = nil) {
         self.uid = uid
         // Default nickname: 'User_[Last4CharsOfUID]'
         self.nickname = nickname ?? "User_\(String(uid.suffix(4)))"
@@ -28,6 +33,9 @@ struct UserProfile: Codable {
         self.fcm_token = fcm_token
         self.followersCount = followersCount
         self.followingCount = followingCount
+        self.isCurator = isCurator
+        self.subscriptionStatus = subscriptionStatus
+        self.subscriptionExpiryDate = subscriptionExpiryDate
     }
 }
 
@@ -184,6 +192,12 @@ class AuthenticationManager: ObservableObject {
                     createdAt = Date()
                 }
                 
+                // Parse subscription expiry date if present
+                var subscriptionExpiryDate: Date? = nil
+                if let expiryTimestamp = data["subscriptionExpiryDate"] as? Timestamp {
+                    subscriptionExpiryDate = expiryTimestamp.dateValue()
+                }
+                
                 self?.userProfile = UserProfile(
                     uid: data["uid"] as? String ?? uid,
                     nickname: data["nickname"] as? String,
@@ -194,7 +208,10 @@ class AuthenticationManager: ObservableObject {
                     created_at: createdAt,
                     fcm_token: data["fcm_token"] as? String,
                     followersCount: data["followersCount"] as? Int ?? 0,
-                    followingCount: data["followingCount"] as? Int ?? 0
+                    followingCount: data["followingCount"] as? Int ?? 0,
+                    isCurator: data["isCurator"] as? Bool ?? false,
+                    subscriptionStatus: data["subscriptionStatus"] as? String ?? "free",
+                    subscriptionExpiryDate: subscriptionExpiryDate
                 )
                 print("🔐 Fetched user profile: \(self?.userProfile?.nickname ?? "Unknown")")
             }
