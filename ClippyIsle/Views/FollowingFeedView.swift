@@ -216,45 +216,110 @@ struct CreatorPostCell: View {
     // MARK: - Link Preview Card
     private var linkPreviewCard: some View {
         Button(action: onTap) {
-            HStack(spacing: 12) {
-                // Link icon
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(themeColor.opacity(0.1))
-                        .frame(width: 60, height: 60)
+            // Check if we have a rich link image
+            if let linkImage = post.linkImage, !linkImage.isEmpty,
+               let imageUrl = URL(string: linkImage) {
+                // Rich Link Card with image
+                VStack(alignment: .leading, spacing: 0) {
+                    // Large image (16:9 aspect ratio)
+                    AsyncImage(url: imageUrl) { phase in
+                        switch phase {
+                        case .empty:
+                            Rectangle()
+                                .fill(Color(.systemGray5))
+                                .aspectRatio(16/9, contentMode: .fit)
+                                .overlay(
+                                    ProgressView()
+                                )
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(height: 180)
+                                .clipped()
+                        case .failure:
+                            Rectangle()
+                                .fill(Color(.systemGray5))
+                                .aspectRatio(16/9, contentMode: .fit)
+                                .overlay(
+                                    Image(systemName: "photo")
+                                        .font(.largeTitle)
+                                        .foregroundColor(.secondary)
+                                )
+                        @unknown default:
+                            Rectangle()
+                                .fill(Color(.systemGray5))
+                                .aspectRatio(16/9, contentMode: .fit)
+                        }
+                    }
                     
-                    Image(systemName: "link")
-                        .font(.title2)
-                        .foregroundColor(themeColor)
+                    // Title and domain below image
+                    VStack(alignment: .leading, spacing: 4) {
+                        // Title (use link_title, fallback to post.title)
+                        Text(post.linkTitle ?? post.title)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                        
+                        // Domain in small gray text
+                        Text(post.linkDomain ?? formattedUrl)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(.systemGray6).opacity(colorScheme == .dark ? 1.0 : 0.5))
                 }
-                
-                // Title and URL
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(post.title)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.primary)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(.systemGray6).opacity(colorScheme == .dark ? 1.0 : 0.5))
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            } else {
+                // Fallback: generic link card (no image available)
+                HStack(spacing: 12) {
+                    // Link icon
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(themeColor.opacity(0.1))
+                            .frame(width: 60, height: 60)
+                        
+                        Image(systemName: "link")
+                            .font(.title2)
+                            .foregroundColor(themeColor)
+                    }
                     
-                    Text(formattedUrl)
+                    // Title and URL
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(post.linkTitle ?? post.title)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.primary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                        
+                        Text(post.linkDomain ?? formattedUrl)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                    
+                    Spacer()
+                    
+                    // Chevron indicator
+                    Image(systemName: "chevron.right")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                        .lineLimit(1)
                 }
-                
-                Spacer()
-                
-                // Chevron indicator
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                .padding(12)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(.systemGray6).opacity(colorScheme == .dark ? 1.0 : 0.5))
+                )
             }
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.systemGray6).opacity(colorScheme == .dark ? 1.0 : 0.5))
-            )
         }
         .buttonStyle(.plain)
     }

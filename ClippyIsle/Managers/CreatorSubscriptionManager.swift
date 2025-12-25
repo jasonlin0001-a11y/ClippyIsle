@@ -19,14 +19,23 @@ struct CreatorPost: Codable, Identifiable {
     var content_url: String
     var curator_note: String?
     var created_at: Date
+    // Link preview fields
+    var link_title: String?
+    var link_image: String?
+    var link_description: String?
+    var link_domain: String?
     
-    init(id: String = UUID().uuidString, creator_uid: String, title: String, content_url: String, curator_note: String? = nil, created_at: Date = Date()) {
+    init(id: String = UUID().uuidString, creator_uid: String, title: String, content_url: String, curator_note: String? = nil, created_at: Date = Date(), link_title: String? = nil, link_image: String? = nil, link_description: String? = nil, link_domain: String? = nil) {
         self.id = id
         self.creator_uid = creator_uid
         self.title = title
         self.content_url = content_url
         self.curator_note = curator_note
         self.created_at = created_at
+        self.link_title = link_title
+        self.link_image = link_image
+        self.link_description = link_description
+        self.link_domain = link_domain
     }
 }
 

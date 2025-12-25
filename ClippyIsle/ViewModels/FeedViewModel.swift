@@ -20,6 +20,11 @@ struct FeedPost: Identifiable {
     var contentUrl: String
     var curatorNote: String?
     var createdAt: Date
+    // Link preview fields
+    var linkTitle: String?
+    var linkImage: String?
+    var linkDescription: String?
+    var linkDomain: String?
     
     init(from creatorPost: CreatorPost, creatorName: String = "Unknown Creator", creatorAvatarUrl: String? = nil) {
         self.id = creatorPost.id
@@ -30,6 +35,10 @@ struct FeedPost: Identifiable {
         self.contentUrl = creatorPost.content_url
         self.curatorNote = creatorPost.curator_note
         self.createdAt = creatorPost.created_at
+        self.linkTitle = creatorPost.link_title
+        self.linkImage = creatorPost.link_image
+        self.linkDescription = creatorPost.link_description
+        self.linkDomain = creatorPost.link_domain
     }
 }
 
@@ -172,7 +181,11 @@ class FeedViewModel: ObservableObject {
                     title: title,
                     content_url: contentUrl,
                     curator_note: data["curator_note"] as? String,
-                    created_at: timestamp.dateValue()
+                    created_at: timestamp.dateValue(),
+                    link_title: data["link_title"] as? String,
+                    link_image: data["link_image"] as? String,
+                    link_description: data["link_description"] as? String,
+                    link_domain: data["link_domain"] as? String
                 )
             }
         } catch {
