@@ -119,8 +119,8 @@ struct SocialNotificationRow: View {
     
     var body: some View {
         NavigationLink(destination: CreatorProfileView(
-            targetUid: notification.fromUserId,
-            targetDisplayName: notification.fromUserName
+            targetUserId: notification.fromUserId,
+            targetUserName: notification.fromUserName
         )) {
             HStack(spacing: 12) {
                 // Unread indicator
