@@ -169,7 +169,16 @@ struct ContentView: View {
         )
     }
 
+    // MARK: - Body (split to help compiler type-check)
+    
     var body: some View {
+        bodyWithLifecycle
+            .background(sheetsBackground)
+            .background(alertsBackground)
+    }
+    
+    @ViewBuilder
+    private var bodyWithLifecycle: some View {
         NavigationView { mainContent }
         .navigationViewStyle(.stack).tint(themeColor).preferredColorScheme(preferredColorScheme)
         // Note: Removed .searchable() modifier - using custom floating search bar instead
@@ -278,137 +287,91 @@ struct ContentView: View {
             // Sync searchText with global search ViewModel for Users/Posts search
             searchViewModel.searchText = newValue
         }
-        
-        .sheet(isPresented: $isShowingTagSheet) { TagFilterView(clipboardManager: clipboardManager, selectedTag: $selectedTagFilter) }
-        .sheet(isPresented: .init(get: { horizontalSizeClass == .compact && isShowingSettings }, set: { isShowingSettings = $0 })) {
-            SettingsView(themeColorName: $themeColorName, speechManager: speechManager, clipboardManager: clipboardManager)
-                .environmentObject(authManager)
-        }
-        .fullScreenCover(isPresented: .init(get: { horizontalSizeClass == .regular && isShowingSettings }, set: { isShowingSettings = $0 })) {
-            SettingsView(themeColorName: $themeColorName, speechManager: speechManager, clipboardManager: clipboardManager)
-                .environmentObject(authManager)
-        }
-        .sheet(isPresented: $isShowingAudioManager) {
-            NavigationView {
-                AudioFileManagerView(clipboardManager: clipboardManager, speechManager: speechManager, onOpenItem: { item in
-                    // Open the item in preview
-                    isShowingAudioManager = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        previewState = .loading(item)
-                    }
-                })
+    }
+    
+    // MARK: - Sheets Background (for compiler optimization)
+    @ViewBuilder
+    private var sheetsBackground: some View {
+        Color.clear
+            .sheet(isPresented: $isShowingTagSheet) { TagFilterView(clipboardManager: clipboardManager, selectedTag: $selectedTagFilter) }
+            .sheet(isPresented: .init(get: { horizontalSizeClass == .compact && isShowingSettings }, set: { isShowingSettings = $0 })) {
+                SettingsView(themeColorName: $themeColorName, speechManager: speechManager, clipboardManager: clipboardManager)
+                    .environmentObject(authManager)
+            }
+            .fullScreenCover(isPresented: .init(get: { horizontalSizeClass == .regular && isShowingSettings }, set: { isShowingSettings = $0 })) {
+                SettingsView(themeColorName: $themeColorName, speechManager: speechManager, clipboardManager: clipboardManager)
+                    .environmentObject(authManager)
+            }
+            .sheet(isPresented: $isShowingAudioManager) {
+                NavigationView {
+                    AudioFileManagerView(clipboardManager: clipboardManager, speechManager: speechManager, onOpenItem: { item in
+                        isShowingAudioManager = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            previewState = .loading(item)
+                        }
+                    })
                     .toolbar {
                         ToolbarItem(placement: .navigationBarTrailing) {
                             Button("Done") { isShowingAudioManager = false }
                                 .foregroundStyle(themeColor)
                         }
                     }
-            }
-            .tint(themeColor)
-        }
-        
-        .sheet(item: $itemToTag) { item in TagEditView(item: Binding(get: { item }, set: { itemToTag = $0 }), clipboardManager: clipboardManager) }
-        // iPad preview: sheet in normal mode, fullScreenCover in fullscreen mode
-        // iPhone preview: always sheet
-        // Note: onDismiss handles user-initiated dismissal (swipe down, etc.)
-        // The setter should only dismiss when not transitioning between presentation styles
-        .sheet(isPresented: .init(
-            get: { isSheetPresented && (horizontalSizeClass == .compact || !isPreviewFullscreen) },
-            set: { newValue in
-                // Only dismiss if user actually dismissed (not transitioning to fullscreen)
-                if !newValue && !isPreviewFullscreen {
-                    dismissPreview()
                 }
+                .tint(themeColor)
             }
-        ), onDismiss: {
-            // Only dismiss if not transitioning to fullscreen
-            if !isPreviewFullscreen {
-                dismissPreview()
+            .sheet(item: $itemToTag) { item in TagEditView(item: Binding(get: { item }, set: { itemToTag = $0 }), clipboardManager: clipboardManager) }
+            .sheet(isPresented: .init(
+                get: { isSheetPresented && (horizontalSizeClass == .compact || !isPreviewFullscreen) },
+                set: { newValue in if !newValue && !isPreviewFullscreen { dismissPreview() } }
+            ), onDismiss: { if !isPreviewFullscreen { dismissPreview() } }) {
+                previewSheetContent(isFullscreen: false, onToggleFullscreen: { isPreviewFullscreen = true })
             }
-        }) {
-            previewSheetContent(isFullscreen: false, onToggleFullscreen: { isPreviewFullscreen = true })
-        }
-        .fullScreenCover(isPresented: .init(
-            get: { isSheetPresented && horizontalSizeClass == .regular && isPreviewFullscreen },
-            set: { newValue in
-                // Only dismiss if user actually dismissed (not transitioning back to sheet)
-                if !newValue && isPreviewFullscreen {
-                    dismissPreview()
-                }
+            .fullScreenCover(isPresented: .init(
+                get: { isSheetPresented && horizontalSizeClass == .regular && isPreviewFullscreen },
+                set: { newValue in if !newValue && isPreviewFullscreen { dismissPreview() } }
+            ), onDismiss: { if isPreviewFullscreen { dismissPreview() } }) {
+                previewSheetContent(isFullscreen: true, onToggleFullscreen: { isPreviewFullscreen = false })
             }
-        ), onDismiss: {
-            // Only dismiss if still in fullscreen mode (user dismissed fullscreen)
-            if isPreviewFullscreen {
-                dismissPreview()
+            .sheet(isPresented: $showPaywall) { PaywallView() }
+            .sheet(isPresented: $showFirebaseShareSheet) {
+                if let urlString = firebaseShareURL { ActivityView(activityItems: [urlString]) }
             }
-        }) {
-            previewSheetContent(isFullscreen: true, onToggleFullscreen: { isPreviewFullscreen = false })
-        }
-        .alert("Rename Item", isPresented: $isShowingRenameAlert) {
-            TextField("Enter new name", text: $newName).submitLabel(.done)
-            Button("Save") { if let item = itemToRename { clipboardManager.renameItem(item: item, newName: newName) }; isShowingRenameAlert = false }
-            Button("Cancel", role: .cancel) {}
-        } message: { Text("Please enter a new name for the clipboard item.") }
-        .alert("Confirm Deletion", isPresented: $isShowingDeleteConfirm, presenting: itemToDelete) { item in
-            Button("Delete", role: .destructive) { clipboardManager.moveItemToTrash(item: item) }
-            Button("Cancel", role: .cancel) {}
-        } message: { item in Text("Are you sure you want to move “\(item.displayName ?? item.content.prefix(20).description)...” to the trash?") }
-        
-        // **NEW**: Attach Paywall Sheet
-        .sheet(isPresented: $showPaywall) {
-            PaywallView()
-        }
-        // Firebase share sheet
-        .sheet(isPresented: $showFirebaseShareSheet) {
-            if let urlString = firebaseShareURL {
-                ActivityView(activityItems: [urlString])
+            .sheet(isPresented: $pendingShareManager.showImportDialog) {
+                SharedItemsImportView(
+                    clipboardManager: clipboardManager,
+                    pendingItems: pendingShareManager.pendingItems,
+                    isPresented: $pendingShareManager.showImportDialog
+                )
+                .onDisappear { pendingShareManager.clearPendingItems() }
             }
-        }
-        // Firebase size error alert
-        .alert("Size Limit Exceeded", isPresented: $showFirebaseSizeError) {
-            Button("OK") {}
-        } message: {
-            Text("The item exceeds the 900KB limit for Firebase sharing. Please use JSON export instead.")
-        }
-        // Shared items import dialog
-        .sheet(isPresented: $pendingShareManager.showImportDialog) {
-            SharedItemsImportView(
-                clipboardManager: clipboardManager,
-                pendingItems: pendingShareManager.pendingItems,
-                isPresented: $pendingShareManager.showImportDialog
-            )
-            .onDisappear {
-                pendingShareManager.clearPendingItems()
+            .sheet(isPresented: $isShowingMessageCenter) {
+                MessageCenterView(notificationManager: notificationManager, clipboardManager: clipboardManager)
             }
-        }
-        // Message Center sheet
-        .sheet(isPresented: $isShowingMessageCenter) {
-            MessageCenterView(
-                notificationManager: notificationManager,
-                clipboardManager: clipboardManager
-            )
-        }
-        // Social Notifications sheet (Bell icon)
-        .sheet(isPresented: $isShowingSocialNotifications) {
-            SocialNotificationsView()
-        }
-        // Create Post sheet with link preview integration
-        .sheet(isPresented: $showCreatePostSheet) {
-            CreatePostView(themeColor: themeColor)
-        }
-        // Curator Required alert - shown when non-curator tries to create a post
-        .alert("Curator Access Required", isPresented: $showCuratorRequiredAlert) {
-            Button("Upgrade to Curator") {
-                showUpgradeView = true
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text(curatorAlertMessage)
-        }
-        // Upgrade View sheet (for Curator Required flow)
-        .sheet(isPresented: $showUpgradeView) {
-            UpgradeView(themeColor: themeColor)
-        }
+            .sheet(isPresented: $isShowingSocialNotifications) { SocialNotificationsView() }
+            .sheet(isPresented: $showCreatePostSheet) { CreatePostView(themeColor: themeColor) }
+            .sheet(isPresented: $showUpgradeView) { UpgradeView(themeColor: themeColor) }
+    }
+    
+    // MARK: - Alerts Background (for compiler optimization)
+    @ViewBuilder
+    private var alertsBackground: some View {
+        Color.clear
+            .alert("Rename Item", isPresented: $isShowingRenameAlert) {
+                TextField("Enter new name", text: $newName).submitLabel(.done)
+                Button("Save") { if let item = itemToRename { clipboardManager.renameItem(item: item, newName: newName) }; isShowingRenameAlert = false }
+                Button("Cancel", role: .cancel) {}
+            } message: { Text("Please enter a new name for the clipboard item.") }
+            .alert("Confirm Deletion", isPresented: $isShowingDeleteConfirm, presenting: itemToDelete) { item in
+                Button("Delete", role: .destructive) { clipboardManager.moveItemToTrash(item: item) }
+                Button("Cancel", role: .cancel) {}
+            } message: { item in Text("Are you sure you want to move "\(item.displayName ?? item.content.prefix(20).description)..." to the trash?") }
+            .alert("Size Limit Exceeded", isPresented: $showFirebaseSizeError) {
+                Button("OK") {}
+            } message: { Text("The item exceeds the 900KB limit for Firebase sharing. Please use JSON export instead.") }
+            .alert("Curator Access Required", isPresented: $showCuratorRequiredAlert) {
+                Button("Upgrade to Curator") { showUpgradeView = true }
+                Button("Cancel", role: .cancel) {}
+            } message: { Text(curatorAlertMessage) }
     }
     
     // Constant for curator alert message to help compiler
