@@ -96,6 +96,9 @@ struct ContentView: View {
     
     // Create Post sheet state
     @State private var showCreatePostSheet = false
+    
+    // Global Search ViewModel (for Users and Posts search)
+    @StateObject private var searchViewModel = SearchResultsViewModel()
 
     @AppStorage("themeColorName") private var themeColorName: String = "green"
     
@@ -267,6 +270,10 @@ struct ContentView: View {
                 }
             }
         }
+        .onChange(of: searchText) { _, newValue in
+            // Sync searchText with global search ViewModel for Users/Posts search
+            searchViewModel.searchText = newValue
+        }
         
         .sheet(isPresented: $isShowingTagSheet) { TagFilterView(clipboardManager: clipboardManager, selectedTag: $selectedTagFilter) }
         .sheet(isPresented: .init(get: { horizontalSizeClass == .compact && isShowingSettings }, set: { isShowingSettings = $0 })) {
@@ -429,6 +436,10 @@ struct ContentView: View {
             
             VStack(spacing: 0) {
                 if clipboardManager.dataLoadError != nil { dataErrorView }
+                else if !searchText.isEmpty {
+                    // Show global search results when searching
+                    SearchResultsView(viewModel: searchViewModel, themeColor: themeColor)
+                }
                 else { 
                     // Paged feed with Discovery, Following, and CC FEED tabs
                     MainFeedView(
