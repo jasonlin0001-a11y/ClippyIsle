@@ -136,26 +136,38 @@ struct CreatorPostCell: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Header: Creator Avatar + Name + Time
+            // Header: Creator Avatar + Name + Time (tappable for profile) + Follow Button
             HStack(spacing: 12) {
-                // Avatar
-                creatorAvatar
-                
-                // Name and time
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(post.creatorName)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
-                    
-                    Text(post.createdAt.timeAgoDisplay())
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                // Tappable Avatar + Name section (navigates to profile)
+                NavigationLink(destination: CreatorProfileView(
+                    targetUserId: post.creatorUid,
+                    targetUserName: post.creatorName,
+                    themeColor: themeColor
+                )) {
+                    HStack(spacing: 12) {
+                        // Avatar
+                        creatorAvatar
+                        
+                        // Name and time
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(post.creatorName)
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.primary)
+                            
+                            Text(post.createdAt.timeAgoDisplay())
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
+                .buttonStyle(.plain) // Removes default NavigationLink styling
+                .disabled(post.creatorUid.isEmpty) // Disable if no creator UID
                 
                 Spacer()
                 
                 // Follow button in header (only if showFollowButton is true)
+                // Placed outside NavigationLink so it remains independently clickable
                 if showFollowButton && !post.creatorUid.isEmpty {
                     CompactFollowButton(
                         targetUid: post.creatorUid,
