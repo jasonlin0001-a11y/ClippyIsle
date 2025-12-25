@@ -441,21 +441,19 @@ struct ContentView: View {
                             Spacer()
                         }
                     } ccFeedContent: {
-                        // CC FEED tab content - local clipboard items with floating search bar
-                        ZStack(alignment: .bottom) { 
-                            listContent
-                            
-                            // Floating Search Bar
-                            VStack {
-                                Spacer()
-                                bottomToolbar
-                                    .padding(.bottom, 10)
-                            }
-                            .background(Color.clear)
-                        }
+                        // CC FEED tab content - local clipboard items
+                        listContent
                     }
                 }
             }
+            
+            // Floating Search Bar - visible on all tabs
+            VStack {
+                Spacer()
+                bottomToolbar
+                    .padding(.bottom, 10)
+            }
+            .background(Color.clear)
             
             // Radial Menu FAB - positioned relative to full screen, not scroll content
             RadialMenuView(

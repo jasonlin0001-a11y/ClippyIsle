@@ -174,9 +174,6 @@ struct CreatorPostCell: View {
             
             // Attachment: Rich Link Preview Card
             linkPreviewCard
-            
-            // Footer: Author info row (subtle, for additional context)
-            authorFooterRow
         }
         .padding(16)
         .background(cardBackground)
@@ -186,70 +183,6 @@ struct CreatorPostCell: View {
             x: 0,
             y: 2
         )
-    }
-    
-    // MARK: - Author Footer Row
-    /// A subtle footer row showing author info
-    private var authorFooterRow: some View {
-        HStack(spacing: 6) {
-            // Small author avatar (20x20)
-            smallAuthorAvatar
-            
-            // Author name
-            Text(post.creatorName)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .lineLimit(1)
-            
-            Spacer()
-            
-            // Time indicator
-            Text("·")
-                .foregroundColor(.secondary)
-            
-            Text(post.createdAt.timeAgoDisplay())
-                .font(.caption2)
-                .foregroundColor(.secondary)
-        }
-        .padding(.top, 4)
-    }
-    
-    // MARK: - Small Author Avatar
-    private var smallAuthorAvatar: some View {
-        Group {
-            if let avatarUrlString = post.creatorAvatarUrl,
-               let avatarUrl = URL(string: avatarUrlString) {
-                AsyncImage(url: avatarUrl) { phase in
-                    switch phase {
-                    case .empty:
-                        smallAvatarPlaceholder
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    case .failure:
-                        smallAvatarPlaceholder
-                    @unknown default:
-                        smallAvatarPlaceholder
-                    }
-                }
-                .frame(width: 20, height: 20)
-                .clipShape(Circle())
-            } else {
-                smallAvatarPlaceholder
-            }
-        }
-    }
-    
-    private var smallAvatarPlaceholder: some View {
-        Circle()
-            .fill(themeColor.opacity(0.15))
-            .frame(width: 20, height: 20)
-            .overlay(
-                Text(String(post.creatorName.prefix(1)).uppercased())
-                    .font(.caption2.bold())
-                    .foregroundColor(themeColor)
-            )
     }
     
     // MARK: - Creator Avatar

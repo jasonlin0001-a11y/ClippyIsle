@@ -102,7 +102,7 @@ struct MainFeedView<DiscoveryContent: View, FollowingContent: View, CCFeedConten
             
             Spacer()
             
-            // Segmented Picker for Discovery/Following/CC FEED
+            // Segmented Picker for Discovery/Following/CC FEED - aligned to far right
             Picker("Feed", selection: $selectedTab) {
                 ForEach(FeedTab.allCases, id: \.rawValue) { tab in
                     Text(tab.title).tag(tab)
@@ -110,8 +110,6 @@ struct MainFeedView<DiscoveryContent: View, FollowingContent: View, CCFeedConten
             }
             .pickerStyle(.segmented)
             .frame(width: 240)
-            
-            Spacer()
         }
         .padding(.horizontal, 16)
         .padding(.top, 8)
