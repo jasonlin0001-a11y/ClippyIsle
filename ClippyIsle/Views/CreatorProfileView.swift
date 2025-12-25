@@ -80,15 +80,29 @@ struct CreatorProfileView: View {
                         label: "Posts"
                     )
                     
-                    statItem(
-                        count: viewModel.profile?.followersCount ?? 0,
-                        label: "Followers"
-                    )
+                    NavigationLink(destination: UserListView(
+                        userId: targetUserId,
+                        listType: .followers,
+                        themeColor: themeColor
+                    )) {
+                        statItem(
+                            count: viewModel.profile?.followersCount ?? 0,
+                            label: "Followers"
+                        )
+                    }
+                    .buttonStyle(.plain)
                     
-                    statItem(
-                        count: viewModel.profile?.followingCount ?? 0,
-                        label: "Following"
-                    )
+                    NavigationLink(destination: UserListView(
+                        userId: targetUserId,
+                        listType: .following,
+                        themeColor: themeColor
+                    )) {
+                        statItem(
+                            count: viewModel.profile?.followingCount ?? 0,
+                            label: "Following"
+                        )
+                    }
+                    .buttonStyle(.plain)
                 }
             }
             

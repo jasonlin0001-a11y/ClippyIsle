@@ -56,6 +56,7 @@ class SocialService: ObservableObject {
     private let db = Firestore.firestore()
     private let usersCollection = "users"
     private let followingSubcollection = "following"
+    private let followersSubcollection = "followers"
     
     /// Set of UIDs that the current user is following (cached locally)
     @Published var followingSet: Set<String> = []
@@ -113,6 +114,9 @@ class SocialService: ObservableObject {
             try await followingDocRef.setData(data)
             print("✅ [SocialService] Followed user: \(targetUid)")
             
+            // Dual-write: Also add to target user's followers subcollection
+            try await addToFollowersList(targetUid: targetUid, currentUid: currentUid)
+            
             // Increment followersCount on target user's document
             try await incrementFollowersCount(targetUid: targetUid)
             
@@ -151,6 +155,9 @@ class SocialService: ObservableObject {
             
             try await followingDocRef.delete()
             print("✅ [SocialService] Unfollowed user: \(targetUid)")
+            
+            // Dual-write: Also remove from target user's followers subcollection
+            try await removeFromFollowersList(targetUid: targetUid, currentUid: currentUid)
             
             // Decrement followersCount on target user's document
             try await decrementFollowersCount(targetUid: targetUid)
@@ -341,6 +348,40 @@ class SocialService: ObservableObject {
             "followersCount": FieldValue.increment(Int64(-1))
         ])
         print("📊 [SocialService] Decremented followers count for: \(targetUid)")
+    }
+    
+    /// Adds the current user to the target user's followers subcollection (dual-write)
+    private func addToFollowersList(targetUid: String, currentUid: String) async throws {
+        // Get current user's display name for caching
+        let currentUserDoc = try await db.collection(usersCollection).document(currentUid).getDocument()
+        let displayName = currentUserDoc.data()?["nickname"] as? String ?? currentUserDoc.data()?["displayName"] as? String
+        
+        // Path: users/{targetUid}/followers/{currentUid}
+        let followersDocRef = db.collection(usersCollection)
+            .document(targetUid)
+            .collection(followersSubcollection)
+            .document(currentUid)
+        
+        let data: [String: Any] = [
+            "uid": currentUid,
+            "timestamp": Timestamp(date: Date()),
+            "displayName": displayName ?? NSNull()
+        ]
+        
+        try await followersDocRef.setData(data)
+        print("📝 [SocialService] Added to followers list of: \(targetUid)")
+    }
+    
+    /// Removes the current user from the target user's followers subcollection (dual-write)
+    private func removeFromFollowersList(targetUid: String, currentUid: String) async throws {
+        // Path: users/{targetUid}/followers/{currentUid}
+        let followersDocRef = db.collection(usersCollection)
+            .document(targetUid)
+            .collection(followersSubcollection)
+            .document(currentUid)
+        
+        try await followersDocRef.delete()
+        print("📝 [SocialService] Removed from followers list of: \(targetUid)")
     }
     
     // MARK: - Cleanup
