@@ -12,10 +12,14 @@ import SafariServices
 /// Displays the feed of posts from creators the user follows
 struct FollowingFeedView: View {
     @StateObject private var viewModel = FeedViewModel()
+    @StateObject private var safetyService = SafetyService.shared
     @State private var selectedURL: URL?
     @State private var showSafari = false
     @State private var showSaveToast = false
     @State private var saveToastMessage = ""
+    @State private var showBlockToast = false
+    @State private var blockToastMessage = ""
+    @State private var showReportToast = false
     
     let themeColor: Color
     @Environment(\.colorScheme) private var colorScheme
@@ -51,9 +55,50 @@ struct FollowingFeedView: View {
                 }
                 .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showSaveToast)
             }
+            
+            // Block Toast
+            if showBlockToast {
+                VStack {
+                    Spacer()
+                    Text(blockToastMessage)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(
+                            Capsule()
+                                .fill(Color.red.opacity(0.9))
+                        )
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .padding(.bottom, 100)
+                }
+                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showBlockToast)
+            }
+            
+            // Report Toast
+            if showReportToast {
+                VStack {
+                    Spacer()
+                    Text("Report submitted / 檢舉已提交 ✓")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(
+                            Capsule()
+                                .fill(Color.orange.opacity(0.9))
+                        )
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .padding(.bottom, 100)
+                }
+                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showReportToast)
+            }
         }
         .task {
             await viewModel.fetchFollowingFeed()
+            await safetyService.loadBlockedUsers()
         }
         .sheet(isPresented: $showSafari) {
             if let url = selectedURL {
@@ -62,11 +107,16 @@ struct FollowingFeedView: View {
         }
     }
     
+    // MARK: - Filtered Posts (excluding blocked users)
+    private var filteredPosts: [FeedPost] {
+        viewModel.feedPosts.filter { !safetyService.isUserBlocked(userId: $0.creatorUid) }
+    }
+    
     // MARK: - Feed List
     private var feedList: some View {
         ScrollView {
             LazyVStack(spacing: 16) {
-                ForEach(viewModel.feedPosts) { post in
+                ForEach(filteredPosts) { post in
                     CreatorPostCell(
                         post: post,
                         themeColor: themeColor,
@@ -79,6 +129,12 @@ struct FollowingFeedView: View {
                         showFollowButton: false, // Already following these creators
                         onSaveToggle: { isSaved in
                             showSaveToastMessage(isSaved: isSaved)
+                        },
+                        onUserBlocked: { uid, name in
+                            showBlockToastMessage(userName: name)
+                        },
+                        onPostReported: {
+                            showReportToastMessage()
                         }
                     )
                     .padding(.horizontal, 16)
@@ -98,6 +154,25 @@ struct FollowingFeedView: View {
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             showSaveToast = false
+        }
+    }
+    
+    // MARK: - Show Block Toast
+    private func showBlockToastMessage(userName: String) {
+        blockToastMessage = "Blocked \(userName). Content hidden. / 已封鎖 \(userName)。內容已隱藏。"
+        showBlockToast = true
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            showBlockToast = false
+        }
+    }
+    
+    // MARK: - Show Report Toast
+    private func showReportToastMessage() {
+        showReportToast = true
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            showReportToast = false
         }
     }
     
@@ -168,17 +243,27 @@ struct CreatorPostCell: View {
     var showFollowButton: Bool = true
     /// Callback when save button is tapped (shows toast)
     var onSaveToggle: ((Bool) -> Void)? = nil
+    /// Callback when user is blocked
+    var onUserBlocked: ((String, String) -> Void)? = nil
+    /// Callback when post is reported
+    var onPostReported: (() -> Void)? = nil
     
     @Environment(\.colorScheme) private var colorScheme
     @StateObject private var engagementService = EngagementService.shared
+    @StateObject private var safetyService = SafetyService.shared
     
     // Animation states
     @State private var isLikeAnimating = false
     @State private var isSaveAnimating = false
     
+    // Report/Block states
+    @State private var showReportSheet = false
+    @State private var showBlockConfirmation = false
+    @State private var selectedReportReason: Report.ReportReason?
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Header: Creator Avatar + Name + Time (tappable for profile) + Follow Button
+            // Header: Creator Avatar + Name + Time (tappable for profile) + Follow Button + More Menu
             HStack(spacing: 12) {
                 // Tappable Avatar + Name section (navigates to profile)
                 NavigationLink(destination: CreatorProfileView(
@@ -216,6 +301,9 @@ struct CreatorPostCell: View {
                         targetDisplayName: post.creatorName
                     )
                 }
+                
+                // More menu (Report/Block)
+                moreMenu
             }
             
             // Body: Curator Note (if available)
@@ -503,6 +591,140 @@ struct CreatorPostCell: View {
             return url.host ?? post.contentUrl
         }
         return post.contentUrl
+    }
+    
+    // MARK: - More Menu (Report/Block)
+    private var moreMenu: some View {
+        Menu {
+            // Report Post
+            Button(role: .none) {
+                showReportSheet = true
+            } label: {
+                Label("Report Post / 檢舉貼文", systemImage: "exclamationmark.triangle")
+            }
+            
+            // Block User (destructive)
+            if !post.creatorUid.isEmpty {
+                Button(role: .destructive) {
+                    showBlockConfirmation = true
+                } label: {
+                    Label("Block User / 封鎖用戶", systemImage: "nosign")
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.secondary)
+                .frame(width: 32, height: 32)
+                .contentShape(Rectangle())
+        }
+        .sheet(isPresented: $showReportSheet) {
+            ReportPostSheet(
+                postId: post.id,
+                onReport: { reason in
+                    submitReport(reason: reason)
+                }
+            )
+        }
+        .alert("Block User / 封鎖用戶", isPresented: $showBlockConfirmation) {
+            Button("Cancel / 取消", role: .cancel) {}
+            Button("Block / 封鎖", role: .destructive) {
+                blockUser()
+            }
+        } message: {
+            Text("Block \(post.creatorName)? You won't see their posts anymore.\n\n封鎖 \(post.creatorName)？你將不再看到他們的貼文。")
+        }
+    }
+    
+    // MARK: - Submit Report
+    private func submitReport(reason: Report.ReportReason) {
+        Task {
+            do {
+                try await safetyService.reportPost(postId: post.id, reason: reason)
+                
+                // Haptic feedback
+                let generator = UINotificationFeedbackGenerator()
+                generator.notificationOccurred(.success)
+                
+                // Notify parent
+                onPostReported?()
+            } catch {
+                print("❌ Report failed: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    // MARK: - Block User
+    private func blockUser() {
+        Task {
+            do {
+                try await safetyService.blockUser(targetUid: post.creatorUid, displayName: post.creatorName)
+                
+                // Haptic feedback
+                let generator = UINotificationFeedbackGenerator()
+                generator.notificationOccurred(.success)
+                
+                // Notify parent
+                onUserBlocked?(post.creatorUid, post.creatorName)
+            } catch {
+                print("❌ Block failed: \(error.localizedDescription)")
+            }
+        }
+    }
+}
+
+// MARK: - Report Post Sheet
+/// Sheet for selecting a report reason
+struct ReportPostSheet: View {
+    let postId: String
+    let onReport: (Report.ReportReason) -> Void
+    
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedReason: Report.ReportReason?
+    
+    var body: some View {
+        NavigationView {
+            List {
+                Section {
+                    ForEach(Report.ReportReason.allCases, id: \.self) { reason in
+                        Button {
+                            selectedReason = reason
+                        } label: {
+                            HStack {
+                                Text(reason.displayName)
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                if selectedReason == reason {
+                                    Image(systemName: "checkmark")
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Why are you reporting this post?\n為什麼要檢舉這則貼文？")
+                }
+            }
+            .navigationTitle("Report / 檢舉")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel / 取消") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Submit / 提交") {
+                        if let reason = selectedReason {
+                            onReport(reason)
+                            dismiss()
+                        }
+                    }
+                    .disabled(selectedReason == nil)
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 }
 
