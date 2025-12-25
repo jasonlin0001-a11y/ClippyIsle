@@ -90,6 +90,10 @@ struct ContentView: View {
     @State private var isShowingMessageCenter = false
     @StateObject private var notificationManager = NotificationManager.shared
     
+    // Social Notifications state (Bell icon)
+    @State private var isShowingSocialNotifications = false
+    @StateObject private var socialNotificationService = SocialNotificationService.shared
+    
     // Create Post sheet state
     @State private var showCreatePostSheet = false
 
@@ -176,6 +180,8 @@ struct ContentView: View {
             configureNavigationBarAppearance()
             checkActivityStatus()
             NotificationCenter.default.addObserver(forName: .didRequestUndo, object: nil, queue: .main) { _ in undoManager?.undo() }
+            // Start listening for social notifications (new followers)
+            socialNotificationService.listenToNotifications()
             LaunchLogger.log("ContentView.onAppear - END")
         }
         .onChange(of: scenePhase) { oldPhase, newPhase in
@@ -371,6 +377,10 @@ struct ContentView: View {
                 clipboardManager: clipboardManager
             )
         }
+        // Social Notifications sheet (Bell icon)
+        .sheet(isPresented: $isShowingSocialNotifications) {
+            SocialNotificationsView()
+        }
         // Create Post sheet with link preview integration
         .sheet(isPresented: $showCreatePostSheet) {
             CreatePostView(themeColor: themeColor)
@@ -550,7 +560,29 @@ struct ContentView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 // Unified capsule container for navigation icons
                 let hasUnreadNotifications = notificationManager.unreadCount > 0
+                let hasSocialNotifications = socialNotificationService.unreadCount > 0
                 HStack(spacing: 4) {
+                    // Social Notifications (Bell icon) with badge
+                    Button { isShowingSocialNotifications = true } label: {
+                        ZStack {
+                            Image(systemName: "bell.fill")
+                                .font(.system(size: navIconFontSize, weight: .semibold))
+                                .foregroundColor(themeColor)
+                            
+                            // Badge for unread count
+                            if hasSocialNotifications {
+                                Text("\(socialNotificationService.unreadCount)")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .frame(minWidth: 14, minHeight: 14)
+                                    .background(Color.red)
+                                    .clipShape(Circle())
+                                    .offset(x: 8, y: -8)
+                            }
+                        }
+                        .frame(width: navIconWidth, height: navIconHeight)
+                    }
+                    
                     // Message Center button with badge (uniform style - no individual background)
                     Button { isShowingMessageCenter = true } label: {
                         ZStack {

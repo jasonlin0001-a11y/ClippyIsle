@@ -120,6 +120,9 @@ class SocialService: ObservableObject {
             // Increment followersCount on target user's document
             try await incrementFollowersCount(targetUid: targetUid)
             
+            // Create notification for the target user
+            try await createFollowNotification(targetUid: targetUid, currentUid: currentUid)
+            
             // Update local cache
             followingSet.insert(targetUid)
             if !followingList.contains(where: { $0.uid == targetUid }) {
@@ -382,6 +385,26 @@ class SocialService: ObservableObject {
         
         try await followersDocRef.delete()
         print("📝 [SocialService] Removed from followers list of: \(targetUid)")
+    }
+    
+    /// Creates a new follower notification for the target user
+    private func createFollowNotification(targetUid: String, currentUid: String) async throws {
+        // Get current user's display name and avatar
+        let currentUserDoc = try await db.collection(usersCollection).document(currentUid).getDocument()
+        let displayName = currentUserDoc.data()?["nickname"] as? String 
+            ?? currentUserDoc.data()?["displayName"] as? String 
+            ?? "Someone"
+        let avatarUrl = currentUserDoc.data()?["avatar_url"] as? String
+        
+        // Create the notification
+        try await SocialNotificationService.shared.createNotification(
+            targetUid: targetUid,
+            type: .newFollower,
+            fromUserId: currentUid,
+            fromUserName: displayName,
+            fromUserAvatarUrl: avatarUrl
+        )
+        print("🔔 [SocialService] Created follow notification for: \(targetUid)")
     }
     
     // MARK: - Cleanup
