@@ -14,6 +14,8 @@ struct DiscoveryFeedView: View {
     @StateObject private var viewModel = FeedViewModel()
     @State private var selectedURL: URL?
     @State private var showSafari = false
+    @State private var showSaveToast = false
+    @State private var saveToastMessage = ""
     
     let themeColor: Color
     @Environment(\.colorScheme) private var colorScheme
@@ -28,6 +30,26 @@ struct DiscoveryFeedView: View {
                 errorView(error)
             } else {
                 feedList
+            }
+            
+            // Save Toast
+            if showSaveToast {
+                VStack {
+                    Spacer()
+                    Text(saveToastMessage)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(
+                            Capsule()
+                                .fill(Color.black.opacity(0.8))
+                        )
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .padding(.bottom, 100)
+                }
+                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showSaveToast)
             }
         }
         .onAppear {
@@ -58,6 +80,9 @@ struct DiscoveryFeedView: View {
                                 selectedURL = url
                                 showSafari = true
                             }
+                        },
+                        onSaveToggle: { isSaved in
+                            showSaveToastMessage(isSaved: isSaved)
                         }
                     )
                     .padding(.horizontal, 16)
@@ -67,6 +92,16 @@ struct DiscoveryFeedView: View {
         }
         .refreshable {
             await viewModel.fetchDiscoveryFeed()
+        }
+    }
+    
+    // MARK: - Show Save Toast
+    private func showSaveToastMessage(isSaved: Bool) {
+        saveToastMessage = isSaved ? "Saved to CC FEED 🔖" : "Removed from CC FEED"
+        showSaveToast = true
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            showSaveToast = false
         }
     }
     

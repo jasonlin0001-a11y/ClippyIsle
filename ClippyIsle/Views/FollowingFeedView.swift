@@ -14,6 +14,8 @@ struct FollowingFeedView: View {
     @StateObject private var viewModel = FeedViewModel()
     @State private var selectedURL: URL?
     @State private var showSafari = false
+    @State private var showSaveToast = false
+    @State private var saveToastMessage = ""
     
     let themeColor: Color
     @Environment(\.colorScheme) private var colorScheme
@@ -28,6 +30,26 @@ struct FollowingFeedView: View {
                 errorView(error)
             } else {
                 feedList
+            }
+            
+            // Save Toast
+            if showSaveToast {
+                VStack {
+                    Spacer()
+                    Text(saveToastMessage)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(
+                            Capsule()
+                                .fill(Color.black.opacity(0.8))
+                        )
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .padding(.bottom, 100)
+                }
+                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showSaveToast)
             }
         }
         .task {
@@ -54,7 +76,10 @@ struct FollowingFeedView: View {
                                 showSafari = true
                             }
                         },
-                        showFollowButton: false // Already following these creators
+                        showFollowButton: false, // Already following these creators
+                        onSaveToggle: { isSaved in
+                            showSaveToastMessage(isSaved: isSaved)
+                        }
                     )
                     .padding(.horizontal, 16)
                 }
@@ -63,6 +88,16 @@ struct FollowingFeedView: View {
         }
         .refreshable {
             await viewModel.refreshFeed()
+        }
+    }
+    
+    // MARK: - Show Save Toast
+    private func showSaveToastMessage(isSaved: Bool) {
+        saveToastMessage = isSaved ? "Saved to CC FEED 🔖" : "Removed from CC FEED"
+        showSaveToast = true
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            showSaveToast = false
         }
     }
     
@@ -131,8 +166,15 @@ struct CreatorPostCell: View {
     let onTap: () -> Void
     /// Show follow button in footer (default: true for Discovery, false for Following tab)
     var showFollowButton: Bool = true
+    /// Callback when save button is tapped (shows toast)
+    var onSaveToggle: ((Bool) -> Void)? = nil
     
     @Environment(\.colorScheme) private var colorScheme
+    @StateObject private var engagementService = EngagementService.shared
+    
+    // Animation states
+    @State private var isLikeAnimating = false
+    @State private var isSaveAnimating = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -186,6 +228,9 @@ struct CreatorPostCell: View {
             
             // Attachment: Rich Link Preview Card
             linkPreviewCard
+            
+            // Footer: Engagement Actions (Like + Save)
+            engagementFooter
         }
         .padding(16)
         .background(cardBackground)
@@ -195,6 +240,94 @@ struct CreatorPostCell: View {
             x: 0,
             y: 2
         )
+    }
+    
+    // MARK: - Engagement Footer
+    private var engagementFooter: some View {
+        HStack(spacing: 20) {
+            // Like Button
+            Button {
+                toggleLike()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: engagementService.isPostLiked(postId: post.id) ? "heart.fill" : "heart")
+                        .font(.system(size: 18))
+                        .foregroundColor(engagementService.isPostLiked(postId: post.id) ? .red : .secondary)
+                        .scaleEffect(isLikeAnimating ? 1.3 : 1.0)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.5), value: isLikeAnimating)
+                    
+                    if post.likes > 0 {
+                        Text("\(post.likes)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+            
+            // Save to CC FEED Button (Bookmark)
+            Button {
+                toggleSave()
+            } label: {
+                Image(systemName: engagementService.isPostSaved(postId: post.id) ? "bookmark.fill" : "bookmark")
+                    .font(.system(size: 18))
+                    .foregroundColor(engagementService.isPostSaved(postId: post.id) ? themeColor : .secondary)
+                    .scaleEffect(isSaveAnimating ? 1.3 : 1.0)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.5), value: isSaveAnimating)
+            }
+            .buttonStyle(.plain)
+            
+            Spacer()
+        }
+        .padding(.top, 4)
+    }
+    
+    // MARK: - Toggle Like
+    private func toggleLike() {
+        // Animate
+        isLikeAnimating = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            isLikeAnimating = false
+        }
+        
+        // Haptic feedback
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
+        
+        Task {
+            do {
+                try await engagementService.toggleLike(postId: post.id)
+            } catch {
+                print("❌ Like toggle failed: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    // MARK: - Toggle Save
+    private func toggleSave() {
+        // Animate
+        isSaveAnimating = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            isSaveAnimating = false
+        }
+        
+        // Haptic feedback
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+        
+        let wasSaved = engagementService.isPostSaved(postId: post.id)
+        
+        Task {
+            do {
+                try await engagementService.toggleSave(post: post)
+                // Notify parent about save toggle for toast
+                await MainActor.run {
+                    onSaveToggle?(!wasSaved)
+                }
+            } catch {
+                print("❌ Save toggle failed: \(error.localizedDescription)")
+            }
+        }
     }
     
     // MARK: - Creator Avatar
