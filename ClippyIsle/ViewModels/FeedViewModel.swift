@@ -351,6 +351,11 @@ class FeedViewModel: ObservableObject {
                         if posts.isEmpty {
                             print("📄 Sample document ID: \(doc.documentID)")
                             print("📄 Sample document fields: \(data.keys.joined(separator: ", "))")
+                            // Debug: Print link preview field values
+                            print("📄 link_image: \(data["link_image"] ?? "nil")")
+                            print("📄 link_title: \(data["link_title"] ?? "nil")")
+                            print("📄 link_domain: \(data["link_domain"] ?? "nil")")
+                            print("📄 link_description: \(data["link_description"] ?? "nil")")
                         }
                         
                         // Create FeedPost with robust decoding
@@ -360,6 +365,12 @@ class FeedViewModel: ObservableObject {
                             creatorName: "Creator", // Will be enriched later
                             creatorAvatarUrl: nil
                         )
+                        
+                        // Debug: Print decoded post link preview fields
+                        if posts.isEmpty {
+                            print("📄 Decoded post.linkImage: \(post.linkImage ?? "nil")")
+                            print("📄 Decoded post.linkTitle: \(post.linkTitle ?? "nil")")
+                        }
                         
                         // Validate we have at least a content_url or title
                         if !post.contentUrl.isEmpty || !post.title.isEmpty {

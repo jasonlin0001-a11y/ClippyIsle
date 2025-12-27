@@ -464,7 +464,10 @@ struct CreatorPostCell: View {
     
     // MARK: - Link Preview Card
     private var linkPreviewCard: some View {
-        Button(action: onTap) {
+        // Debug: Log link preview data for troubleshooting
+        let _ = print("🔍 Post \(post.id): linkImage=\(post.linkImage ?? "nil"), linkTitle=\(post.linkTitle ?? "nil")")
+        
+        return Button(action: onTap) {
             // Check if we have a rich link image
             if let linkImage = post.linkImage, !linkImage.isEmpty,
                let imageUrl = URL(string: linkImage) {
