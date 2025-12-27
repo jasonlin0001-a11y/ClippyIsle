@@ -464,9 +464,6 @@ struct CreatorPostCell: View {
     
     // MARK: - Link Preview Card
     private var linkPreviewCard: some View {
-        // Debug: Log link preview data for troubleshooting
-        let _ = print("🔍 Post \(post.id): linkImage=\(post.linkImage ?? "nil"), linkTitle=\(post.linkTitle ?? "nil")")
-        
         // Helper to parse URL, handling potential encoding issues
         let parsedImageUrl: URL? = {
             guard let linkImage = post.linkImage, !linkImage.isEmpty else { return nil }

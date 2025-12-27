@@ -338,16 +338,11 @@ class FeedViewModel: ObservableObject {
                         return
                     }
                     
-                    print("📦 Discovery: Fetched \(documents.count) documents from Firestore")
-                    
-                    // Decode documents with robust error handling
+                    // Decode documents - match CreatorProfileViewModel.fetchPosts() exactly
                     var posts: [FeedPost] = []
-                    var decodingErrors: [String] = []
                     
                     for doc in documents {
                         let data = doc.data()
-                        
-                        // Create FeedPost with robust decoding
                         let post = FeedPost(
                             id: doc.documentID,
                             data: data,
@@ -355,34 +350,8 @@ class FeedViewModel: ObservableObject {
                             creatorAvatarUrl: nil
                         )
                         
-                        // Debug: Print ALL fields for first post to diagnose rich preview issue
-                        if posts.isEmpty {
-                            print("🔍 DISCOVERY FIRST POST DEBUG:")
-                            print("   id: \(post.id)")
-                            print("   title: \(post.title)")
-                            print("   contentUrl: \(post.contentUrl)")
-                            print("   linkTitle: \(post.linkTitle ?? "nil")")
-                            print("   linkImage: \(post.linkImage ?? "nil")")
-                            print("   linkDomain: \(post.linkDomain ?? "nil")")
-                            print("   linkDescription: \(post.linkDescription ?? "nil")")
-                            print("   curatorNote: \(post.curatorNote ?? "nil")")
-                            print("🔍 RAW FIRESTORE DATA:")
-                            print("   link_image raw: \(String(describing: data["link_image"]))")
-                            print("   link_title raw: \(String(describing: data["link_title"]))")
-                        }
-                        
-                        // Validate we have at least a content_url or title
                         if !post.contentUrl.isEmpty || !post.title.isEmpty {
                             posts.append(post)
-                        } else {
-                            decodingErrors.append("Document \(doc.documentID) missing required fields")
-                        }
-                    }
-                    
-                    if !decodingErrors.isEmpty {
-                        print("⚠️ Discovery: \(decodingErrors.count) decoding errors:")
-                        for error in decodingErrors.prefix(5) {
-                            print("   - \(error)")
                         }
                     }
                     
