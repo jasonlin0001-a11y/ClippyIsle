@@ -374,20 +374,17 @@ class AuthenticationManager: ObservableObject {
             }
             
             // Handle specific Firebase Auth errors
-            if let errorCode = AuthErrorCode.Code(rawValue: error.code) {
-                switch errorCode {
-                case .emailAlreadyInUse:
-                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "This email is already in use by another account."])
-                case .weakPassword:
-                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Password is too weak. Please use at least 6 characters."])
-                case .invalidEmail:
-                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Invalid email address format."])
-                default:
-                    throw error
-                }
+            let errorCode = AuthErrorCode(_nsError: error)
+            switch errorCode.code {
+            case .emailAlreadyInUse:
+                throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "This email is already in use by another account."])
+            case .weakPassword:
+                throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Password is too weak. Please use at least 6 characters."])
+            case .invalidEmail:
+                throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Invalid email address format."])
+            default:
+                throw error
             }
-            
-            throw error
         }
     }
     
@@ -450,24 +447,21 @@ class AuthenticationManager: ObservableObject {
             }
             
             // Handle specific Firebase Auth errors
-            if let errorCode = AuthErrorCode.Code(rawValue: error.code) {
-                switch errorCode {
-                case .wrongPassword:
-                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Incorrect password. Please try again."])
-                case .userNotFound:
-                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "No account found with this email. Please sign up first."])
-                case .invalidEmail:
-                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Invalid email address format."])
-                case .userDisabled:
-                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "This account has been disabled."])
-                case .tooManyRequests:
-                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Too many failed attempts. Please try again later."])
-                default:
-                    throw error
-                }
+            let errorCode = AuthErrorCode(_nsError: error)
+            switch errorCode.code {
+            case .wrongPassword:
+                throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Incorrect password. Please try again."])
+            case .userNotFound:
+                throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "No account found with this email. Please sign up first."])
+            case .invalidEmail:
+                throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Invalid email address format."])
+            case .userDisabled:
+                throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "This account has been disabled."])
+            case .tooManyRequests:
+                throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Too many failed attempts. Please try again later."])
+            default:
+                throw error
             }
-            
-            throw error
         }
     }
     
@@ -502,20 +496,17 @@ class AuthenticationManager: ObservableObject {
             }
             
             // Handle specific Firebase Auth errors
-            if let errorCode = AuthErrorCode.Code(rawValue: error.code) {
-                switch errorCode {
-                case .emailAlreadyInUse:
-                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "This email is already in use. Please sign in instead."])
-                case .weakPassword:
-                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Password is too weak. Please use at least 6 characters."])
-                case .invalidEmail:
-                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Invalid email address format."])
-                default:
-                    throw error
-                }
+            let errorCode = AuthErrorCode(_nsError: error)
+            switch errorCode.code {
+            case .emailAlreadyInUse:
+                throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "This email is already in use. Please sign in instead."])
+            case .weakPassword:
+                throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Password is too weak. Please use at least 6 characters."])
+            case .invalidEmail:
+                throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Invalid email address format."])
+            default:
+                throw error
             }
-            
-            throw error
         }
     }
     
