@@ -216,6 +216,15 @@ struct SearchPostCard: View {
                     .foregroundColor(.primary)
                     .lineLimit(2)
                 
+                // Link Description (if available)
+                if let desc = post.linkDescription, !desc.isEmpty {
+                    Text(desc)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .lineLimit(3)
+                        .truncationMode(.tail)
+                }
+                
                 // Curator note (if present)
                 if let note = post.curatorNote, !note.isEmpty {
                     Text(note)

@@ -6,12 +6,17 @@
       "**/.*",
       "**/node_modules/**"
     ],
+<<<<<<< HEAD
     
     // 🔥 關鍵修正：加入這行！
     // 這會告訴 Firebase："當有人訪問 /dashboard 時，請自動開啟 dashboard.html"
     "cleanUrls": true,
 
     // 👇 這邊保留您原本的設定 (不用動)
+=======
+    "cleanUrls": true,
+    "trailingSlash": false,
+>>>>>>> copilot/create-firebase-function-scrape-metadata
     "rewrites": [
       {
         "source": "/u/**",
@@ -24,17 +29,6 @@
       {
         "source": "/article/**",
         "destination": "/index.html"
-      }
-    ],
-    "headers": [
-      {
-        "source": "/.well-known/apple-app-site-association",
-        "headers": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ]
       }
     ]
   },

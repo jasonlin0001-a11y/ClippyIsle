@@ -52,7 +52,7 @@ export default function CreatePostPage() {
 
   useEffect(() => {
     if (!loading && user && !isAdmin) {
-      router.push('/');
+      router.push('/dashboard');
     }
   }, [user, isAdmin, loading, router]);
 
@@ -136,7 +136,7 @@ export default function CreatePostPage() {
       });
 
       // Redirect to dashboard on success
-      router.push('/');
+      router.push('/dashboard');
     } catch (err) {
       console.error('Error creating post:', err);
       setError(err instanceof Error ? err.message : 'Failed to create post. Please try again.');
@@ -174,7 +174,7 @@ export default function CreatePostPage() {
       <div className="max-w-[600px] mx-auto">
         {/* Back Button */}
         <button
-          onClick={() => router.push('/')}
+          onClick={() => router.push('/dashboard')}
           className="inline-flex items-center gap-2 text-[#fafafa]/60 hover:text-[#fafafa] mb-6 transition-colors"
         >
           <ArrowLeft className="h-5 w-5" />
