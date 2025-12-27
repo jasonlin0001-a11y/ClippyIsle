@@ -1,189 +1,88 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
-import { fetchAllPosts } from '@/lib/posts';
-import { Post } from '@/types';
-import PostList from '@/components/PostList';
-import { Loader2, LogOut, ShieldAlert, ShieldCheck, RefreshCw, FileText, Plus } from 'lucide-react';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Loader2 } from 'lucide-react';
 
-export default function Home() {
-  const { user, isAdmin, loading, signOut } = useAuth();
-  const router = useRouter();
-  
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [postsLoading, setPostsLoading] = useState(true);
-  const [postsError, setPostsError] = useState<string | null>(null);
-
-  const loadPosts = useCallback(async () => {
-    setPostsLoading(true);
-    setPostsError(null);
-    try {
-      const fetchedPosts = await fetchAllPosts();
-      setPosts(fetchedPosts);
-    } catch (error) {
-      console.error('Failed to fetch posts:', error);
-      setPostsError('Failed to load posts. Please try again.');
-    } finally {
-      setPostsLoading(false);
-    }
-  }, []);
+// 這是內層組件，專門處理 ?id=xxx
+function RedirectContent() {
+  const searchParams = useSearchParams();
+  const id = searchParams.get('id'); // 抓取網址上的 ?id=...
+  const [status, setStatus] = useState<'loading' | 'error' | 'found'>('loading');
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
+    if (!id) {
+      setStatus('error'); // 沒 ID，顯示錯誤
+      return;
     }
-  }, [user, loading, router]);
 
-  useEffect(() => {
-    if (isAdmin) {
-      loadPosts();
+    async function checkPost() {
+      try {
+        // 嘗試去資料庫找這篇文章
+        const docRef = doc(db, 'creator_posts', id!);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          // 找到了！執行轉址邏輯 (這裡先暫時顯示成功，之後可接 Deep Link)
+          // window.location.href = `clippyisle://post/${id}`;
+          setStatus('found');
+        } else {
+          setStatus('error');
+        }
+      } catch (e) {
+        console.error(e);
+        setStatus('error');
+      }
     }
-  }, [isAdmin, loadPosts]);
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      router.push('/login');
-    } catch (error) {
-      console.error('Failed to sign out:', error);
-    }
-  };
+    checkPost();
+  }, [id]);
 
-  const handlePostDeleted = (postId: string) => {
-    // Optimistically remove the post from UI
-    setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
-  };
-
-  // Loading state
-  if (loading) {
+  if (status === 'loading') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a]">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-10 w-10 animate-spin text-teal-500" />
-          <p className="text-[#fafafa]/60">Loading...</p>
-        </div>
+      <div className="flex flex-col items-center gap-4">
+        <Loader2 className="h-10 w-10 animate-spin text-teal-500" />
+        <p className="text-[#fafafa]/60">正在尋找您的島嶼...</p>
       </div>
     );
   }
 
-  // Not logged in - will redirect
-  if (!user) {
+  if (status === 'found') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a]">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-10 w-10 animate-spin text-teal-500" />
-          <p className="text-[#fafafa]/60">Redirecting to login...</p>
-        </div>
+      <div className="text-center p-8 bg-[#1a1a1a] rounded-xl border border-[#2a2a2a] max-w-md">
+        <h1 className="text-2xl font-bold text-[#fafafa] mb-4">找到了！</h1>
+        <p className="text-[#fafafa]/60 mb-6">這篇文章存在，正在嘗試開啟 App...</p>
+        <button className="px-6 py-3 bg-teal-600 hover:bg-teal-500 text-white rounded-lg font-medium transition-colors">
+          開啟 CC ISLE App
+        </button>
       </div>
     );
   }
 
-  // Logged in but not admin - Access Denied
-  if (!isAdmin) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] p-4">
-        <div className="max-w-md text-center">
-          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-red-500/10 border border-red-500/20">
-            <ShieldAlert className="h-10 w-10 text-red-400" />
-          </div>
-          <h1 className="text-2xl font-bold text-[#fafafa] mb-3">Access Denied</h1>
-          <p className="text-[#fafafa]/60 mb-6">
-            You do not have administrator privileges. Only authorized admins can access this portal.
-          </p>
-          <p className="text-sm text-[#fafafa]/40 mb-6">
-            Signed in as: {user.email}
-          </p>
-          <button
-            onClick={handleSignOut}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#1a1a1a] px-6 py-3 text-[#fafafa] hover:bg-[#2a2a2a] border border-[#2a2a2a] transition-colors"
-          >
-            <LogOut className="h-5 w-5" />
-            Sign Out
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Admin Dashboard
+  // status === 'error'
   return (
-    <div className="min-h-screen bg-[#0a0a0a] p-4 md:p-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-teal-500/20 to-blue-600/20 border border-teal-500/30">
-              <ShieldCheck className="h-6 w-6 text-teal-400" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-[#fafafa]">CC ISLE Admin</h1>
-              <p className="text-sm text-[#fafafa]/60">{user.email}</p>
-            </div>
-          </div>
-          
-          <button
-            onClick={handleSignOut}
-            className="inline-flex items-center gap-2 rounded-lg bg-red-500/10 px-4 py-2 text-sm text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors"
-          >
-            <LogOut className="h-4 w-4" />
-            Sign Out
-          </button>
-        </div>
+    <div className="text-center p-8 bg-[#1a1a1a] rounded-xl border border-[#2a2a2a] max-w-md">
+      <h1 className="text-2xl font-bold text-[#fafafa] mb-2">連結無效 (缺少 ID)</h1>
+      <p className="text-[#fafafa]/60 mb-6">如果沒有自動跳轉，請點擊下方按鈕：</p>
+      <a 
+        href="/dashboard"
+        className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors inline-block"
+      >
+        前往管理後台
+      </a>
+    </div>
+  );
+}
 
-        {/* Posts Section */}
-        <div className="rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] overflow-hidden">
-          {/* Section Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#2a2a2a]">
-            <div className="flex items-center gap-3">
-              <FileText className="h-5 w-5 text-teal-400" />
-              <h2 className="text-lg font-semibold text-[#fafafa]">Posts</h2>
-              <span className="text-sm text-[#fafafa]/60">
-                ({posts.length} total)
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => router.push('/create')}
-                className="inline-flex items-center gap-2 rounded-lg bg-teal-500 px-4 py-2 text-sm text-white hover:bg-teal-600 transition-colors"
-              >
-                <Plus className="h-4 w-4" />
-                New Post
-              </button>
-              <button
-                onClick={loadPosts}
-                disabled={postsLoading}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#2a2a2a] px-4 py-2 text-sm text-[#fafafa] hover:bg-[#3a3a3a] transition-colors disabled:opacity-50"
-              >
-                <RefreshCw className={`h-4 w-4 ${postsLoading ? 'animate-spin' : ''}`} />
-                Refresh
-              </button>
-            </div>
-          </div>
-
-          {/* Content */}
-          <div className="p-4">
-            {postsLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-teal-500" />
-              </div>
-            ) : postsError ? (
-              <div className="text-center py-12">
-                <p className="text-red-400 mb-4">{postsError}</p>
-                <button
-                  onClick={loadPosts}
-                  className="text-teal-400 hover:text-teal-300 text-sm"
-                >
-                  Try again
-                </button>
-              </div>
-            ) : (
-              <PostList posts={posts} onPostDeleted={handlePostDeleted} />
-            )}
-          </div>
-        </div>
-      </div>
+// 這是外層頁面，必須包在 Suspense 裡
+export default function Home() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] p-4">
+      <Suspense fallback={<div className="text-white">Loading...</div>}>
+        <RedirectContent />
+      </Suspense>
     </div>
   );
 }
