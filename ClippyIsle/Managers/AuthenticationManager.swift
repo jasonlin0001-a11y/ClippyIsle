@@ -329,6 +329,11 @@ class AuthenticationManager: ObservableObject {
         return currentUser?.email
     }
     
+    /// Returns true if the email has been verified
+    var isEmailVerified: Bool {
+        return currentUser?.isEmailVerified ?? false
+    }
+    
     // MARK: - Link Email Account
     /// Links an email/password credential to the current anonymous user
     /// - Parameters:
@@ -355,6 +360,10 @@ class AuthenticationManager: ObservableObject {
             
             print("🔐 Successfully linked email account: \(authResult.user.email ?? "unknown")")
             
+            // Send email verification
+            try await authResult.user.sendEmailVerification()
+            print("🔐 Verification email sent to: \(authResult.user.email ?? "unknown")")
+            
             await MainActor.run {
                 currentUser = authResult.user
                 isLoading = false
@@ -380,5 +389,37 @@ class AuthenticationManager: ObservableObject {
             
             throw error
         }
+    }
+    
+    // MARK: - Reload User
+    /// Reloads the current user to get the latest isEmailVerified status from Firebase
+    func reloadUser() async throws {
+        guard let user = currentUser else {
+            throw NSError(domain: "AuthenticationManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No authenticated user"])
+        }
+        
+        try await user.reload()
+        
+        // Update the currentUser reference
+        await MainActor.run {
+            currentUser = Auth.auth().currentUser
+        }
+        
+        print("🔐 User reloaded. Email verified: \(currentUser?.isEmailVerified ?? false)")
+    }
+    
+    // MARK: - Resend Verification Email
+    /// Resends the verification email to the current user
+    func resendVerificationEmail() async throws {
+        guard let user = currentUser else {
+            throw NSError(domain: "AuthenticationManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No authenticated user"])
+        }
+        
+        guard let email = user.email, !email.isEmpty else {
+            throw NSError(domain: "AuthenticationManager", code: -2, userInfo: [NSLocalizedDescriptionKey: "No email linked to account"])
+        }
+        
+        try await user.sendEmailVerification()
+        print("🔐 Verification email resent to: \(email)")
     }
 }

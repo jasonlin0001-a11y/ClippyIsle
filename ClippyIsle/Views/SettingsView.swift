@@ -341,11 +341,14 @@ struct SettingsView: View {
     
     // MARK: - Account Status Section
     @State private var showLinkAccountSheet = false
+    @State private var isResendingVerification = false
+    @State private var verificationResendMessage: String?
+    @State private var isCheckingVerification = false
     
     private var accountStatusSection: some View {
         Section(header: Text("Account Status"), footer: Text("Link an email to secure your account and prevent data loss.")) {
             if authManager.isAnonymous {
-                // Anonymous/Guest Account - Unsafe
+                // Case A: Anonymous/Guest Account - Unsafe
                 HStack(spacing: 12) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundColor(.orange)
@@ -384,15 +387,81 @@ struct SettingsView: View {
                     RoundedRectangle(cornerRadius: 10)
                         .fill(themeColor)
                 )
+            } else if !authManager.isEmailVerified {
+                // Case B: Linked but Unverified
+                HStack(spacing: 12) {
+                    Image(systemName: "envelope.badge.fill")
+                        .foregroundColor(.yellow)
+                        .font(.title3)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Email Linked (Unverified)")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.yellow)
+                        if let email = authManager.linkedEmail {
+                            Text(email)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    Spacer()
+                }
+                
+                // Show success/error message
+                if let message = verificationResendMessage {
+                    HStack {
+                        Image(systemName: message.contains("sent") ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                            .foregroundColor(message.contains("sent") ? .green : .red)
+                        Text(message)
+                            .font(.caption)
+                            .foregroundColor(message.contains("sent") ? .green : .red)
+                    }
+                }
+                
+                // Resend verification email button
+                Button(action: resendVerificationEmail) {
+                    HStack {
+                        if isResendingVerification {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                                .padding(.trailing, 4)
+                        } else {
+                            Image(systemName: "envelope.arrow.triangle.branch")
+                        }
+                        Text(isResendingVerification ? "Sending..." : "Resend Verification Email")
+                        Spacer()
+                    }
+                }
+                .disabled(isResendingVerification || isCheckingVerification)
+                .foregroundColor(isResendingVerification ? .gray : themeColor)
+                
+                // Check verification button
+                Button(action: checkVerificationStatus) {
+                    HStack {
+                        if isCheckingVerification {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                                .padding(.trailing, 4)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                        Text(isCheckingVerification ? "Checking..." : "I Have Verified")
+                        Spacer()
+                    }
+                }
+                .disabled(isResendingVerification || isCheckingVerification)
+                .foregroundColor(isCheckingVerification ? .gray : themeColor)
             } else {
-                // Linked/Permanent Account - Secured
+                // Case C: Linked and Verified - Account Secured
                 HStack(spacing: 12) {
                     Image(systemName: "checkmark.shield.fill")
                         .foregroundColor(.green)
                         .font(.title3)
                     
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Account Secured")
+                        Text("Account Secured ✅")
                             .font(.subheadline)
                             .fontWeight(.semibold)
                             .foregroundColor(.green)
@@ -466,6 +535,73 @@ struct SettingsView: View {
                     let generator = UINotificationFeedbackGenerator()
                     generator.notificationOccurred(.error)
                     print("❌ Failed to save nickname: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    // MARK: - Email Verification Helpers
+    private func resendVerificationEmail() {
+        verificationResendMessage = nil
+        isResendingVerification = true
+        
+        Task {
+            do {
+                try await authManager.resendVerificationEmail()
+                
+                await MainActor.run {
+                    isResendingVerification = false
+                    verificationResendMessage = "Verification email sent!"
+                    
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(.success)
+                }
+                
+                // Clear message after 3 seconds
+                try? await Task.sleep(for: .seconds(3))
+                await MainActor.run {
+                    verificationResendMessage = nil
+                }
+            } catch {
+                await MainActor.run {
+                    isResendingVerification = false
+                    verificationResendMessage = error.localizedDescription
+                    
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(.error)
+                }
+            }
+        }
+    }
+    
+    private func checkVerificationStatus() {
+        verificationResendMessage = nil
+        isCheckingVerification = true
+        
+        Task {
+            do {
+                try await authManager.reloadUser()
+                
+                await MainActor.run {
+                    isCheckingVerification = false
+                    
+                    if authManager.isEmailVerified {
+                        let generator = UINotificationFeedbackGenerator()
+                        generator.notificationOccurred(.success)
+                    } else {
+                        verificationResendMessage = "Not verified yet. Please check your email."
+                        
+                        let generator = UINotificationFeedbackGenerator()
+                        generator.notificationOccurred(.warning)
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    isCheckingVerification = false
+                    verificationResendMessage = error.localizedDescription
+                    
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(.error)
                 }
             }
         }
