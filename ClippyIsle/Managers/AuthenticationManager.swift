@@ -317,4 +317,68 @@ class AuthenticationManager: ObservableObject {
     var currentUID: String? {
         return currentUser?.uid
     }
+    
+    // MARK: - Check if Anonymous
+    /// Returns true if the current user is signed in anonymously
+    var isAnonymous: Bool {
+        return currentUser?.isAnonymous ?? true
+    }
+    
+    /// Returns the linked email if the account has been upgraded from anonymous
+    var linkedEmail: String? {
+        return currentUser?.email
+    }
+    
+    // MARK: - Link Email Account
+    /// Links an email/password credential to the current anonymous user
+    /// - Parameters:
+    ///   - email: The email address to link
+    ///   - password: The password to set
+    /// - Throws: Error if linking fails
+    func linkEmailAccount(email: String, password: String) async throws {
+        guard let user = currentUser else {
+            throw NSError(domain: "AuthenticationManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No authenticated user"])
+        }
+        
+        guard user.isAnonymous else {
+            throw NSError(domain: "AuthenticationManager", code: -2, userInfo: [NSLocalizedDescriptionKey: "Account is already linked"])
+        }
+        
+        await MainActor.run { isLoading = true; authError = nil }
+        
+        do {
+            // Create email credential
+            let credential = EmailAuthProvider.credential(withEmail: email, password: password)
+            
+            // Link the credential to the anonymous account
+            let authResult = try await user.link(with: credential)
+            
+            print("🔐 Successfully linked email account: \(authResult.user.email ?? "unknown")")
+            
+            await MainActor.run {
+                currentUser = authResult.user
+                isLoading = false
+            }
+        } catch let error as NSError {
+            await MainActor.run {
+                isLoading = false
+            }
+            
+            // Handle specific Firebase Auth errors
+            if let errorCode = AuthErrorCode.Code(rawValue: error.code) {
+                switch errorCode {
+                case .emailAlreadyInUse:
+                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "This email is already in use by another account."])
+                case .weakPassword:
+                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Password is too weak. Please use at least 6 characters."])
+                case .invalidEmail:
+                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Invalid email address format."])
+                default:
+                    throw error
+                }
+            }
+            
+            throw error
+        }
+    }
 }

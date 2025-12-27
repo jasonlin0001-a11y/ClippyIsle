@@ -164,6 +164,7 @@ struct SettingsView: View {
             Form {
                 premiumSection
                 nicknameSection
+                accountStatusSection
                 
                 Section(header: Text("Web Management"), footer: Text("Allows managing items via a web browser on the same Wi-Fi network.")) {
                     Toggle("Enable Web Server", isOn: Binding(
@@ -335,6 +336,80 @@ struct SettingsView: View {
                     .foregroundColor(.red)
                     .font(.caption2)
             }
+        }
+    }
+    
+    // MARK: - Account Status Section
+    @State private var showLinkAccountSheet = false
+    
+    private var accountStatusSection: some View {
+        Section(header: Text("Account Status"), footer: Text("Link an email to secure your account and prevent data loss.")) {
+            if authManager.isAnonymous {
+                // Anonymous/Guest Account - Unsafe
+                HStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                        .font(.title3)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Guest Account (Unsafe)")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.orange)
+                        Text("Your data may be lost")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                }
+                
+                Button(action: {
+                    showLinkAccountSheet = true
+                }) {
+                    HStack {
+                        Image(systemName: "link.badge.plus")
+                            .foregroundColor(.white)
+                        Text("Link Email to Save Data")
+                            .fontWeight(.medium)
+                            .foregroundColor(.white)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+                    .padding(.vertical, 4)
+                }
+                .listRowBackground(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(themeColor)
+                )
+            } else {
+                // Linked/Permanent Account - Secured
+                HStack(spacing: 12) {
+                    Image(systemName: "checkmark.shield.fill")
+                        .foregroundColor(.green)
+                        .font(.title3)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Account Secured")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.green)
+                        if let email = authManager.linkedEmail {
+                            Text(email)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    Spacer()
+                }
+            }
+        }
+        .sheet(isPresented: $showLinkAccountSheet) {
+            LinkAccountView(themeColor: themeColor)
+                .environmentObject(authManager)
         }
     }
     
