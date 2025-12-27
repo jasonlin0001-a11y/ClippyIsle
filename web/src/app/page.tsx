@@ -110,7 +110,7 @@ export default function Home() {
   // Admin Dashboard
   return (
     <div className="min-h-screen bg-[#0a0a0a] p-4 md:p-8">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-[800px] mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
@@ -118,7 +118,7 @@ export default function Home() {
               <ShieldCheck className="h-6 w-6 text-teal-400" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-[#fafafa]">CC ISLE Admin</h1>
+              <h1 className="text-xl font-bold text-[#fafafa]">CC Island Dashboard</h1>
               <p className="text-sm text-[#fafafa]/60">{user.email}</p>
             </div>
           </div>
