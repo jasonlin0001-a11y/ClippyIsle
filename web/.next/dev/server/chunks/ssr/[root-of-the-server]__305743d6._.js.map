@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 18, "column": 0}, "map": {"version":3,"sources":["file:///Users/jasonlin/ClippyIsle/web/src/app/page.tsx"],"sourcesContent":["export default function Home() {\n  return (\n    <div className=\"flex min-h-screen items-center justify-center bg-[#0a0a0a]\">\n      <main className=\"flex flex-col items-center justify-center\">\n        <h1 className=\"text-4xl font-bold text-[#fafafa] mb-4\">CC ISLE</h1>\n        <p className=\"text-lg text-[#fafafa]/70\">Web Portal - Loading...</p>\n      </main>\n    </div>\n  );\n}\n"],"names":[],"mappings":";;;;;;AAAe,SAAS;IACtB,qBACE,8OAAC;QAAI,WAAU;kBACb,cAAA,8OAAC;YAAK,WAAU;;8BACd,8OAAC;oBAAG,WAAU;8BAAyC;;;;;;8BACvD,8OAAC;oBAAE,WAAU;8BAA4B;;;;;;;;;;;;;;;;;AAIjD"}}]
+}
