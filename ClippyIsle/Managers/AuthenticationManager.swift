@@ -422,4 +422,114 @@ class AuthenticationManager: ObservableObject {
         try await user.sendEmailVerification()
         print("🔐 Verification email resent to: \(email)")
     }
+    
+    // MARK: - Sign In with Email
+    /// Signs in with email and password
+    /// - Parameters:
+    ///   - email: The user's email address
+    ///   - password: The user's password
+    func signIn(email: String, password: String) async throws {
+        await MainActor.run { isLoading = true; authError = nil }
+        
+        do {
+            let authResult = try await auth.signIn(withEmail: email, password: password)
+            let user = authResult.user
+            print("🔐 Email sign in successful: \(user.uid)")
+            
+            await MainActor.run {
+                currentUser = user
+                isAuthenticated = true
+                isLoading = false
+            }
+            
+            // Fetch or create user profile
+            try await ensureUserProfileExists(uid: user.uid)
+        } catch let error as NSError {
+            await MainActor.run {
+                isLoading = false
+            }
+            
+            // Handle specific Firebase Auth errors
+            if let errorCode = AuthErrorCode.Code(rawValue: error.code) {
+                switch errorCode {
+                case .wrongPassword:
+                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Incorrect password. Please try again."])
+                case .userNotFound:
+                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "No account found with this email. Please sign up first."])
+                case .invalidEmail:
+                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Invalid email address format."])
+                case .userDisabled:
+                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "This account has been disabled."])
+                case .tooManyRequests:
+                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Too many failed attempts. Please try again later."])
+                default:
+                    throw error
+                }
+            }
+            
+            throw error
+        }
+    }
+    
+    // MARK: - Sign Up with Email
+    /// Creates a new account with email and password
+    /// - Parameters:
+    ///   - email: The user's email address
+    ///   - password: The user's password
+    func signUp(email: String, password: String) async throws {
+        await MainActor.run { isLoading = true; authError = nil }
+        
+        do {
+            let authResult = try await auth.createUser(withEmail: email, password: password)
+            let user = authResult.user
+            print("🔐 Email sign up successful: \(user.uid)")
+            
+            // Send email verification
+            try await user.sendEmailVerification()
+            print("🔐 Verification email sent to: \(user.email ?? "unknown")")
+            
+            await MainActor.run {
+                currentUser = user
+                isAuthenticated = true
+                isLoading = false
+            }
+            
+            // Create user profile in Firestore
+            try await createUserProfile(uid: user.uid)
+        } catch let error as NSError {
+            await MainActor.run {
+                isLoading = false
+            }
+            
+            // Handle specific Firebase Auth errors
+            if let errorCode = AuthErrorCode.Code(rawValue: error.code) {
+                switch errorCode {
+                case .emailAlreadyInUse:
+                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "This email is already in use. Please sign in instead."])
+                case .weakPassword:
+                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Password is too weak. Please use at least 6 characters."])
+                case .invalidEmail:
+                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Invalid email address format."])
+                default:
+                    throw error
+                }
+            }
+            
+            throw error
+        }
+    }
+    
+    // MARK: - Sign Out
+    /// Signs out the current user
+    func signOut() throws {
+        do {
+            try auth.signOut()
+            print("🔐 User signed out successfully")
+            
+            // The auth state listener will handle updating currentUser and isAuthenticated
+        } catch {
+            print("🔐 Sign out failed: \(error.localizedDescription)")
+            throw error
+        }
+    }
 }

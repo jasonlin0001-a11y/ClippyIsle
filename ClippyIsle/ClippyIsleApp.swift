@@ -30,69 +30,66 @@ struct ClippyIsleApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
-                ContentView(isAppReady: $isAppReady)
-                    // 2. 注入環境變數供全 App 使用
-                    .environmentObject(subscriptionManager)
-                    .environmentObject(pendingShareManager)
-                    .environmentObject(authManager)
-                    // 3. 關鍵效能優化：在背景 Task 啟動監聽，完全不阻塞 Main Thread
-                    .task(priority: .background) {
-                        LaunchLogger.log("SubscriptionManager.start() - Task BEGIN")
-                        subscriptionManager.start()
-                        LaunchLogger.log("SubscriptionManager.start() - Task END")
-                    }
-                    // 4. Anonymous Authentication on launch
-                    .task(priority: .userInitiated) {
-                        LaunchLogger.log("AuthenticationManager.signInAnonymously() - Task BEGIN")
-                        do {
-                            try await authManager.signInAnonymously()
-                            LaunchLogger.log("AuthenticationManager.signInAnonymously() - Task END (success)")
-                        } catch {
-                            LaunchLogger.log("AuthenticationManager.signInAnonymously() - Task END (error: \(error.localizedDescription))")
+                // Show AuthView when not authenticated, otherwise show ContentView
+                if authManager.isAuthenticated {
+                    ContentView(isAppReady: $isAppReady)
+                        // 2. 注入環境變數供全 App 使用
+                        .environmentObject(subscriptionManager)
+                        .environmentObject(pendingShareManager)
+                        .environmentObject(authManager)
+                        // 3. 關鍵效能優化：在背景 Task 啟動監聽，完全不阻塞 Main Thread
+                        .task(priority: .background) {
+                            LaunchLogger.log("SubscriptionManager.start() - Task BEGIN")
+                            subscriptionManager.start()
+                            LaunchLogger.log("SubscriptionManager.start() - Task END")
                         }
-                    }
-                    .onAppear {
-                        LaunchLogger.log("ClippyIsleApp.body.WindowGroup - onAppear")
-                    }
-                    .onOpenURL { url in
-                        handleDeepLink(url)
-                    }
-                    // Password prompt alert for protected shares
-                    .alert("Password Required", isPresented: $showPasswordPrompt) {
-                        SecureField("Enter password", text: $passwordInput)
-                        Button("Cancel", role: .cancel) {
-                            pendingShareId = nil
-                            passwordInput = ""
-                            pendingShareMetadata = nil
+                        .onAppear {
+                            LaunchLogger.log("ClippyIsleApp.body.WindowGroup - onAppear")
                         }
-                        Button("Submit") {
-                            submitPassword()
+                        .onOpenURL { url in
+                            handleDeepLink(url)
                         }
-                    } message: {
-                        if let metadata = pendingShareMetadata {
-                            if let nickname = metadata.sharerNickname {
-                                Text("This share from \(nickname) is password protected. Please enter the password to access \(metadata.itemCount) item(s).")
-                            } else {
-                                Text("This share is password protected. Please enter the password to access \(metadata.itemCount) item(s).")
+                        // Password prompt alert for protected shares
+                        .alert("Password Required", isPresented: $showPasswordPrompt) {
+                            SecureField("Enter password", text: $passwordInput)
+                            Button("Cancel", role: .cancel) {
+                                pendingShareId = nil
+                                passwordInput = ""
+                                pendingShareMetadata = nil
                             }
-                        } else {
-                            Text("This share is password protected.")
+                            Button("Submit") {
+                                submitPassword()
+                            }
+                        } message: {
+                            if let metadata = pendingShareMetadata {
+                                if let nickname = metadata.sharerNickname {
+                                    Text("This share from \(nickname) is password protected. Please enter the password to access \(metadata.itemCount) item(s).")
+                                } else {
+                                    Text("This share is password protected. Please enter the password to access \(metadata.itemCount) item(s).")
+                                }
+                            } else {
+                                Text("This share is password protected.")
+                            }
                         }
-                    }
-                    // Password error alert
-                    .alert("Incorrect Password", isPresented: $showPasswordError) {
-                        Button("Try Again") {
-                            passwordInput = ""
-                            showPasswordPrompt = true
+                        // Password error alert
+                        .alert("Incorrect Password", isPresented: $showPasswordError) {
+                            Button("Try Again") {
+                                passwordInput = ""
+                                showPasswordPrompt = true
+                            }
+                            Button("Cancel", role: .cancel) {
+                                pendingShareId = nil
+                                passwordInput = ""
+                                pendingShareMetadata = nil
+                            }
+                        } message: {
+                            Text("The password you entered is incorrect. Please try again.")
                         }
-                        Button("Cancel", role: .cancel) {
-                            pendingShareId = nil
-                            passwordInput = ""
-                            pendingShareMetadata = nil
-                        }
-                    } message: {
-                        Text("The password you entered is incorrect. Please try again.")
-                    }
+                } else {
+                    // Show AuthView when not authenticated
+                    AuthView()
+                        .environmentObject(authManager)
+                }
                 
                 // Splash Screen Overlay
                 if showSplash {

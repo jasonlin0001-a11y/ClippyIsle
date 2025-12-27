@@ -190,7 +190,7 @@ struct SettingsView: View {
                 }
                 
                 Section(header: Text("General"), footer: Text("When enabled, the app will automatically detect and add new items from the clipboard. When disabled, you must add items manually from the '+' menu on the main screen.")) { Toggle("Auto Add from Clipboard", isOn: $askToAddFromClipboard) }
-                storagePolicySection; appearanceSection; previewSettingsSection; speechSettingsSection; iCloudSection; backupAndRestoreSection; firebaseSettingsSection; dataManagementSection; debugToolsSection; appInfoSection
+                storagePolicySection; appearanceSection; previewSettingsSection; speechSettingsSection; iCloudSection; backupAndRestoreSection; firebaseSettingsSection; dataManagementSection; debugToolsSection; appInfoSection; signOutSection
             }
             .navigationTitle("Settings").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() } } }
@@ -820,6 +820,58 @@ struct SettingsView: View {
             } label: {
                 Text("About Us")
             }
+        }
+    }
+    
+    // MARK: - Sign Out Section
+    @State private var showSignOutConfirmation = false
+    @State private var isSigningOut = false
+    
+    private var signOutSection: some View {
+        Section {
+            Button(role: .destructive) {
+                showSignOutConfirmation = true
+            } label: {
+                HStack {
+                    if isSigningOut {
+                        ProgressView()
+                            .tint(.red)
+                    } else {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                    }
+                    Text("Sign Out")
+                    Spacer()
+                }
+            }
+            .disabled(isSigningOut)
+        } footer: {
+            Text("Signing out will return you to the login screen. Your data will remain on this device.")
+        }
+        .alert("Sign Out?", isPresented: $showSignOutConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Sign Out", role: .destructive) {
+                signOut()
+            }
+        } message: {
+            if authManager.isAnonymous {
+                Text("Warning: You are signed in as a guest. If you sign out without linking an email, you may lose access to your data.")
+            } else {
+                Text("Are you sure you want to sign out?")
+            }
+        }
+    }
+    
+    private func signOut() {
+        isSigningOut = true
+        
+        do {
+            try authManager.signOut()
+            // The auth state listener will handle navigation back to AuthView
+            dismiss()
+        } catch {
+            isSigningOut = false
+            // Show error - could add an alert here if needed
+            print("❌ Sign out failed: \(error.localizedDescription)")
         }
     }
     
