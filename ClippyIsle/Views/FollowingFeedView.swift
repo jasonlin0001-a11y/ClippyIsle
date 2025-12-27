@@ -464,21 +464,28 @@ struct CreatorPostCell: View {
     
     // MARK: - Link Preview Card
     private var linkPreviewCard: some View {
-        // Helper to parse URL, handling potential encoding issues
+        // CASE A: Web Portal Post - has pre-saved link_image from Firestore
+        // Show rich preview immediately without user interaction
+        if let linkImage = post.linkImage, !linkImage.isEmpty {
+            return AnyView(richLinkPreviewCard(imageUrlString: linkImage))
+        } else {
+            // CASE B: No pre-saved image - show fallback generic card
+            return AnyView(fallbackLinkCard)
+        }
+    }
+    
+    // Rich link preview card with image (for Web Portal posts with link_image)
+    private func richLinkPreviewCard(imageUrlString: String) -> some View {
+        // Parse URL, handling potential encoding issues
         let parsedImageUrl: URL? = {
-            guard let linkImage = post.linkImage, !linkImage.isEmpty else { return nil }
-            // Try direct URL first
-            if let url = URL(string: linkImage) { return url }
-            // Try percent-encoding the string
-            if let encoded = linkImage.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+            if let url = URL(string: imageUrlString) { return url }
+            if let encoded = imageUrlString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
                let url = URL(string: encoded) { return url }
             return nil
         }()
         
         return Button(action: onTap) {
-            // Check if we have a rich link image
             if let imageUrl = parsedImageUrl {
-                // Rich Link Card with image
                 VStack(alignment: .leading, spacing: 0) {
                     // Large image (16:9 aspect ratio)
                     AsyncImage(url: imageUrl) { phase in
@@ -514,7 +521,6 @@ struct CreatorPostCell: View {
                     
                     // Title and domain below image
                     VStack(alignment: .leading, spacing: 4) {
-                        // Title (use link_title, fallback to post.title)
                         Text(post.linkTitle ?? post.title)
                             .font(.subheadline)
                             .fontWeight(.semibold)
@@ -522,7 +528,6 @@ struct CreatorPostCell: View {
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
                         
-                        // Domain in small gray text
                         Text(post.linkDomain ?? formattedUrl)
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -538,47 +543,55 @@ struct CreatorPostCell: View {
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             } else {
-                // Fallback: generic link card (no image available)
-                HStack(spacing: 12) {
-                    // Link icon
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(themeColor.opacity(0.1))
-                            .frame(width: 60, height: 60)
-                        
-                        Image(systemName: "link")
-                            .font(.title2)
-                            .foregroundColor(themeColor)
-                    }
+                // URL parsing failed, show fallback
+                fallbackLinkCard
+            }
+        }
+        .buttonStyle(.plain)
+    }
+    
+    // Fallback generic link card (no image available)
+    private var fallbackLinkCard: some View {
+        Button(action: onTap) {
+            HStack(spacing: 12) {
+                // Link icon
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(themeColor.opacity(0.1))
+                        .frame(width: 60, height: 60)
                     
-                    // Title and URL
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(post.linkTitle ?? post.title)
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(.primary)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.leading)
-                        
-                        Text(post.linkDomain ?? formattedUrl)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                    }
+                    Image(systemName: "link")
+                        .font(.title2)
+                        .foregroundColor(themeColor)
+                }
+                
+                // Title and URL
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(post.linkTitle ?? post.title)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
                     
-                    Spacer()
-                    
-                    // Chevron indicator
-                    Image(systemName: "chevron.right")
+                    Text(post.linkDomain ?? formattedUrl)
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .lineLimit(1)
                 }
-                .padding(12)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(.systemGray6).opacity(colorScheme == .dark ? 1.0 : 0.5))
-                )
+                
+                Spacer()
+                
+                // Chevron indicator
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.systemGray6).opacity(colorScheme == .dark ? 1.0 : 0.5))
+            )
         }
         .buttonStyle(.plain)
     }
