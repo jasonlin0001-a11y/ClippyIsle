@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SafariServices
+import LinkPresentation
 
 // MARK: - Following Feed View
 /// Displays the feed of posts from creators the user follows
@@ -477,7 +478,7 @@ struct CreatorPostCell: View {
             return AnyView(richLinkPreviewCard(imageUrlString: linkImage))
         } 
         // CASE B: Client-fetched metadata available (from auto-load)
-        else if let metadata = clientFetchedMetadata, let imageProvider = metadata.lpMetadata.imageProvider {
+        else if let metadata = clientFetchedMetadata, metadata.lpMetadata.imageProvider != nil {
             return AnyView(clientFetchedPreviewCard(metadata: metadata))
         }
         // CASE C: Auto-load mode - fetch client-side preview automatically
