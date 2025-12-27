@@ -92,16 +92,20 @@ export default function PostList({ posts, onPostDeleted }: PostListProps) {
                 {/* Image */}
                 <td className="px-4 py-3">
                   {showImage ? (
-                    <div className="relative h-12 w-12 rounded-lg overflow-hidden bg-[#2a2a2a]">
-                      <Image
-                        src={imageUrl}
-                        alt=""
-                        fill
-                        className="object-cover"
-                        onError={() => handleImageError(post.id)}
-                        unoptimized
-                      />
-                    </div>
+<div className="relative h-12 w-12 rounded-lg overflow-hidden bg-[#2a2a2a]">
+  {/* 修改：改用標準 img 標籤並加上 referrerPolicy="no-referrer" 來騙過 Meta 的防盜連 */}
+  <img
+    src={imageUrl}
+    alt=""
+    className="w-full h-full object-cover"
+    referrerPolicy="no-referrer"
+    onError={(e) => {
+      // 圖片真的掛掉時，呼叫原本的 error handler 並顯示預設圖
+      handleImageError(post.id);
+      e.currentTarget.style.display = 'none'; // 或替換成預設圖
+    }}
+  />
+</div>
                   ) : (
                     <div className="h-12 w-12 rounded-lg bg-[#2a2a2a] flex items-center justify-center">
                       <ImageIcon className="h-5 w-5 text-[#fafafa]/30" />
