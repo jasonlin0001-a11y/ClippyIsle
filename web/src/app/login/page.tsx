@@ -26,7 +26,7 @@ export default function LoginPage() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push('/');
+      router.push('/dashboard');
     } catch (err) {
       console.error('Login error:', err);
       if (err instanceof Error) {

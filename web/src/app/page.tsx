@@ -1,60 +1,87 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
-import { fetchAllPosts } from '@/lib/posts';
-import { Post } from '@/types';
-import PostList from '@/components/PostList';
-import { Loader2, LogOut, ShieldAlert, ShieldCheck, RefreshCw, FileText, Plus } from 'lucide-react';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Loader2, AlertTriangle, ExternalLink, Link as LinkIcon } from 'lucide-react';
+import Image from 'next/image';
 
-export default function Home() {
-  const { user, isAdmin, loading, signOut } = useAuth();
-  const router = useRouter();
+interface PostData {
+  content_url?: string;
+  link_title?: string;
+  link_description?: string;
+  link_image?: string;
+  curator_note?: string;
+}
+
+function SharingReceiverContent() {
+  const searchParams = useSearchParams();
+  const id = searchParams.get('id');
   
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [postsLoading, setPostsLoading] = useState(true);
-  const [postsError, setPostsError] = useState<string | null>(null);
-
-  const loadPosts = useCallback(async () => {
-    setPostsLoading(true);
-    setPostsError(null);
-    try {
-      const fetchedPosts = await fetchAllPosts();
-      setPosts(fetchedPosts);
-    } catch (error) {
-      console.error('Failed to fetch posts:', error);
-      setPostsError('Failed to load posts. Please try again.');
-    } finally {
-      setPostsLoading(false);
-    }
-  }, []);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [postData, setPostData] = useState<PostData | null>(null);
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
+    async function fetchPost() {
+      if (!id) {
+        setLoading(false);
+        return;
+      }
 
-  useEffect(() => {
-    if (isAdmin) {
-      loadPosts();
-    }
-  }, [isAdmin, loadPosts]);
+      if (!db) {
+        setError('Firebase is not initialized');
+        setLoading(false);
+        return;
+      }
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      router.push('/login');
-    } catch (error) {
-      console.error('Failed to sign out:', error);
-    }
-  };
+      try {
+        const postRef = doc(db, 'creator_posts', id);
+        const postSnap = await getDoc(postRef);
 
-  const handlePostDeleted = (postId: string) => {
-    // Optimistically remove the post from UI
-    setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
-  };
+        if (postSnap.exists()) {
+          const data = postSnap.data() as PostData;
+          setPostData(data);
+          
+          // Redirect to content URL if available
+          if (data.content_url) {
+            window.location.href = data.content_url;
+          }
+        } else {
+          setError('Post not found');
+        }
+      } catch (err) {
+        console.error('Error fetching post:', err);
+        setError('Failed to load post');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchPost();
+  }, [id]);
+
+  // No ID provided - show error
+  if (!id) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] p-4">
+        <div className="max-w-md text-center">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-yellow-500/10 border border-yellow-500/20">
+            <AlertTriangle className="h-10 w-10 text-yellow-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-[#fafafa] mb-3">Link Invalid</h1>
+          <p className="text-[#fafafa]/60 mb-6">
+            Missing ID parameter. Please use a valid sharing link.
+          </p>
+          <div className="flex items-center justify-center gap-2 text-sm text-[#fafafa]/40">
+            <LinkIcon className="h-4 w-4" />
+            <span>Expected format: /?id=POST_ID</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Loading state
   if (loading) {
@@ -62,128 +89,101 @@ export default function Home() {
       <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a]">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-10 w-10 animate-spin text-teal-500" />
-          <p className="text-[#fafafa]/60">Loading...</p>
+          <p className="text-[#fafafa]/60">Loading shared content...</p>
         </div>
       </div>
     );
   }
 
-  // Not logged in - will redirect
-  if (!user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a]">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-10 w-10 animate-spin text-teal-500" />
-          <p className="text-[#fafafa]/60">Redirecting to login...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Logged in but not admin - Access Denied
-  if (!isAdmin) {
+  // Error state
+  if (error) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] p-4">
         <div className="max-w-md text-center">
           <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-red-500/10 border border-red-500/20">
-            <ShieldAlert className="h-10 w-10 text-red-400" />
+            <AlertTriangle className="h-10 w-10 text-red-400" />
           </div>
-          <h1 className="text-2xl font-bold text-[#fafafa] mb-3">Access Denied</h1>
-          <p className="text-[#fafafa]/60 mb-6">
-            You do not have administrator privileges. Only authorized admins can access this portal.
-          </p>
-          <p className="text-sm text-[#fafafa]/40 mb-6">
-            Signed in as: {user.email}
-          </p>
-          <button
-            onClick={handleSignOut}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#1a1a1a] px-6 py-3 text-[#fafafa] hover:bg-[#2a2a2a] border border-[#2a2a2a] transition-colors"
-          >
-            <LogOut className="h-5 w-5" />
-            Sign Out
-          </button>
+          <h1 className="text-2xl font-bold text-[#fafafa] mb-3">Error</h1>
+          <p className="text-[#fafafa]/60 mb-6">{error}</p>
         </div>
       </div>
     );
   }
 
-  // Admin Dashboard
-  return (
-    <div className="min-h-screen bg-[#0a0a0a] p-4 md:p-8">
-      <div className="max-w-[800px] mx-auto">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-teal-500/20 to-blue-600/20 border border-teal-500/30">
-              <ShieldCheck className="h-6 w-6 text-teal-400" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-[#fafafa]">CC Island Dashboard</h1>
-              <p className="text-sm text-[#fafafa]/60">{user.email}</p>
-            </div>
+  // Post found but redirecting - show preview while redirecting
+  if (postData) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] p-4">
+        <div className="max-w-md text-center">
+          <div className="flex flex-col items-center gap-4 mb-6">
+            <Loader2 className="h-8 w-8 animate-spin text-teal-500" />
+            <p className="text-[#fafafa]/60">Redirecting to content...</p>
           </div>
           
-          <button
-            onClick={handleSignOut}
-            className="inline-flex items-center gap-2 rounded-lg bg-red-500/10 px-4 py-2 text-sm text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors"
-          >
-            <LogOut className="h-4 w-4" />
-            Sign Out
-          </button>
-        </div>
-
-        {/* Posts Section */}
-        <div className="rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] overflow-hidden">
-          {/* Section Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#2a2a2a]">
-            <div className="flex items-center gap-3">
-              <FileText className="h-5 w-5 text-teal-400" />
-              <h2 className="text-lg font-semibold text-[#fafafa]">Posts</h2>
-              <span className="text-sm text-[#fafafa]/60">
-                ({posts.length} total)
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => router.push('/create')}
-                className="inline-flex items-center gap-2 rounded-lg bg-teal-500 px-4 py-2 text-sm text-white hover:bg-teal-600 transition-colors"
-              >
-                <Plus className="h-4 w-4" />
-                New Post
-              </button>
-              <button
-                onClick={loadPosts}
-                disabled={postsLoading}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#2a2a2a] px-4 py-2 text-sm text-[#fafafa] hover:bg-[#3a3a3a] transition-colors disabled:opacity-50"
-              >
-                <RefreshCw className={`h-4 w-4 ${postsLoading ? 'animate-spin' : ''}`} />
-                Refresh
-              </button>
-            </div>
-          </div>
-
-          {/* Content */}
-          <div className="p-4">
-            {postsLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-teal-500" />
+          {/* Preview Card */}
+          <div className="rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] overflow-hidden text-left">
+            {postData.link_image && (
+              <div className="relative aspect-video bg-[#2a2a2a]">
+                <Image 
+                  src={postData.link_image} 
+                  alt={postData.link_title || 'Preview'} 
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
               </div>
-            ) : postsError ? (
-              <div className="text-center py-12">
-                <p className="text-red-400 mb-4">{postsError}</p>
-                <button
-                  onClick={loadPosts}
-                  className="text-teal-400 hover:text-teal-300 text-sm"
-                >
-                  Try again
-                </button>
-              </div>
-            ) : (
-              <PostList posts={posts} onPostDeleted={handlePostDeleted} />
             )}
+            <div className="p-4">
+              {postData.link_title && (
+                <h2 className="text-lg font-semibold text-[#fafafa] mb-2">
+                  {postData.link_title}
+                </h2>
+              )}
+              {postData.link_description && (
+                <p className="text-sm text-[#fafafa]/60 mb-3">
+                  {postData.link_description}
+                </p>
+              )}
+              {postData.curator_note && (
+                <p className="text-sm text-teal-400 italic">
+                  &quot;{postData.curator_note}&quot;
+                </p>
+              )}
+              {postData.content_url && (
+                <a
+                  href={postData.content_url}
+                  className="inline-flex items-center gap-2 mt-4 text-sm text-teal-400 hover:text-teal-300"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Open link manually
+                </a>
+              )}
+            </div>
           </div>
         </div>
       </div>
+    );
+  }
+
+  return null;
+}
+
+// Loading fallback for Suspense
+function LoadingFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a]">
+      <div className="flex flex-col items-center gap-4">
+        <Loader2 className="h-10 w-10 animate-spin text-teal-500" />
+        <p className="text-[#fafafa]/60">Loading...</p>
+      </div>
     </div>
+  );
+}
+
+export default function SharingReceiver() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <SharingReceiverContent />
+    </Suspense>
   );
 }
