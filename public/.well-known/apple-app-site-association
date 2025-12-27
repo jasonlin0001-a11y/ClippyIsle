@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "J894ABBU74.J894ABBU74.ClippyIsle",
+        "paths": ["/u/*", "/s/*", "/article/*"]
+      }
+    ]
+  }
+}

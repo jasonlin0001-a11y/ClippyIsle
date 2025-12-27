@@ -99,9 +99,15 @@ struct RadialMenuButton: View {
 /// A floating action button with radial menu expansion and draggable positioning
 struct RadialMenuView: View {
     let themeColor: Color
+    let selectedTab: FeedTab  // Track which tab is selected for FAB behavior
     let onVoiceMemo: () -> Void  // Voice memo - opens microphone for voice-to-text memo
-    let onNewItem: () -> Void
+    let onNewItem: () -> Void    // Create new text item (local clipboard) - for My Isle tab
+    let onCreatePost: () -> Void // Create social post - for Discovery/Following tabs (curators only)
+    let onCuratorRequired: () -> Void // Callback when non-curator tries to create a post
     let onPasteFromClipboard: () -> Void
+    
+    // Access curator subscription status
+    @StateObject private var curatorService = CuratorSubscriptionService.shared
     
     @State private var isExpanded = false
     @State private var isDragging = false
@@ -123,13 +129,33 @@ struct RadialMenuView: View {
     // Reusable haptic feedback generator
     private let hapticGenerator = UIImpactFeedbackGenerator(style: .medium)
     
+    // Dynamic label based on selected tab
+    private var newItemLabel: LocalizedStringKey {
+        selectedTab == .myIsle ? "New Item" : "Create Post"
+    }
+    
+    // Dynamic action based on selected tab (with curator permission check)
+    private var newItemAction: () -> Void {
+        if selectedTab == .myIsle {
+            // My Isle tab: anyone can create local notes
+            return onNewItem
+        } else {
+            // Discovery/Following tabs: check curator status
+            if curatorService.canPublish {
+                return onCreatePost
+            } else {
+                return onCuratorRequired
+            }
+        }
+    }
+    
     private var menuItems: [RadialMenuItem] {
         [
             RadialMenuItem(localizedKey: "Paste", action: {
                 closeMenuAndExecute(onPasteFromClipboard)
             }),
-            RadialMenuItem(localizedKey: "New Item", action: {
-                closeMenuAndExecute(onNewItem)
+            RadialMenuItem(localizedKey: newItemLabel, action: {
+                closeMenuAndExecute(newItemAction)
             }),
             RadialMenuItem(localizedKey: "Voice Memo", action: {
                 closeMenuAndExecute(onVoiceMemo)
@@ -332,8 +358,11 @@ struct RadialMenuView: View {
         
         RadialMenuView(
             themeColor: .blue,
+            selectedTab: .myIsle,
             onVoiceMemo: { print("Voice Memo tapped") },
             onNewItem: { print("New Item tapped") },
+            onCreatePost: { print("Create Post tapped") },
+            onCuratorRequired: { print("Curator Required") },
             onPasteFromClipboard: { print("Paste tapped") }
         )
     }

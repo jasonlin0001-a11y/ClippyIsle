@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 import AVFoundation
 import UIKit
 import StoreKit
+import FirebaseFunctions
 
 // MARK: - Extensions for Identifiable URL
 extension URL: @retroactive Identifiable {
@@ -116,6 +117,11 @@ struct SettingsView: View {
     @State private var isPurgingCloud = false
     @State private var purgeCloudResult: String?
     @State private var isShowingPurgeResultAlert = false
+    
+    // Debug: Link Preview Test
+    @State private var isTestingLinkPreview = false
+    @State private var linkPreviewTestResult: String?
+    @State private var isShowingLinkPreviewResult = false
 
     let countOptions = [50, 100, 200, 0]
     let dayOptions = [7, 30, 90, 0]
@@ -158,6 +164,7 @@ struct SettingsView: View {
             Form {
                 premiumSection
                 nicknameSection
+                accountStatusSection
                 
                 Section(header: Text("Web Management"), footer: Text("Allows managing items via a web browser on the same Wi-Fi network.")) {
                     Toggle("Enable Web Server", isOn: Binding(
@@ -183,12 +190,21 @@ struct SettingsView: View {
                 }
                 
                 Section(header: Text("General"), footer: Text("When enabled, the app will automatically detect and add new items from the clipboard. When disabled, you must add items manually from the '+' menu on the main screen.")) { Toggle("Auto Add from Clipboard", isOn: $askToAddFromClipboard) }
-                storagePolicySection; appearanceSection; previewSettingsSection; speechSettingsSection; iCloudSection; backupAndRestoreSection; firebaseSettingsSection; dataManagementSection; appInfoSection
+                storagePolicySection; appearanceSection; previewSettingsSection; speechSettingsSection; iCloudSection; backupAndRestoreSection; firebaseSettingsSection; dataManagementSection; debugToolsSection; appInfoSection; signOutSection
             }
             .navigationTitle("Settings").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() } } }
             .background(SettingsModalPresenterView(isShowingTrash: $isShowingTrash, exportURL: $exportURL, isImporting: $isImporting, isShowingImportAlert: $isShowingImportAlert, importAlertMessage: $importAlertMessage, isShowingClearCacheAlert: $isShowingClearCacheAlert, isShowingCacheClearedAlert: $isShowingCacheClearedAlert, isShowingHardResetAlert: $isShowingHardResetAlert, confirmationText: $confirmationText, isShowingTagExport: $isShowingTagExport, clipboardManager: clipboardManager, dismissAction: { dismiss() }))
             .sheet(isPresented: $showPaywall) { PaywallView() }
+            .sheet(isPresented: $showLinkAccountSheet) {
+                LinkAccountView(themeColor: themeColor)
+                    .environmentObject(authManager)
+            }
+            .alert("Link Preview Test Result", isPresented: $isShowingLinkPreviewResult) {
+                Button("OK") {}
+            } message: {
+                Text(linkPreviewTestResult ?? "No result")
+            }
             .onAppear {
                 WebServerManager.shared.clipboardManager = clipboardManager
                 // Initialize nickname from AuthenticationManager or fallback to local storage
@@ -220,6 +236,42 @@ struct SettingsView: View {
 
     private var nicknameSection: some View {
         Section(header: Text("User Profile"), footer: Text("Your nickname will be displayed when sharing items (e.g., 'Shared by Alex').")) {
+            // Edit Profile Link
+            NavigationLink {
+                EditProfileView(themeColor: themeColor)
+            } label: {
+                HStack {
+                    // Avatar preview
+                    if let avatarUrl = authManager.userProfile?.avatarUrl, !avatarUrl.isEmpty, let url = URL(string: avatarUrl) {
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                            case .failure, .empty:
+                                profileAvatarPlaceholder
+                            @unknown default:
+                                profileAvatarPlaceholder
+                            }
+                        }
+                        .frame(width: 40, height: 40)
+                        .clipShape(Circle())
+                    } else {
+                        profileAvatarPlaceholder
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(authManager.userProfile?.nickname ?? "User")
+                            .fontWeight(.medium)
+                        Text("Edit Profile")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.leading, 8)
+                }
+            }
+            
             HStack {
                 Text("Nickname")
                 TextField("Enter your name", text: $nicknameInput)
@@ -291,6 +343,163 @@ struct SettingsView: View {
         }
     }
     
+    // MARK: - Account Status Section
+    @State private var showLinkAccountSheet = false
+    @State private var isResendingVerification = false
+    @State private var verificationResendMessage: String?
+    @State private var isCheckingVerification = false
+    
+    private var accountStatusSection: some View {
+        Section(header: Text("Account Status"), footer: Text("Link an email to secure your account and prevent data loss.")) {
+            if authManager.isAnonymous {
+                // Case A: Anonymous/Guest Account - Unsafe
+                HStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                        .font(.title3)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Guest Account (Unsafe)")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.orange)
+                        Text("Your data may be lost")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                }
+                
+                Button(action: {
+                    showLinkAccountSheet = true
+                }) {
+                    HStack {
+                        Image(systemName: "link.badge.plus")
+                            .foregroundColor(.white)
+                        Text("Link Email to Save Data")
+                            .fontWeight(.medium)
+                            .foregroundColor(.white)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+                    .padding(.vertical, 4)
+                }
+                .listRowBackground(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(themeColor)
+                )
+            } else if !authManager.isEmailVerified {
+                // Case B: Linked but Unverified
+                HStack(spacing: 12) {
+                    Image(systemName: "envelope.badge.fill")
+                        .foregroundColor(.yellow)
+                        .font(.title3)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Email Linked (Unverified)")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.yellow)
+                        if let email = authManager.linkedEmail {
+                            Text(email)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    Spacer()
+                }
+                
+                // Show success/error message
+                if let message = verificationResendMessage {
+                    HStack {
+                        Image(systemName: message.contains("sent") ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                            .foregroundColor(message.contains("sent") ? .green : .red)
+                        Text(message)
+                            .font(.caption)
+                            .foregroundColor(message.contains("sent") ? .green : .red)
+                    }
+                }
+                
+                // Resend verification email button
+                Button(action: resendVerificationEmail) {
+                    HStack {
+                        if isResendingVerification {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                                .padding(.trailing, 4)
+                        } else {
+                            Image(systemName: "envelope.arrow.triangle.branch")
+                        }
+                        Text(isResendingVerification ? "Sending..." : "Resend Verification Email")
+                        Spacer()
+                    }
+                }
+                .disabled(isResendingVerification || isCheckingVerification)
+                .foregroundColor(isResendingVerification ? .gray : themeColor)
+                
+                // Check verification button
+                Button(action: checkVerificationStatus) {
+                    HStack {
+                        if isCheckingVerification {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                                .padding(.trailing, 4)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                        Text(isCheckingVerification ? "Checking..." : "I Have Verified")
+                        Spacer()
+                    }
+                }
+                .disabled(isResendingVerification || isCheckingVerification)
+                .foregroundColor(isCheckingVerification ? .gray : themeColor)
+            } else {
+                // Case C: Linked and Verified - Account Secured
+                HStack(spacing: 12) {
+                    Image(systemName: "checkmark.shield.fill")
+                        .foregroundColor(.green)
+                        .font(.title3)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Account Secured ✅")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.green)
+                        if let email = authManager.linkedEmail {
+                            Text(email)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    Spacer()
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var profileAvatarPlaceholder: some View {
+        Circle()
+            .fill(
+                LinearGradient(
+                    gradient: Gradient(colors: [themeColor.opacity(0.6), themeColor]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .frame(width: 40, height: 40)
+            .overlay(
+                Text(String((authManager.userProfile?.nickname ?? "U").prefix(1)).uppercased())
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(.white)
+            )
+    }
+    
     private func saveNickname() {
         guard !nicknameInput.isEmpty else { return }
         
@@ -326,6 +535,73 @@ struct SettingsView: View {
                     let generator = UINotificationFeedbackGenerator()
                     generator.notificationOccurred(.error)
                     print("❌ Failed to save nickname: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    // MARK: - Email Verification Helpers
+    private func resendVerificationEmail() {
+        verificationResendMessage = nil
+        isResendingVerification = true
+        
+        Task {
+            do {
+                try await authManager.resendVerificationEmail()
+                
+                await MainActor.run {
+                    isResendingVerification = false
+                    verificationResendMessage = "Verification email sent!"
+                    
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(.success)
+                }
+                
+                // Clear message after 3 seconds
+                try? await Task.sleep(for: .seconds(3))
+                await MainActor.run {
+                    verificationResendMessage = nil
+                }
+            } catch {
+                await MainActor.run {
+                    isResendingVerification = false
+                    verificationResendMessage = error.localizedDescription
+                    
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(.error)
+                }
+            }
+        }
+    }
+    
+    private func checkVerificationStatus() {
+        verificationResendMessage = nil
+        isCheckingVerification = true
+        
+        Task {
+            do {
+                try await authManager.reloadUser()
+                
+                await MainActor.run {
+                    isCheckingVerification = false
+                    
+                    if authManager.isEmailVerified {
+                        let generator = UINotificationFeedbackGenerator()
+                        generator.notificationOccurred(.success)
+                    } else {
+                        verificationResendMessage = "Not verified yet. Please check your email."
+                        
+                        let generator = UINotificationFeedbackGenerator()
+                        generator.notificationOccurred(.warning)
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    isCheckingVerification = false
+                    verificationResendMessage = error.localizedDescription
+                    
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(.error)
                 }
             }
         }
@@ -546,6 +822,136 @@ struct SettingsView: View {
             }
         }
     }
+    
+    // MARK: - Sign Out Section
+    @State private var showSignOutConfirmation = false
+    @State private var isSigningOut = false
+    
+    private var signOutSection: some View {
+        Section {
+            Button(role: .destructive) {
+                showSignOutConfirmation = true
+            } label: {
+                HStack {
+                    if isSigningOut {
+                        ProgressView()
+                            .tint(.red)
+                    } else {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                    }
+                    Text("Sign Out")
+                    Spacer()
+                }
+            }
+            .disabled(isSigningOut)
+        } footer: {
+            Text("Signing out will return you to the login screen. Your data will remain on this device.")
+        }
+        .alert("Sign Out?", isPresented: $showSignOutConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Sign Out", role: .destructive) {
+                signOut()
+            }
+        } message: {
+            if authManager.isAnonymous {
+                Text("Warning: You are signed in as a guest. If you sign out without linking an email, you may lose access to your data.")
+            } else {
+                Text("Are you sure you want to sign out?")
+            }
+        }
+    }
+    
+    private func signOut() {
+        isSigningOut = true
+        
+        do {
+            try authManager.signOut()
+            // The auth state listener will handle navigation back to AuthView
+            dismiss()
+        } catch {
+            isSigningOut = false
+            // Show error - could add an alert here if needed
+            print("❌ Sign out failed: \(error.localizedDescription)")
+        }
+    }
+    
+    #if DEBUG
+    private var debugToolsSection: some View {
+        Section(header: Text("Debug Tools"), footer: Text("Testing tools for Cloud Function development. Only visible in debug builds.")) {
+            Button {
+                testLinkPreview()
+            } label: {
+                HStack {
+                    Text("Test Link Preview")
+                    Spacer()
+                    if isTestingLinkPreview {
+                        ProgressView()
+                    }
+                }
+            }
+            .disabled(isTestingLinkPreview)
+        }
+    }
+    
+    private func testLinkPreview() {
+        isTestingLinkPreview = true
+        
+        // Call the fetchLinkPreview Cloud Function
+        let functions = Functions.functions()
+        let callable = functions.httpsCallable("fetchLinkPreview")
+        
+        callable.call(["url": "https://www.apple.com"]) { result, error in
+            DispatchQueue.main.async {
+                isTestingLinkPreview = false
+                
+                if let error = error {
+                    // Handle error
+                    let errorMessage = "❌ Error: \(error.localizedDescription)"
+                    print(errorMessage)
+                    linkPreviewTestResult = errorMessage
+                    isShowingLinkPreviewResult = true
+                    return
+                }
+                
+                guard let data = result?.data as? [String: Any] else {
+                    let errorMessage = "❌ Error: Invalid response format"
+                    print(errorMessage)
+                    linkPreviewTestResult = errorMessage
+                    isShowingLinkPreviewResult = true
+                    return
+                }
+                
+                // Check success flag
+                if let success = data["success"] as? Bool, success {
+                    if let responseData = data["data"] as? [String: Any] {
+                        let title = responseData["title"] as? String ?? "N/A"
+                        let image = responseData["image"] as? String ?? "N/A"
+                        let description = responseData["description"] as? String ?? "N/A"
+                        
+                        // Print to console
+                        print("✅ Link Preview Test Success!")
+                        print("   Title: \(title)")
+                        print("   Image: \(image)")
+                        print("   Description: \(description)")
+                        
+                        // Show in alert
+                        linkPreviewTestResult = "✅ Success!\n\nTitle: \(title)\n\nImage: \(String(image.prefix(50)))...\n\nDescription: \(String(description.prefix(100)))..."
+                        isShowingLinkPreviewResult = true
+                    }
+                } else {
+                    let errorMsg = data["error"] as? String ?? "Unknown error"
+                    print("❌ Link Preview Error: \(errorMsg)")
+                    linkPreviewTestResult = "❌ Error: \(errorMsg)"
+                    isShowingLinkPreviewResult = true
+                }
+            }
+        }
+    }
+    #else
+    private var debugToolsSection: some View {
+        EmptyView()
+    }
+    #endif
     
     private func exportAllData() {
         do { exportURL = try clipboardManager.exportData() } catch { importAlertMessage = "Export failed.\nError: \(error.localizedDescription)"; isShowingImportAlert = true }

@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CC ISLE Creator Studio</title>
+    <meta property="og:title" content="CC ISLE Creator Studio">
+    <meta property="og:description" content="Create and share posts with your followers">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-functions-compat.js"></script>
+    
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        h1 .emoji {
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        
+        /* Auth Section */
+        .auth-section {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .auth-section p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+        
+        .google-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 500;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .google-btn:hover {
+            border-color: #4285f4;
+            box-shadow: 0 2px 8px rgba(66,133,244,0.2);
+        }
+        
+        .google-btn img {
+            width: 20px;
+            height: 20px;
+        }
+        
+        /* User Info */
+        .user-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }
+        
+        .user-info .user {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .user-info .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #667eea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .user-info .avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        
+        .user-info .name {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .user-info .email {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .logout-btn {
+            background: none;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 13px;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .logout-btn:hover {
+            border-color: #e74c3c;
+            color: #e74c3c;
+        }
+        
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+        }
+        
+        input[type="url"],
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border-color 0.2s;
+        }
+        
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+            font-family: inherit;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        
+        /* Preview Card */
+        .preview-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 16px;
+            display: none;
+        }
+        
+        .preview-card.visible {
+            display: block;
+        }
+        
+        .preview-card .image {
+            width: 100%;
+            height: 200px;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+        }
+        
+        .preview-card .image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .preview-card .content {
+            padding: 16px;
+        }
+        
+        .preview-card .title {
+            font-weight: 600;
+            color: #333;
+            font-size: 16px;
+            margin-bottom: 8px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .preview-card .description {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .preview-card .site {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #eee;
+            font-size: 13px;
+            color: #888;
+        }
+        
+        .preview-card .site img {
+            width: 16px;
+            height: 16px;
+        }
+        
+        /* Loading State */
+        .loading {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #fff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Messages */
+        .message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        /* Hidden */
+        .hidden {
+            display: none !important;
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            color: rgba(255,255,255,0.7);
+            font-size: 13px;
+            margin-top: 20px;
+        }
+        
+        .footer a {
+            color: white;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1><span class="emoji">✨</span> Creator Studio</h1>
+            <p class="subtitle">Share articles and posts with your followers</p>
+            
+            <!-- Auth Section (shown when logged out) -->
+            <div id="authSection" class="auth-section">
+                <p>Sign in to create and publish posts to your followers</p>
+                <button class="google-btn" onclick="signInWithGoogle()">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+                    Sign in with Google
+                </button>
+            </div>
+            
+            <!-- Editor Section (shown when logged in) -->
+            <div id="editorSection" class="hidden">
+                <!-- User Info -->
+                <div class="user-info">
+                    <div class="user">
+                        <div class="avatar" id="userAvatar">?</div>
+                        <div>
+                            <div class="name" id="userName">User</div>
+                            <div class="email" id="userEmail">email@example.com</div>
+                        </div>
+                    </div>
+                    <button class="logout-btn" onclick="signOut()">Sign Out</button>
+                </div>
+                
+                <!-- Message Area -->
+                <div id="messageArea"></div>
+                
+                <!-- URL Input -->
+                <div class="form-group">
+                    <label for="urlInput">Article URL</label>
+                    <div class="input-wrapper">
+                        <input type="url" id="urlInput" placeholder="Paste article URL here..." onpaste="handlePaste(event)">
+                        <button class="btn btn-secondary" onclick="fetchPreview()" id="previewBtn">Preview</button>
+                    </div>
+                </div>
+                
+                <!-- Preview Card -->
+                <div class="preview-card" id="previewCard">
+                    <div class="image" id="previewImage">
+                        <span>No image</span>
+                    </div>
+                    <div class="content">
+                        <div class="title" id="previewTitle">Article Title</div>
+                        <div class="description" id="previewDescription">Article description will appear here...</div>
+                        <div class="site">
+                            <img id="previewFavicon" src="" alt="">
+                            <span id="previewSite">example.com</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Curator Note -->
+                <div class="form-group" id="noteSection" style="display: none;">
+                    <label for="noteInput">Your Note (Curator Comment)</label>
+                    <textarea id="noteInput" placeholder="Share your thoughts about this article..."></textarea>
+                </div>
+                
+                <!-- Publish Button -->
+                <div class="form-group" id="publishSection" style="display: none;">
+                    <button class="btn btn-primary" onclick="publishPost()" id="publishBtn" style="width: 100%;">
+                        Publish to Followers
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <a href="/">← Back to CC ISLE</a>
+        </div>
+    </div>
+    
+    <script>
+        // Firebase Configuration
+        // IMPORTANT: Replace these placeholder values with your actual Firebase project config
+        // These values are safe to expose in client-side code as Firebase security is handled
+        // through Firebase Security Rules, not by hiding the API key
+        // Get your config from: Firebase Console > Project Settings > Your Apps > Web App
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "cc-isle.firebaseapp.com",
+            projectId: "cc-isle",
+            storageBucket: "cc-isle.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const functions = firebase.functions();
+        
+        // State
+        let currentUser = null;
+        let previewData = null;
+        
+        // Auth State Observer
+        auth.onAuthStateChanged((user) => {
+            currentUser = user;
+            updateUI();
+        });
+        
+        function updateUI() {
+            const authSection = document.getElementById('authSection');
+            const editorSection = document.getElementById('editorSection');
+            
+            if (currentUser) {
+                authSection.classList.add('hidden');
+                editorSection.classList.remove('hidden');
+                
+                // Update user info
+                document.getElementById('userName').textContent = currentUser.displayName || 'Creator';
+                document.getElementById('userEmail').textContent = currentUser.email;
+                
+                const avatarEl = document.getElementById('userAvatar');
+                if (currentUser.photoURL && isValidImageUrl(currentUser.photoURL)) {
+                    // Safely create image element to prevent XSS
+                    const img = document.createElement('img');
+                    img.src = currentUser.photoURL;
+                    img.alt = 'Avatar';
+                    avatarEl.innerHTML = '';
+                    avatarEl.appendChild(img);
+                } else {
+                    avatarEl.textContent = (currentUser.displayName || 'U')[0].toUpperCase();
+                }
+            } else {
+                authSection.classList.remove('hidden');
+                editorSection.classList.add('hidden');
+            }
+        }
+        
+        // Validate image URL (basic security check)
+        function isValidImageUrl(url) {
+            try {
+                const parsed = new URL(url);
+                return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+            } catch {
+                return false;
+            }
+        }
+        
+        // Google Sign In
+        async function signInWithGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            try {
+                await auth.signInWithPopup(provider);
+            } catch (error) {
+                console.error('Sign in error:', error);
+                showMessage('Failed to sign in: ' + escapeHtml(error.message), 'error');
+            }
+        }
+        
+        // Sign Out
+        async function signOut() {
+            try {
+                await auth.signOut();
+                previewData = null;
+                resetForm();
+            } catch (error) {
+                console.error('Sign out error:', error);
+            }
+        }
+        
+        // Handle paste event for auto-preview
+        // Note: 100ms delay allows the input value to update after paste event
+        function handlePaste(event) {
+            setTimeout(() => {
+                const url = event.target.value.trim();
+                if (url && isValidUrl(url)) {
+                    fetchPreview();
+                }
+            }, 100);
+        }
+        
+        // Validate URL
+        function isValidUrl(string) {
+            try {
+                const url = new URL(string);
+                return url.protocol === 'http:' || url.protocol === 'https:';
+            } catch (_) {
+                return false;
+            }
+        }
+        
+        // Fetch Link Preview
+        async function fetchPreview() {
+            const urlInput = document.getElementById('urlInput');
+            const url = urlInput.value.trim();
+            
+            if (!url) {
+                showMessage('Please enter a URL', 'error');
+                return;
+            }
+            
+            if (!isValidUrl(url)) {
+                showMessage('Please enter a valid URL (http:// or https://)', 'error');
+                return;
+            }
+            
+            const previewBtn = document.getElementById('previewBtn');
+            previewBtn.disabled = true;
+            previewBtn.innerHTML = '<span class="loading"><span class="spinner"></span></span>';
+            
+            try {
+                const fetchLinkPreview = functions.httpsCallable('fetchLinkPreview');
+                const result = await fetchLinkPreview({ url: url });
+                
+                if (result.data.success) {
+                    previewData = result.data.data;
+                    previewData.url = url; // Store original URL
+                    displayPreview(previewData);
+                    showMessage('Preview loaded successfully!', 'success');
+                } else {
+                    throw new Error('Failed to fetch preview');
+                }
+            } catch (error) {
+                console.error('Preview error:', error);
+                showMessage('Failed to fetch preview: ' + (error.message || 'Unknown error'), 'error');
+                previewData = null;
+            } finally {
+                previewBtn.disabled = false;
+                previewBtn.textContent = 'Preview';
+            }
+        }
+        
+        // Display Preview
+        function displayPreview(data) {
+            const card = document.getElementById('previewCard');
+            const imageContainer = document.getElementById('previewImage');
+            const titleEl = document.getElementById('previewTitle');
+            const descEl = document.getElementById('previewDescription');
+            const faviconEl = document.getElementById('previewFavicon');
+            const siteEl = document.getElementById('previewSite');
+            
+            // Image - safely create element to prevent XSS
+            imageContainer.innerHTML = '';
+            if (data.image && isValidImageUrl(data.image)) {
+                const img = document.createElement('img');
+                img.src = data.image;
+                img.alt = 'Preview';
+                img.onerror = function() {
+                    this.parentElement.innerHTML = '<span>Image failed to load</span>';
+                };
+                imageContainer.appendChild(img);
+            } else {
+                imageContainer.innerHTML = '<span>No image available</span>';
+            }
+            
+            // Title
+            titleEl.textContent = data.title || 'Untitled';
+            
+            // Description
+            descEl.textContent = data.description || 'No description available';
+            
+            // Site info - safely set favicon
+            if (data.favicon && isValidImageUrl(data.favicon)) {
+                faviconEl.src = data.favicon;
+                faviconEl.style.display = 'block';
+            } else {
+                faviconEl.style.display = 'none';
+            }
+            
+            try {
+                const urlObj = new URL(data.url);
+                siteEl.textContent = data.siteName || urlObj.hostname;
+            } catch {
+                siteEl.textContent = data.siteName || 'Website';
+            }
+            
+            // Show card and other sections
+            card.classList.add('visible');
+            document.getElementById('noteSection').style.display = 'block';
+            document.getElementById('publishSection').style.display = 'block';
+        }
+        
+        // Publish Post
+        async function publishPost() {
+            if (!currentUser) {
+                showMessage('Please sign in to publish', 'error');
+                return;
+            }
+            
+            if (!previewData) {
+                showMessage('Please preview a URL first', 'error');
+                return;
+            }
+            
+            const publishBtn = document.getElementById('publishBtn');
+            publishBtn.disabled = true;
+            publishBtn.innerHTML = '<span class="loading"><span class="spinner"></span> Publishing...</span>';
+            
+            const note = document.getElementById('noteInput').value.trim();
+            
+            try {
+                // Write to creator_posts collection
+                await db.collection('creator_posts').add({
+                    creator_uid: currentUser.uid,
+                    title: previewData.title || 'Untitled',
+                    content_url: previewData.url,
+                    curator_note: note,
+                    og_image: previewData.image || null,
+                    og_description: previewData.description || null,
+                    site_name: previewData.siteName || null,
+                    created_at: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                showMessage('🎉 Post published successfully! Your followers will be notified.', 'success');
+                resetForm();
+                
+            } catch (error) {
+                console.error('Publish error:', error);
+                showMessage('Failed to publish: ' + error.message, 'error');
+            } finally {
+                publishBtn.disabled = false;
+                publishBtn.textContent = 'Publish to Followers';
+            }
+        }
+        
+        // Reset Form
+        function resetForm() {
+            document.getElementById('urlInput').value = '';
+            document.getElementById('noteInput').value = '';
+            document.getElementById('previewCard').classList.remove('visible');
+            document.getElementById('noteSection').style.display = 'none';
+            document.getElementById('publishSection').style.display = 'none';
+            previewData = null;
+        }
+        
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Show Message (XSS-safe)
+        function showMessage(text, type) {
+            const messageArea = document.getElementById('messageArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = text;
+            messageArea.innerHTML = '';
+            messageArea.appendChild(messageDiv);
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                messageArea.innerHTML = '';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

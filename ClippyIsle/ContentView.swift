@@ -65,6 +65,9 @@ struct ContentView: View {
     // Track expanded inline preview item
     @State private var expandedPreviewItemID: UUID?
     
+    // Feed tab selection for paged view
+    @State private var selectedFeedTab: FeedTab = .discovery
+    
     // Timer for auto-stopping speech search
     @State private var silenceTimer: Timer?
     
@@ -86,6 +89,20 @@ struct ContentView: View {
     // Message Center state
     @State private var isShowingMessageCenter = false
     @StateObject private var notificationManager = NotificationManager.shared
+    
+    // Social Notifications state (Bell icon)
+    @State private var isShowingSocialNotifications = false
+    @StateObject private var socialNotificationService = SocialNotificationService.shared
+    
+    // Create Post sheet state
+    @State private var showCreatePostSheet = false
+    
+    // Curator Required alert state (for non-curators trying to create posts)
+    @State private var showCuratorRequiredAlert = false
+    @State private var showUpgradeView = false
+    
+    // Global Search ViewModel (for Users and Posts search)
+    @StateObject private var searchViewModel = SearchResultsViewModel()
 
     @AppStorage("themeColorName") private var themeColorName: String = "green"
     
@@ -152,10 +169,19 @@ struct ContentView: View {
         )
     }
 
+    // MARK: - Body (split to help compiler type-check)
+    
     var body: some View {
+        bodyWithLifecycle
+            .background(sheetsBackground)
+            .background(alertsBackground)
+    }
+    
+    @ViewBuilder
+    private var bodyWithLifecycle: some View {
         NavigationView { mainContent }
         .navigationViewStyle(.stack).tint(themeColor).preferredColorScheme(preferredColorScheme)
-        .searchable(text: $searchText, prompt: "Search...")
+        // Note: Removed .searchable() modifier - using custom floating search bar instead
         .task(priority: .userInitiated) {
             // ✅ PERFORMANCE FIX: Initialize data asynchronously after UI rendering
             // Note: Runs on MainActor but doesn't block initial view rendering
@@ -170,6 +196,16 @@ struct ContentView: View {
             configureNavigationBarAppearance()
             checkActivityStatus()
             NotificationCenter.default.addObserver(forName: .didRequestUndo, object: nil, queue: .main) { _ in undoManager?.undo() }
+            // Start listening for social notifications (new followers)
+            socialNotificationService.listenToNotifications()
+            // Load saved posts for My Isle
+            Task {
+                await EngagementService.shared.loadSavedPosts()
+            }
+            // Check admin status from Firestore
+            Task {
+                await SafetyService.shared.checkAdminStatus()
+            }
             LaunchLogger.log("ContentView.onAppear - END")
         }
         .onChange(of: scenePhase) { oldPhase, newPhase in
@@ -255,116 +291,100 @@ struct ContentView: View {
                 }
             }
         }
-        
-        .sheet(isPresented: $isShowingTagSheet) { TagFilterView(clipboardManager: clipboardManager, selectedTag: $selectedTagFilter) }
-        .sheet(isPresented: .init(get: { horizontalSizeClass == .compact && isShowingSettings }, set: { isShowingSettings = $0 })) {
-            SettingsView(themeColorName: $themeColorName, speechManager: speechManager, clipboardManager: clipboardManager)
-                .environmentObject(authManager)
+        .onChange(of: searchText) { _, newValue in
+            // Sync searchText with global search ViewModel for Users/Posts search
+            searchViewModel.searchText = newValue
         }
-        .fullScreenCover(isPresented: .init(get: { horizontalSizeClass == .regular && isShowingSettings }, set: { isShowingSettings = $0 })) {
-            SettingsView(themeColorName: $themeColorName, speechManager: speechManager, clipboardManager: clipboardManager)
-                .environmentObject(authManager)
-        }
-        .sheet(isPresented: $isShowingAudioManager) {
-            NavigationView {
-                AudioFileManagerView(clipboardManager: clipboardManager, speechManager: speechManager, onOpenItem: { item in
-                    // Open the item in preview
-                    isShowingAudioManager = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        previewState = .loading(item)
-                    }
-                })
+    }
+    
+    // MARK: - Sheets Background (for compiler optimization)
+    @ViewBuilder
+    private var sheetsBackground: some View {
+        Color.clear
+            .sheet(isPresented: $isShowingTagSheet) { TagFilterView(clipboardManager: clipboardManager, selectedTag: $selectedTagFilter) }
+            .sheet(isPresented: .init(get: { horizontalSizeClass == .compact && isShowingSettings }, set: { isShowingSettings = $0 })) {
+                SettingsView(themeColorName: $themeColorName, speechManager: speechManager, clipboardManager: clipboardManager)
+                    .environmentObject(authManager)
+            }
+            .fullScreenCover(isPresented: .init(get: { horizontalSizeClass == .regular && isShowingSettings }, set: { isShowingSettings = $0 })) {
+                SettingsView(themeColorName: $themeColorName, speechManager: speechManager, clipboardManager: clipboardManager)
+                    .environmentObject(authManager)
+            }
+            .sheet(isPresented: $isShowingAudioManager) {
+                NavigationView {
+                    AudioFileManagerView(clipboardManager: clipboardManager, speechManager: speechManager, onOpenItem: { item in
+                        isShowingAudioManager = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            previewState = .loading(item)
+                        }
+                    })
                     .toolbar {
                         ToolbarItem(placement: .navigationBarTrailing) {
                             Button("Done") { isShowingAudioManager = false }
                                 .foregroundStyle(themeColor)
                         }
                     }
-            }
-            .tint(themeColor)
-        }
-        
-        .sheet(item: $itemToTag) { item in TagEditView(item: Binding(get: { item }, set: { itemToTag = $0 }), clipboardManager: clipboardManager) }
-        // iPad preview: sheet in normal mode, fullScreenCover in fullscreen mode
-        // iPhone preview: always sheet
-        // Note: onDismiss handles user-initiated dismissal (swipe down, etc.)
-        // The setter should only dismiss when not transitioning between presentation styles
-        .sheet(isPresented: .init(
-            get: { isSheetPresented && (horizontalSizeClass == .compact || !isPreviewFullscreen) },
-            set: { newValue in
-                // Only dismiss if user actually dismissed (not transitioning to fullscreen)
-                if !newValue && !isPreviewFullscreen {
-                    dismissPreview()
                 }
+                .tint(themeColor)
             }
-        ), onDismiss: {
-            // Only dismiss if not transitioning to fullscreen
-            if !isPreviewFullscreen {
-                dismissPreview()
+            .sheet(item: $itemToTag) { item in TagEditView(item: Binding(get: { item }, set: { itemToTag = $0 }), clipboardManager: clipboardManager) }
+            .sheet(isPresented: .init(
+                get: { isSheetPresented && (horizontalSizeClass == .compact || !isPreviewFullscreen) },
+                set: { newValue in if !newValue && !isPreviewFullscreen { dismissPreview() } }
+            ), onDismiss: { if !isPreviewFullscreen { dismissPreview() } }) {
+                previewSheetContent(isFullscreen: false, onToggleFullscreen: { isPreviewFullscreen = true })
             }
-        }) {
-            previewSheetContent(isFullscreen: false, onToggleFullscreen: { isPreviewFullscreen = true })
-        }
-        .fullScreenCover(isPresented: .init(
-            get: { isSheetPresented && horizontalSizeClass == .regular && isPreviewFullscreen },
-            set: { newValue in
-                // Only dismiss if user actually dismissed (not transitioning back to sheet)
-                if !newValue && isPreviewFullscreen {
-                    dismissPreview()
-                }
+            .fullScreenCover(isPresented: .init(
+                get: { isSheetPresented && horizontalSizeClass == .regular && isPreviewFullscreen },
+                set: { newValue in if !newValue && isPreviewFullscreen { dismissPreview() } }
+            ), onDismiss: { if isPreviewFullscreen { dismissPreview() } }) {
+                previewSheetContent(isFullscreen: true, onToggleFullscreen: { isPreviewFullscreen = false })
             }
-        ), onDismiss: {
-            // Only dismiss if still in fullscreen mode (user dismissed fullscreen)
-            if isPreviewFullscreen {
-                dismissPreview()
+            .sheet(isPresented: $showPaywall) { PaywallView() }
+            .sheet(isPresented: $showFirebaseShareSheet) {
+                if let urlString = firebaseShareURL { ActivityView(activityItems: [urlString]) }
             }
-        }) {
-            previewSheetContent(isFullscreen: true, onToggleFullscreen: { isPreviewFullscreen = false })
-        }
-        .alert("Rename Item", isPresented: $isShowingRenameAlert) {
-            TextField("Enter new name", text: $newName).submitLabel(.done)
-            Button("Save") { if let item = itemToRename { clipboardManager.renameItem(item: item, newName: newName) }; isShowingRenameAlert = false }
-            Button("Cancel", role: .cancel) {}
-        } message: { Text("Please enter a new name for the clipboard item.") }
-        .alert("Confirm Deletion", isPresented: $isShowingDeleteConfirm, presenting: itemToDelete) { item in
-            Button("Delete", role: .destructive) { clipboardManager.moveItemToTrash(item: item) }
-            Button("Cancel", role: .cancel) {}
-        } message: { item in Text("Are you sure you want to move “\(item.displayName ?? item.content.prefix(20).description)...” to the trash?") }
-        
-        // **NEW**: Attach Paywall Sheet
-        .sheet(isPresented: $showPaywall) {
-            PaywallView()
-        }
-        // Firebase share sheet
-        .sheet(isPresented: $showFirebaseShareSheet) {
-            if let urlString = firebaseShareURL {
-                ActivityView(activityItems: [urlString])
+            .sheet(isPresented: $pendingShareManager.showImportDialog) {
+                SharedItemsImportView(
+                    clipboardManager: clipboardManager,
+                    pendingItems: pendingShareManager.pendingItems,
+                    isPresented: $pendingShareManager.showImportDialog
+                )
+                .onDisappear { pendingShareManager.clearPendingItems() }
             }
-        }
-        // Firebase size error alert
-        .alert("Size Limit Exceeded", isPresented: $showFirebaseSizeError) {
-            Button("OK") {}
-        } message: {
-            Text("The item exceeds the 900KB limit for Firebase sharing. Please use JSON export instead.")
-        }
-        // Shared items import dialog
-        .sheet(isPresented: $pendingShareManager.showImportDialog) {
-            SharedItemsImportView(
-                clipboardManager: clipboardManager,
-                pendingItems: pendingShareManager.pendingItems,
-                isPresented: $pendingShareManager.showImportDialog
-            )
-            .onDisappear {
-                pendingShareManager.clearPendingItems()
+            .sheet(isPresented: $isShowingMessageCenter) {
+                MessageCenterView(notificationManager: notificationManager, clipboardManager: clipboardManager)
             }
-        }
-        // Message Center sheet
-        .sheet(isPresented: $isShowingMessageCenter) {
-            MessageCenterView(
-                notificationManager: notificationManager,
-                clipboardManager: clipboardManager
-            )
-        }
+            .sheet(isPresented: $isShowingSocialNotifications) { SocialNotificationsView() }
+            .sheet(isPresented: $showCreatePostSheet) { CreatePostView(themeColor: themeColor) }
+            .sheet(isPresented: $showUpgradeView) { UpgradeView(themeColor: themeColor) }
+    }
+    
+    // MARK: - Alerts Background (for compiler optimization)
+    @ViewBuilder
+    private var alertsBackground: some View {
+        Color.clear
+            .alert("Rename Item", isPresented: $isShowingRenameAlert) {
+                TextField("Enter new name", text: $newName).submitLabel(.done)
+                Button("Save") { if let item = itemToRename { clipboardManager.renameItem(item: item, newName: newName) }; isShowingRenameAlert = false }
+                Button("Cancel", role: .cancel) {}
+            } message: { Text("Please enter a new name for the clipboard item.") }
+            .alert("Confirm Deletion", isPresented: $isShowingDeleteConfirm, presenting: itemToDelete) { item in
+                Button("Delete", role: .destructive) { clipboardManager.moveItemToTrash(item: item) }
+                Button("Cancel", role: .cancel) {}
+            } message: { item in Text("Are you sure you want to move \"\(item.displayName ?? String(item.content.prefix(20)))...\" to the trash?") }
+            .alert("Size Limit Exceeded", isPresented: $showFirebaseSizeError) {
+                Button("OK") {}
+            } message: { Text("The item exceeds the 900KB limit for Firebase sharing. Please use JSON export instead.") }
+            .alert("Curator Access Required", isPresented: $showCuratorRequiredAlert) {
+                Button("Upgrade to Curator") { showUpgradeView = true }
+                Button("Cancel", role: .cancel) {}
+            } message: { Text(curatorAlertMessage) }
+    }
+    
+    // Constant for curator alert message to help compiler
+    private var curatorAlertMessage: String {
+        "Publishing posts requires a Curator subscription. Upgrade to Curator (TWD 300/month) to unlock publishing tools."
     }
     
     private func stopTranscription() {
@@ -409,16 +429,40 @@ struct ContentView: View {
             
             VStack(spacing: 0) {
                 if clipboardManager.dataLoadError != nil { dataErrorView }
+                else if !searchText.isEmpty {
+                    // Show global search results when searching
+                    SearchResultsView(viewModel: searchViewModel, themeColor: themeColor)
+                }
                 else { 
-                    ZStack(alignment: .bottom) { 
+                    // Paged feed with Discovery, Following, and My Isle tabs
+                    MainFeedView(
+                        selectedTab: $selectedFeedTab,
+                        themeColor: themeColor
+                    ) {
+                        // Discovery tab content - real Firestore data from creator_posts
+                        DiscoveryFeedView(themeColor: themeColor)
+                    } followingContent: {
+                        // Following tab content - posts from creators the user follows
+                        FollowingFeedView(themeColor: themeColor)
+                    } myIsleContent: {
+                        // My Isle tab content - local clipboard items + saved posts
                         listContent
                     }
                 }
             }
             
+            // Floating Search Bar - visible on all tabs
+            VStack {
+                Spacer()
+                bottomToolbar
+                    .padding(.bottom, 10)
+            }
+            .background(Color.clear)
+            
             // Radial Menu FAB - positioned relative to full screen, not scroll content
             RadialMenuView(
                 themeColor: themeColor,
+                selectedTab: selectedFeedTab,
                 onVoiceMemo: {
                     // Open microphone for voice-to-text memo
                     if isTranscribing && isVoiceMemoMode {
@@ -434,9 +478,18 @@ struct ContentView: View {
                     }
                 },
                 onNewItem: {
+                    // Create new text item (local clipboard function) - My Isle tab
                     trackAndHighlightNewItem {
-                        clipboardManager.addNewItem(content: String(localized: "New Item"), type: UTType.text.identifier)
+                        clipboardManager.addNewItem(content: "New Item", type: UTType.text.identifier)
                     }
+                },
+                onCreatePost: {
+                    // Open Create Post view with link preview (social posting function for curators)
+                    showCreatePostSheet = true
+                },
+                onCuratorRequired: {
+                    // Show alert when non-curator tries to create a post on Discovery/Following
+                    showCuratorRequiredAlert = true
                 },
                 onPasteFromClipboard: {
                     trackAndHighlightNewItem {
@@ -492,7 +545,8 @@ struct ContentView: View {
                 .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isVoiceMemoMode)
             }
         }
-        .navigationTitle(navigationTitle).navigationBarTitleDisplayMode(selectedTagFilter == nil ? .large : .inline)
+        .navigationTitle(selectedTagFilter != nil ? navigationTitle : "")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 if selectedTagFilter != nil { 
@@ -502,18 +556,41 @@ struct ContentView: View {
                         .clipShape(Capsule())
                 }
                 else { 
+                    // Live Activity button only (tab picker moved to custom header)
                     Button { clipboardManager.isLiveActivityOn.toggle() } label: { 
                         Image(systemName: "c.circle.fill")
                             .font(.system(size: 20, weight: .bold))
                             .foregroundColor(clipboardManager.isLiveActivityOn ? Color.green : Color.red) 
                     }
-                    .disabled(!areActivitiesEnabled) 
+                    .disabled(!areActivitiesEnabled)
                 }
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 // Unified capsule container for navigation icons
                 let hasUnreadNotifications = notificationManager.unreadCount > 0
+                let hasSocialNotifications = socialNotificationService.unreadCount > 0
                 HStack(spacing: 4) {
+                    // Social Notifications (Bell icon) with badge
+                    Button { isShowingSocialNotifications = true } label: {
+                        ZStack {
+                            Image(systemName: "bell.fill")
+                                .font(.system(size: navIconFontSize, weight: .semibold))
+                                .foregroundColor(themeColor)
+                            
+                            // Badge for unread count
+                            if hasSocialNotifications {
+                                Text("\(socialNotificationService.unreadCount)")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .frame(minWidth: 14, minHeight: 14)
+                                    .background(Color.red)
+                                    .clipShape(Circle())
+                                    .offset(x: 8, y: -8)
+                            }
+                        }
+                        .frame(width: navIconWidth, height: navIconHeight)
+                    }
+                    
                     // Message Center button with badge (uniform style - no individual background)
                     Button { isShowingMessageCenter = true } label: {
                         ZStack {
@@ -732,7 +809,7 @@ struct ContentView: View {
             )
             .ignoresSafeArea(.keyboard, edges: .bottom)
             .refreshable { await clipboardManager.performCloudSync() }
-            .onChange(of: filteredItems) { items in if let first = items.first, first.id != lastTopItemID { withAnimation { proxy.scrollTo(first.id, anchor: .top) }; lastTopItemID = first.id } }
+            .onChange(of: filteredItems) { _, items in if let first = items.first, first.id != lastTopItemID { withAnimation { proxy.scrollTo(first.id, anchor: .top) }; lastTopItemID = first.id } }
             .onChange(of: newlyAddedItemID) { oldID, newID in
                 if let id = newID {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -821,9 +898,13 @@ struct ContentView: View {
     
     @ViewBuilder
     private var bottomToolbarBackground: some View {
-        // Glassmorphism style - semi-transparent in both dark and light modes
+        // Semi-transparent glass capsule with 50% opacity
         Capsule()
-            .fill(.ultraThinMaterial)
+            .fill(colorScheme == .dark ? Color.black.opacity(0.5) : Color.white.opacity(0.5))
+            .background(
+                Capsule()
+                    .fill(.ultraThinMaterial)
+            )
     }
     
     @ViewBuilder private func previewSheetContent(isFullscreen: Bool, onToggleFullscreen: @escaping () -> Void) -> some View {
@@ -860,7 +941,7 @@ struct ContentView: View {
     
     func checkActivityStatus() {
         Task {
-            let enabled = await ActivityAuthorizationInfo().areActivitiesEnabled; self.areActivitiesEnabled = enabled
+            let enabled = ActivityAuthorizationInfo().areActivitiesEnabled; self.areActivitiesEnabled = enabled
             if enabled { await clipboardManager.ensureLiveActivityIsRunningIfNeeded() } else { await clipboardManager.endActivity() }
         }
     }
