@@ -15,9 +15,6 @@ const firebaseConfig = {
 
 // Initialize Firebase (avoid double initialization during hot reloads)
 let app: FirebaseApp;
-let auth: Auth;
-let db: Firestore;
-let storage: FirebaseStorage;
 
 if (getApps().length === 0) {
   app = initializeApp(firebaseConfig);
@@ -25,8 +22,8 @@ if (getApps().length === 0) {
   app = getApps()[0];
 }
 
-auth = getAuth(app);
-db = getFirestore(app);
-storage = getStorage(app);
+const auth: Auth = getAuth(app);
+const db: Firestore = getFirestore(app);
+const storage: FirebaseStorage = getStorage(app);
 
 export { app, auth, db, storage };
