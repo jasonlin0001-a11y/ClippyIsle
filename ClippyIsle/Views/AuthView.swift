@@ -50,8 +50,8 @@ struct AuthView: View {
     // MARK: - Header Section
     private var headerSection: some View {
         VStack(spacing: 16) {
-            // App Logo
-            Image(systemName: "island.fill")
+            // App Logo - Using leaf.circle.fill as island.fill doesn't exist in SF Symbols
+            Image(systemName: "leaf.circle.fill")
                 .font(.system(size: 80))
                 .foregroundStyle(
                     LinearGradient(
