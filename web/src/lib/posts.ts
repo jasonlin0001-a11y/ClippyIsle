@@ -8,10 +8,25 @@ import {
   Timestamp 
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Post } from '@/types';
+
+// 1. 直接在這裡定義並匯出 Post 介面 (解決 Build Error)
+export interface Post {
+  id: string;
+  creator_uid: string;
+  curator_note?: string; // 筆記
+  content_url?: string;  // 原始連結
+  
+  // 連結預覽資料
+  link_title?: string;
+  link_description?: string;
+  link_image?: string;
+  link_domain?: string;
+  
+  created_at?: any;      // 時間戳記
+}
 
 /**
- * Fetch all posts from Firestore, ordered by created_at (newest first)
+ * 抓取所有文章 (已修正為 Dashboard 專用格式)
  */
 export async function fetchAllPosts(): Promise<Post[]> {
   if (!db) {
@@ -20,45 +35,27 @@ export async function fetchAllPosts(): Promise<Post[]> {
 
   try {
     const postsRef = collection(db, 'creator_posts');
-    
-    // 修正 1: 資料庫排序欄位是 created_at
     const q = query(postsRef, orderBy('created_at', 'desc'));
-    
     const snapshot = await getDocs(q);
     
+    // 2. 直接對應資料庫欄位，不隨意改名 (解決 Dashboard 空白問題)
     const posts: Post[] = snapshot.docs.map((docSnapshot) => {
       const data = docSnapshot.data();
       
-      // 修正 2: 這裡做欄位對應 (左邊是程式用的，右邊是資料庫有的)
       return {
         id: docSnapshot.id,
-        // 資料庫是 creator_uid，若沒有則找 authorId，再沒有就給空字串
-        authorId: data.creator_uid || data.authorId || '',
-        authorName: data.authorName || 'Unknown',
+        creator_uid: data.creator_uid || data.authorId || '',
         
-        // 資料庫筆記是 curator_note，對應到這裡的 text
-        text: data.curator_note || data.text || data.content || '',
+        // 直接使用資料庫的原名，確保 Dashboard 讀得到
+        curator_note: data.curator_note || data.text || '',
+        content_url: data.content_url || data.url || '',
         
-        // 嘗試抓取連結圖片
-        imageUrl: data.link_image || data.imageUrl,
+        link_title: data.link_title || data.ogTitle || '',
+        link_description: data.link_description || data.ogDescription || '',
+        link_image: data.link_image || data.imageUrl || '', // 關鍵修正
+        link_domain: data.link_domain || '',
         
-        // 資料庫時間是 created_at
-        timestamp: data.created_at || data.timestamp || Timestamp.now(),
-        
-        category: data.category,
-        likesCount: data.likesCount || 0,
-        
-        // 資料庫連結是 content_url
-        url: data.content_url || data.url,
-        
-        // 對應連結標題與描述
-        ogTitle: data.link_title || data.ogTitle,
-        ogDescription: data.link_description || data.ogDescription,
-        ogImageUrl: data.ogImageUrl, // 若資料庫沒有這個欄位，會是 undefined
-        
-        // 保留原本的計數與隱藏邏輯
-        reportCount: data.reportCount || 0,
-        isHidden: data.isHidden || false,
+        created_at: data.created_at || Timestamp.now(),
       };
     });
     
@@ -70,8 +67,7 @@ export async function fetchAllPosts(): Promise<Post[]> {
 }
 
 /**
- * Delete a post by ID
- * Note: This works because Firestore Rules allow Admins to delete
+ * 刪除文章
  */
 export async function deletePost(postId: string): Promise<void> {
   if (!db) {
@@ -79,7 +75,6 @@ export async function deletePost(postId: string): Promise<void> {
   }
 
   try {
-    // 這裡也要確保是指向 creator_posts
     const postRef = doc(db, 'creator_posts', postId);
     await deleteDoc(postRef);
   } catch (error) {
