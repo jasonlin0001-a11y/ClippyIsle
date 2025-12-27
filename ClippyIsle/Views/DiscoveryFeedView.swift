@@ -139,6 +139,7 @@ struct DiscoveryFeedView: View {
                                 selectedURL = IdentifiableURL(url: url)
                             }
                         },
+                        autoLoadPreview: true, // Auto-load link previews in Discovery feed
                         onSaveToggle: { isSaved in
                             showSaveToastMessage(isSaved: isSaved)
                         },

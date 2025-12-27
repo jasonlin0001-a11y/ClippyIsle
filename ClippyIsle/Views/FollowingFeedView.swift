@@ -243,6 +243,8 @@ struct CreatorPostCell: View {
     let onTap: () -> Void
     /// Show follow button in footer (default: true for Discovery, false for Following tab)
     var showFollowButton: Bool = true
+    /// Auto-load link preview client-side when no pre-saved image exists (default: false for My Isle, true for Discovery)
+    var autoLoadPreview: Bool = false
     /// Callback when save button is tapped (shows toast)
     var onSaveToggle: ((Bool) -> Void)? = nil
     /// Callback when user is blocked
@@ -265,6 +267,11 @@ struct CreatorPostCell: View {
     @State private var showBlockConfirmation = false
     @State private var showAdminDeleteConfirmation = false
     @State private var selectedReportReason: Report.ReportReason?
+    
+    // Client-side preview loading states (for autoLoadPreview mode)
+    @State private var isLoadingClientPreview = false
+    @State private var clientFetchedMetadata: EnhancedLinkMetadata?
+    @State private var clientPreviewError = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -468,10 +475,135 @@ struct CreatorPostCell: View {
         // Show rich preview immediately without user interaction
         if let linkImage = post.linkImage, !linkImage.isEmpty {
             return AnyView(richLinkPreviewCard(imageUrlString: linkImage))
-        } else {
-            // CASE B: No pre-saved image - show fallback generic card
+        } 
+        // CASE B: Client-fetched metadata available (from auto-load)
+        else if let metadata = clientFetchedMetadata, let imageProvider = metadata.lpMetadata.imageProvider {
+            return AnyView(clientFetchedPreviewCard(metadata: metadata))
+        }
+        // CASE C: Auto-load mode - fetch client-side preview automatically
+        else if autoLoadPreview {
+            return AnyView(autoLoadingPreviewCard)
+        }
+        // CASE D: No pre-saved image and no auto-load - show fallback generic card
+        else {
             return AnyView(fallbackLinkCard)
         }
+    }
+    
+    // Auto-loading preview card (triggers client-side fetch)
+    private var autoLoadingPreviewCard: some View {
+        Group {
+            if isLoadingClientPreview {
+                // Loading state
+                Button(action: onTap) {
+                    HStack(spacing: 12) {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        Text("Loading preview...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(.systemGray6).opacity(colorScheme == .dark ? 1.0 : 0.5))
+                    )
+                }
+                .buttonStyle(.plain)
+            } else if clientPreviewError {
+                // Error state - show fallback
+                fallbackLinkCard
+            } else {
+                // Trigger loading on appear
+                fallbackLinkCard
+                    .onAppear {
+                        loadClientPreview()
+                    }
+            }
+        }
+    }
+    
+    // Load client-side preview
+    private func loadClientPreview() {
+        guard !isLoadingClientPreview, clientFetchedMetadata == nil, !clientPreviewError else { return }
+        guard let url = URL(string: post.contentUrl) else {
+            clientPreviewError = true
+            return
+        }
+        
+        isLoadingClientPreview = true
+        
+        Task {
+            // Check cache first
+            if let cached = LinkMetadataManager.shared.getCachedEnhancedMetadata(for: url) {
+                await MainActor.run {
+                    clientFetchedMetadata = cached
+                    isLoadingClientPreview = false
+                }
+                return
+            }
+            
+            // Fetch metadata
+            if let metadata = await LinkMetadataManager.shared.fetchEnhancedMetadata(for: url) {
+                await MainActor.run {
+                    clientFetchedMetadata = metadata
+                    isLoadingClientPreview = false
+                }
+            } else {
+                await MainActor.run {
+                    clientPreviewError = true
+                    isLoadingClientPreview = false
+                }
+            }
+        }
+    }
+    
+    // Client-fetched preview card (from auto-load)
+    private func clientFetchedPreviewCard(metadata: EnhancedLinkMetadata) -> some View {
+        Button(action: onTap) {
+            HStack(alignment: .top, spacing: 12) {
+                // Image (if available)
+                if let imageProvider = metadata.lpMetadata.imageProvider {
+                    ClientPreviewImageView(imageProvider: imageProvider)
+                        .frame(width: 80, height: 80)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                
+                // Text content
+                VStack(alignment: .leading, spacing: 4) {
+                    // Title
+                    Text(metadata.lpMetadata.title ?? post.linkTitle ?? post.title)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .lineLimit(2)
+                        .foregroundColor(.primary)
+                        .multilineTextAlignment(.leading)
+                    
+                    // Description
+                    if let description = metadata.description {
+                        Text(description)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(2)
+                    }
+                    
+                    // Domain
+                    Text(post.linkDomain ?? formattedUrl)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+                
+                Spacer(minLength: 0)
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.systemGray6).opacity(colorScheme == .dark ? 1.0 : 0.5))
+            )
+        }
+        .buttonStyle(.plain)
     }
     
     // Rich link preview card with image (for Web Portal posts with link_image)
@@ -733,6 +865,47 @@ struct CreatorPostCell: View {
                 onPostDeleted?()
             } catch {
                 print("❌ Admin delete failed: \(error.localizedDescription)")
+            }
+        }
+    }
+}
+
+// MARK: - Client Preview Image View (for auto-loaded link previews)
+/// Helper view to display images from NSItemProvider
+struct ClientPreviewImageView: View {
+    let imageProvider: NSItemProvider
+    @State private var image: UIImage?
+    @State private var isLoading = true
+    
+    var body: some View {
+        ZStack {
+            if let image = image {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else if isLoading {
+                ProgressView()
+                    .scaleEffect(0.7)
+            } else {
+                Image(systemName: "photo")
+                    .foregroundColor(.secondary)
+                    .font(.title3)
+            }
+        }
+        .frame(width: 80, height: 80)
+        .background(Color.gray.opacity(0.1))
+        .onAppear {
+            loadImage()
+        }
+    }
+    
+    private func loadImage() {
+        imageProvider.loadObject(ofClass: UIImage.self) { (object, error) in
+            DispatchQueue.main.async {
+                if let image = object as? UIImage {
+                    self.image = image
+                }
+                self.isLoading = false
             }
         }
     }
