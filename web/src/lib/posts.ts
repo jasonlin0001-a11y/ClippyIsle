@@ -19,7 +19,7 @@ export async function fetchAllPosts(): Promise<Post[]> {
   }
 
   try {
-    const postsRef = collection(db, 'posts');
+    const postsRef = collection(db, 'creator_posts');
     const q = query(postsRef, orderBy('timestamp', 'desc'));
     const snapshot = await getDocs(q);
     
@@ -60,7 +60,7 @@ export async function deletePost(postId: string): Promise<void> {
   }
 
   try {
-    const postRef = doc(db, 'posts', postId);
+    const postRef = doc(db, 'creator_posts', postId);
     await deleteDoc(postRef);
   } catch (error) {
     console.error('Error deleting post:', error);
