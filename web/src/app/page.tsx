@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { fetchAllPosts } from '@/lib/posts';
 import { Post } from '@/types';
 import PostList from '@/components/PostList';
-import { Loader2, LogOut, ShieldAlert, ShieldCheck, RefreshCw, FileText } from 'lucide-react';
+import { Loader2, LogOut, ShieldAlert, ShieldCheck, RefreshCw, FileText, Plus } from 'lucide-react';
 
 export default function Home() {
   const { user, isAdmin, loading, signOut } = useAuth();
@@ -143,14 +143,23 @@ export default function Home() {
                 ({posts.length} total)
               </span>
             </div>
-            <button
-              onClick={loadPosts}
-              disabled={postsLoading}
-              className="inline-flex items-center gap-2 rounded-lg bg-[#2a2a2a] px-4 py-2 text-sm text-[#fafafa] hover:bg-[#3a3a3a] transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`h-4 w-4 ${postsLoading ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => router.push('/create')}
+                className="inline-flex items-center gap-2 rounded-lg bg-teal-500 px-4 py-2 text-sm text-white hover:bg-teal-600 transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                New Post
+              </button>
+              <button
+                onClick={loadPosts}
+                disabled={postsLoading}
+                className="inline-flex items-center gap-2 rounded-lg bg-[#2a2a2a] px-4 py-2 text-sm text-[#fafafa] hover:bg-[#3a3a3a] transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className={`h-4 w-4 ${postsLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+            </div>
           </div>
 
           {/* Content */}
