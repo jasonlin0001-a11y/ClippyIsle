@@ -34,7 +34,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (!currentUser) {
-        router.push('/'); // 沒登入 -> 踢回首頁
+        router.push('/login'); 
       } else {
         setUser(currentUser);
         loadPosts(); // 有登入 -> 抓文章
