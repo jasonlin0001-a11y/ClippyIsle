@@ -374,7 +374,7 @@ class AuthenticationManager: ObservableObject {
             }
             
             // Handle specific Firebase Auth errors
-            let errorCode = AuthErrorCode(_nsError: error)
+            let errorCode = AuthErrorCode(_bridgedNSError: error)
             switch errorCode.code {
             case .emailAlreadyInUse:
                 throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "This email is already in use by another account."])
@@ -447,7 +447,7 @@ class AuthenticationManager: ObservableObject {
             }
             
             // Handle specific Firebase Auth errors
-            let errorCode = AuthErrorCode(_nsError: error)
+            let errorCode = AuthErrorCode(_bridgedNSError: error)
             switch errorCode.code {
             case .wrongPassword:
                 throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Incorrect password. Please try again."])
@@ -496,7 +496,7 @@ class AuthenticationManager: ObservableObject {
             }
             
             // Handle specific Firebase Auth errors
-            let errorCode = AuthErrorCode(_nsError: error)
+            let errorCode = AuthErrorCode(_bridgedNSError: error)
             switch errorCode.code {
             case .emailAlreadyInUse:
                 throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "This email is already in use. Please sign in instead."])
