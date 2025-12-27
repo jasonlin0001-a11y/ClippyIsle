@@ -107,9 +107,11 @@ struct FollowingFeedView: View {
         }
     }
     
-    // MARK: - Filtered Posts (excluding blocked users)
+    // MARK: - Filtered Posts (excluding blocked users and hidden posts)
     private var filteredPosts: [FeedPost] {
-        viewModel.feedPosts.filter { !safetyService.isUserBlocked(userId: $0.creatorUid) }
+        viewModel.feedPosts.filter { 
+            !safetyService.isUserBlocked(userId: $0.creatorUid) && !$0.isHidden
+        }
     }
     
     // MARK: - Feed List
@@ -247,6 +249,8 @@ struct CreatorPostCell: View {
     var onUserBlocked: ((String, String) -> Void)? = nil
     /// Callback when post is reported
     var onPostReported: (() -> Void)? = nil
+    /// Callback when post is deleted by admin
+    var onPostDeleted: (() -> Void)? = nil
     
     @Environment(\.colorScheme) private var colorScheme
     @StateObject private var engagementService = EngagementService.shared
@@ -259,6 +263,7 @@ struct CreatorPostCell: View {
     // Report/Block states
     @State private var showReportSheet = false
     @State private var showBlockConfirmation = false
+    @State private var showAdminDeleteConfirmation = false
     @State private var selectedReportReason: Report.ReportReason?
     
     var body: some View {
@@ -593,7 +598,7 @@ struct CreatorPostCell: View {
         return post.contentUrl
     }
     
-    // MARK: - More Menu (Report/Block)
+    // MARK: - More Menu (Report/Block/Admin Delete)
     private var moreMenu: some View {
         Menu {
             // Report Post
@@ -609,6 +614,17 @@ struct CreatorPostCell: View {
                     showBlockConfirmation = true
                 } label: {
                     Label("Block User / 封鎖用戶", systemImage: "nosign")
+                }
+            }
+            
+            // Admin Delete (only visible to admins)
+            if safetyService.isCurrentUserAdmin() {
+                Divider()
+                
+                Button(role: .destructive) {
+                    showAdminDeleteConfirmation = true
+                } label: {
+                    Label("Delete Post (Admin)", systemImage: "trash.fill")
                 }
             }
         } label: {
@@ -633,6 +649,14 @@ struct CreatorPostCell: View {
             }
         } message: {
             Text("Block \(post.creatorName)? You won't see their posts anymore.\n\n封鎖 \(post.creatorName)？你將不再看到他們的貼文。")
+        }
+        .alert("Delete Post (Admin)", isPresented: $showAdminDeleteConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                adminDeletePost()
+            }
+        } message: {
+            Text("Permanently delete this post? This action cannot be undone.\n\n永久刪除此貼文？此操作無法撤銷。")
         }
     }
     
@@ -668,6 +692,24 @@ struct CreatorPostCell: View {
                 onUserBlocked?(post.creatorUid, post.creatorName)
             } catch {
                 print("❌ Block failed: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    // MARK: - Admin Delete Post
+    private func adminDeletePost() {
+        Task {
+            do {
+                try await safetyService.adminDeletePost(postId: post.id)
+                
+                // Haptic feedback
+                let generator = UINotificationFeedbackGenerator()
+                generator.notificationOccurred(.success)
+                
+                // Notify parent
+                onPostDeleted?()
+            } catch {
+                print("❌ Admin delete failed: \(error.localizedDescription)")
             }
         }
     }

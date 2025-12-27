@@ -86,8 +86,26 @@ class SafetyService: ObservableObject {
         blockedUsersListener?.remove()
     }
     
+    /// Threshold for auto-hiding posts
+    static let AUTO_HIDE_REPORT_THRESHOLD = 5
+    
+    /// Admin user IDs (for testing/demo - in production, use Firestore isAdmin field)
+    static let ADMIN_USER_IDS: Set<String> = [
+        // Add your admin user IDs here
+        // "YOUR_ADMIN_UID_HERE"
+    ]
+    
+    // MARK: - Check If Admin
+    /// Returns true if the current user is an admin
+    func isCurrentUserAdmin() -> Bool {
+        guard let currentUid = AuthenticationManager.shared.currentUID else { return false }
+        // Check hardcoded list OR isAdmin field (extend as needed)
+        return Self.ADMIN_USER_IDS.contains(currentUid)
+    }
+    
     // MARK: - Report Post
     /// Reports a post to the admin review queue
+    /// Also increments reportCount and auto-hides if threshold reached
     func reportPost(postId: String, reason: Report.ReportReason, description: String? = nil) async throws {
         guard let currentUid = AuthenticationManager.shared.currentUID else {
             throw SafetyError.noAuthenticatedUser
@@ -124,7 +142,67 @@ class SafetyService: ObservableObject {
         
         try await reportDocRef.setData(data)
         
+        // Increment reportCount on the post and check for auto-hide
+        try await incrementReportCountAndAutoHide(postId: postId)
+        
         print("🚨 [SafetyService] Report submitted for post: \(postId), reason: \(reason.rawValue)")
+    }
+    
+    // MARK: - Increment Report Count & Auto-Hide
+    /// Increments the reportCount on a post and auto-hides if threshold reached
+    private func incrementReportCountAndAutoHide(postId: String) async throws {
+        let postRef = db.collection("creator_posts").document(postId)
+        
+        // Use transaction to safely increment
+        try await db.runTransaction { transaction, errorPointer -> Any? in
+            let postDoc: DocumentSnapshot
+            do {
+                postDoc = try transaction.getDocument(postRef)
+            } catch let error {
+                errorPointer?.pointee = error as NSError
+                return nil
+            }
+            
+            // Get current reportCount (default to 0)
+            let currentCount = postDoc.data()?["reportCount"] as? Int ?? 0
+            let newCount = currentCount + 1
+            
+            // Update reportCount
+            transaction.updateData(["reportCount": newCount], forDocument: postRef)
+            
+            // Check if threshold reached for auto-hide
+            if newCount >= SafetyService.AUTO_HIDE_REPORT_THRESHOLD {
+                transaction.updateData(["isHidden": true], forDocument: postRef)
+                print("🚫 [SafetyService] Post \(postId) auto-hidden after \(newCount) reports")
+                
+                // Also add to flagged_for_review collection
+                let flaggedRef = self.db.collection("flagged_for_review").document(postId)
+                transaction.setData([
+                    "postId": postId,
+                    "reportCount": newCount,
+                    "flaggedAt": Timestamp(date: Date()),
+                    "status": "pending_review"
+                ], forDocument: flaggedRef)
+            }
+            
+            return nil
+        }
+    }
+    
+    // MARK: - Admin Delete Post
+    /// Permanently deletes a post (Admin only)
+    func adminDeletePost(postId: String) async throws {
+        guard isCurrentUserAdmin() else {
+            throw SafetyError.notAuthorized
+        }
+        
+        // Delete the post document
+        try await db.collection("creator_posts").document(postId).delete()
+        
+        // Also remove from flagged_for_review if present
+        try? await db.collection("flagged_for_review").document(postId).delete()
+        
+        print("🗑️ [SafetyService] Admin deleted post: \(postId)")
     }
     
     // MARK: - Report User
@@ -371,6 +449,7 @@ enum SafetyError: Error, LocalizedError {
     case cannotBlockSelf
     case networkError(String)
     case invalidReport
+    case notAuthorized
     
     var errorDescription: String? {
         switch self {
@@ -382,6 +461,8 @@ enum SafetyError: Error, LocalizedError {
             return "Network error: \(message)"
         case .invalidReport:
             return "Invalid report data"
+        case .notAuthorized:
+            return "You are not authorized to perform this action"
         }
     }
 }

@@ -19,6 +19,8 @@ struct UpgradeView: View {
     @State private var showSuccessAlert = false
     @State private var purchaseError: String?
     @State private var showErrorAlert = false
+    @State private var eulaAccepted = false
+    @State private var showEulaSheet = false
     
     var body: some View {
         ZStack {
@@ -32,6 +34,9 @@ struct UpgradeView: View {
                     
                     // Pricing Card
                     pricingCard
+                    
+                    // EULA Agreement Checkbox
+                    eulaSection
                     
                     // Subscribe Button
                     subscribeButton
@@ -260,7 +265,62 @@ struct UpgradeView: View {
             .cornerRadius(16)
             .shadow(color: themeColor.opacity(0.3), radius: 8, x: 0, y: 4)
         }
-        .disabled(curatorService.isPurchasing)
+        .disabled(curatorService.isPurchasing || !eulaAccepted)
+        .opacity(eulaAccepted ? 1.0 : 0.5)
+    }
+    
+    // MARK: - EULA Section
+    private var eulaSection: some View {
+        VStack(spacing: 12) {
+            // EULA Checkbox
+            Button(action: {
+                eulaAccepted.toggle()
+            }) {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: eulaAccepted ? "checkmark.square.fill" : "square")
+                        .font(.title3)
+                        .foregroundColor(eulaAccepted ? themeColor : .secondary)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("I agree to the Terms of Service and EULA")
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                        
+                        Text("我同意服務條款與最終用戶許可協議")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Text("I strictly agree not to post illegal, discriminatory, or abusive content.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Text("我嚴格承諾不發布違法、歧視或濫用內容。")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .multilineTextAlignment(.leading)
+                }
+            }
+            .buttonStyle(.plain)
+            
+            // View EULA link
+            Button(action: {
+                showEulaSheet = true
+            }) {
+                Text("View Terms of Service / 查看服務條款")
+                    .font(.caption)
+                    .foregroundColor(themeColor)
+                    .underline()
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(colorScheme == .dark ? Color(.systemGray6) : Color(.systemGray6).opacity(0.5))
+        )
+        .sheet(isPresented: $showEulaSheet) {
+            EulaSheetView()
+        }
     }
     
     // MARK: - Terms Section
@@ -310,6 +370,102 @@ struct CuratorBadge: View {
         Image(systemName: "checkmark.seal.fill")
             .font(.system(size: size))
             .foregroundColor(.orange)
+    }
+}
+
+// MARK: - EULA Sheet View
+struct EulaSheetView: View {
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Terms of Service & EULA")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    
+                    Text("服務條款與最終用戶許可協議")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                    
+                    Divider()
+                    
+                    Group {
+                        Text("1. Content Guidelines / 內容規範")
+                            .font(.headline)
+                        
+                        Text("""
+                        By subscribing to CC Isle Curator, you agree to:
+                        
+                        • NOT post illegal, discriminatory, or abusive content
+                        • NOT share content that violates copyright
+                        • NOT engage in harassment or bullying
+                        • Respect the community guidelines
+                        
+                        訂閱 CC Isle 策展人即表示您同意：
+                        
+                        • 不發布違法、歧視或濫用內容
+                        • 不分享侵犯版權的內容
+                        • 不進行騷擾或霸凌
+                        • 遵守社群規範
+                        """)
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                    }
+                    
+                    Group {
+                        Text("2. Account Termination / 帳號終止")
+                            .font(.headline)
+                        
+                        Text("""
+                        CC Isle reserves the right to:
+                        
+                        • Suspend or terminate accounts that violate these terms
+                        • Remove content without prior notice
+                        • Ban users without refund for severe violations
+                        
+                        CC Isle 保留以下權利：
+                        
+                        • 暫停或終止違反條款的帳號
+                        • 無需事先通知即可刪除內容
+                        • 對於嚴重違規者可不退款直接封禁
+                        """)
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                    }
+                    
+                    Group {
+                        Text("3. Subscription Terms / 訂閱條款")
+                            .font(.headline)
+                        
+                        Text("""
+                        • Subscription auto-renews monthly
+                        • Cancel anytime through Settings
+                        • Refunds subject to App Store policies
+                        
+                        • 訂閱每月自動續訂
+                        • 可隨時透過設定取消
+                        • 退款依照 App Store 政策處理
+                        """)
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer(minLength: 40)
+                }
+                .padding(20)
+            }
+            .navigationTitle("Terms / 條款")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done / 完成") {
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
 }
 

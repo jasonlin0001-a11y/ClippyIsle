@@ -30,6 +30,9 @@ struct FeedPost: Identifiable {
     var views: Int
     var tags: [String]
     var feedType: String
+    // Moderation fields
+    var isHidden: Bool
+    var reportCount: Int
     
     init(from creatorPost: CreatorPost, creatorName: String = "Unknown Creator", creatorAvatarUrl: String? = nil) {
         self.id = creatorPost.id
@@ -48,6 +51,8 @@ struct FeedPost: Identifiable {
         self.views = 0
         self.tags = []
         self.feedType = "text"
+        self.isHidden = false
+        self.reportCount = 0
     }
     
     /// Initialize directly from Firestore document data with robust decoding
@@ -80,6 +85,10 @@ struct FeedPost: Identifiable {
         self.views = data["views"] as? Int ?? 0
         self.tags = data["tags"] as? [String] ?? []
         self.feedType = data["feed_type"] as? String ?? "text"
+        
+        // Moderation fields
+        self.isHidden = data["isHidden"] as? Bool ?? false
+        self.reportCount = data["reportCount"] as? Int ?? 0
     }
 }
 

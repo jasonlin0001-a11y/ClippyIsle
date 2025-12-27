@@ -115,9 +115,11 @@ struct DiscoveryFeedView: View {
         }
     }
     
-    // MARK: - Filtered Posts (excluding blocked users)
+    // MARK: - Filtered Posts (excluding blocked users and hidden posts)
     private var filteredPosts: [FeedPost] {
-        viewModel.discoveryPosts.filter { !safetyService.isUserBlocked(userId: $0.creatorUid) }
+        viewModel.discoveryPosts.filter { 
+            !safetyService.isUserBlocked(userId: $0.creatorUid) && !$0.isHidden
+        }
     }
     
     // MARK: - Feed List
