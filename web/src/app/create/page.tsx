@@ -1,18 +1,20 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { storage, db } from '@/lib/firebase';
-import { Loader2, Image as ImageIcon, ArrowLeft, Plus } from 'lucide-react';
+import { Loader2, Image as ImageIcon, ArrowLeft, Plus, Clipboard } from 'lucide-react';
 
 export default function CreatePostPage() {
   const { user, isAdmin, loading } = useAuth();
   const router = useRouter();
   
   const [linkUrl, setLinkUrl] = useState('');
+  const [linkTitle, setLinkTitle] = useState('');
+  const [linkDescription, setLinkDescription] = useState('');
   const [curatorNote, setCuratorNote] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -20,6 +22,27 @@ export default function CreatePostPage() {
   const [error, setError] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Extract domain from URL
+  const extractDomain = useCallback((url: string): string => {
+    if (!url) return '';
+    try {
+      const urlObj = new URL(url);
+      return urlObj.hostname;
+    } catch {
+      return '';
+    }
+  }, []);
+
+  // Handle image from file
+  const setImageFromFile = useCallback((file: File) => {
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  }, []);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -33,15 +56,32 @@ export default function CreatePostPage() {
     }
   }, [user, isAdmin, loading, router]);
 
+  // Global paste event listener for images
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          const file = items[i].getAsFile();
+          if (file) {
+            setImageFromFile(file);
+            e.preventDefault();
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [setImageFromFile]);
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      setImageFromFile(file);
     }
   };
 
@@ -81,13 +121,16 @@ export default function CreatePostPage() {
       }
 
       // Add document to Firestore
+      const linkDomain = extractDomain(linkUrl);
       await addDoc(collection(db, 'creator_posts'), {
         creator_uid: user.uid,
         curator_note: curatorNote,
         content_url: linkUrl || '',
         link_image: downloadURL,
         created_at: serverTimestamp(),
-        link_title: 'Web Upload',
+        link_title: linkTitle.trim() || 'Shared Link',
+        link_description: linkDescription,
+        link_domain: linkDomain,
         isHidden: false,
         reportCount: 0,
       });
@@ -156,6 +199,41 @@ export default function CreatePostPage() {
                 placeholder="https://example.com"
                 className="w-full rounded-lg bg-[#0a0a0a] py-3 px-4 text-[#fafafa] placeholder:text-[#fafafa]/30 border border-[#2a2a2a] focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 transition-colors"
               />
+              {linkUrl && extractDomain(linkUrl) && (
+                <p className="mt-1 text-xs text-[#fafafa]/40">
+                  Domain: {extractDomain(linkUrl)}
+                </p>
+              )}
+            </div>
+
+            {/* Link Title */}
+            <div>
+              <label htmlFor="linkTitle" className="mb-2 block text-sm font-medium text-[#fafafa]/80">
+                Link Title
+              </label>
+              <input
+                id="linkTitle"
+                type="text"
+                value={linkTitle}
+                onChange={(e) => setLinkTitle(e.target.value)}
+                placeholder="Enter a title (defaults to 'Shared Link')"
+                className="w-full rounded-lg bg-[#0a0a0a] py-3 px-4 text-[#fafafa] placeholder:text-[#fafafa]/30 border border-[#2a2a2a] focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 transition-colors"
+              />
+            </div>
+
+            {/* Link Description (Optional) */}
+            <div>
+              <label htmlFor="linkDescription" className="mb-2 block text-sm font-medium text-[#fafafa]/80">
+                Link Description (Optional)
+              </label>
+              <input
+                id="linkDescription"
+                type="text"
+                value={linkDescription}
+                onChange={(e) => setLinkDescription(e.target.value)}
+                placeholder="Brief description of the link"
+                className="w-full rounded-lg bg-[#0a0a0a] py-3 px-4 text-[#fafafa] placeholder:text-[#fafafa]/30 border border-[#2a2a2a] focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 transition-colors"
+              />
             </div>
 
             {/* Image Upload */}
@@ -187,8 +265,11 @@ export default function CreatePostPage() {
                   onClick={() => fileInputRef.current?.click()}
                   className="w-full rounded-lg bg-[#0a0a0a] py-12 px-4 border-2 border-dashed border-[#2a2a2a] hover:border-teal-500/50 cursor-pointer transition-colors flex flex-col items-center justify-center gap-3"
                 >
-                  <ImageIcon className="h-10 w-10 text-[#fafafa]/30" />
-                  <p className="text-[#fafafa]/60 text-sm">Click to select an image</p>
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="h-8 w-8 text-[#fafafa]/30" />
+                    <Clipboard className="h-6 w-6 text-[#fafafa]/30" />
+                  </div>
+                  <p className="text-[#fafafa]/60 text-sm">Click to select or paste an image (Cmd+V / Ctrl+V)</p>
                 </div>
               )}
               
