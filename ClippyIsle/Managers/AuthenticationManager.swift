@@ -526,6 +526,9 @@ class AuthenticationManager: ObservableObject {
             try auth.signOut()
             print("🔐 User signed out successfully")
             
+            // Reset admin status
+            SafetyService.shared.resetAdminStatus()
+            
             // The auth state listener will handle updating currentUser and isAuthenticated
         } catch {
             print("🔐 Sign out failed: \(error.localizedDescription)")

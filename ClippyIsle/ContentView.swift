@@ -202,6 +202,10 @@ struct ContentView: View {
             Task {
                 await EngagementService.shared.loadSavedPosts()
             }
+            // Check admin status from Firestore
+            Task {
+                await SafetyService.shared.checkAdminStatus()
+            }
             LaunchLogger.log("ContentView.onAppear - END")
         }
         .onChange(of: scenePhase) { oldPhase, newPhase in

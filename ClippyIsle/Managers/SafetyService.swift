@@ -89,18 +89,46 @@ class SafetyService: ObservableObject {
     /// Threshold for auto-hiding posts
     static let AUTO_HIDE_REPORT_THRESHOLD = 5
     
-    /// Admin user IDs (for testing/demo - in production, use Firestore isAdmin field)
-    static let ADMIN_USER_IDS: Set<String> = [
-        // Add your admin user IDs here
-        // "YOUR_ADMIN_UID_HERE"
-    ]
+    /// Admin status - fetched from Firestore admins collection
+    @Published var isAdmin: Bool = false
     
-    // MARK: - Check If Admin
-    /// Returns true if the current user is an admin
+    /// Firestore collection for admin users
+    private let adminsCollection = "admins"
+    
+    // MARK: - Check Admin Status (Firestore)
+    /// Checks if the current user is an admin by looking up the admins collection
+    /// Call this after user authentication
+    func checkAdminStatus() async {
+        guard let currentUid = AuthenticationManager.shared.currentUID else {
+            await MainActor.run { isAdmin = false }
+            return
+        }
+        
+        do {
+            // Check if document exists at admins/{uid}
+            let docRef = db.collection(adminsCollection).document(currentUid)
+            let document = try await docRef.getDocument()
+            
+            let adminStatus = document.exists
+            
+            await MainActor.run {
+                isAdmin = adminStatus
+                print("🔐 [SafetyService] Admin status for \(currentUid): \(adminStatus)")
+            }
+        } catch {
+            print("❌ [SafetyService] Failed to check admin status: \(error.localizedDescription)")
+            await MainActor.run { isAdmin = false }
+        }
+    }
+    
+    /// Returns true if the current user is an admin (uses cached value)
     func isCurrentUserAdmin() -> Bool {
-        guard let currentUid = AuthenticationManager.shared.currentUID else { return false }
-        // Check hardcoded list OR isAdmin field (extend as needed)
-        return Self.ADMIN_USER_IDS.contains(currentUid)
+        return isAdmin
+    }
+    
+    /// Resets admin status (call on sign out)
+    func resetAdminStatus() {
+        isAdmin = false
     }
     
     // MARK: - Report Post
