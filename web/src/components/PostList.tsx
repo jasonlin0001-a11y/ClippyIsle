@@ -5,16 +5,13 @@ import { Post } from '@/types';
 import { deletePost, updatePost } from '@/lib/posts';
 import { 
   Trash2, 
-  ExternalLink, 
-  AlertTriangle, 
-  Eye, 
-  EyeOff, 
   Image as ImageIcon, 
   Edit2, 
   Calendar, 
   Link as LinkIcon,
-  Search, // 2. 引入搜尋圖示
-  X       // 2. 引入清除圖示
+  Search,
+  X,
+  EyeOff
 } from 'lucide-react';
 import EditPostModal from './EditPostModal';
 
@@ -170,32 +167,16 @@ export default function PostList({ posts, onPostDeleted, onPostUpdated }: PostLi
                 {/* 左側圖片 */}
                 <div className="relative shrink-0 w-full sm:w-32 sm:h-32 rounded-lg overflow-hidden bg-[#1f1f1f] border border-[#333]">
                   {showImage ? (
-<<<<<<< HEAD
-<div className="relative h-12 w-12 rounded-lg overflow-hidden bg-[#2a2a2a]">
-  {/* 修改：改用標準 img 標籤並加上 referrerPolicy="no-referrer" 來騙過 Meta 的防盜連 */}
-  <img
-    src={imageUrl}
-    alt=""
-    className="w-full h-full object-cover"
-    referrerPolicy="no-referrer"
-    onError={(e) => {
-      // 圖片真的掛掉時，呼叫原本的 error handler 並顯示預設圖
-      handleImageError(post.id);
-      e.currentTarget.style.display = 'none'; // 或替換成預設圖
-    }}
-  />
-</div>
-=======
                     <img
                       src={getProxyUrl(imageUrl)}
                       alt=""
                       className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-500"
+                      referrerPolicy="no-referrer"
                       onError={(e) => {
                         handleImageError(post.id);
                         e.currentTarget.style.display = 'none';
                       }}
                     />
->>>>>>> copilot/create-firebase-function-scrape-metadata
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <ImageIcon className="h-8 w-8 text-[#fafafa]/20" />

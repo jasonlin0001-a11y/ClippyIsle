@@ -1,13 +1,9 @@
 /**
  * Cloud Functions for ClippyIsle
-<<<<<<< HEAD
+ *
  * 1. Push Notification Engine (onCreatorPostCreated)
  * 2. Manual Link Preview Fetcher (fetchLinkPreview)
  * 3. Auto Metadata Scraper (fetchLinkMetadata) - V3.0 Deep Mining
-=======
- *
- * Push Notification Engine for Creator Subscription System
- * Link Preview Fetcher for Open Graph metadata
  *
  * Triggers:
  * - onCreatorPostCreated: When a new post is added to creator_posts collection,
@@ -17,7 +13,6 @@
  *
  * Callable Functions:
  * - fetchLinkPreview: Fetches Open Graph metadata from a URL
->>>>>>> copilot/create-firebase-function-scrape-metadata
  */
 
 const functions = require("firebase-functions/v1");
@@ -30,16 +25,9 @@ const logger = require("firebase-functions/logger");
 admin.initializeApp();
 const db = admin.firestore();
 
-<<<<<<< HEAD
-// --- 全域設定 ---
+// --- Constants ---
 const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const MAX_DESCRIPTION_LENGTH = 200;
-=======
-// Constants
-const MAX_DESCRIPTION_LENGTH = 200;
-const GOOGLEBOT_USER_AGENT = "Mozilla/5.0 (compatible; Googlebot/2.1; " +
-    "+http://www.google.com/bot.html)";
->>>>>>> copilot/create-firebase-function-scrape-metadata
 
 /**
  * ============================================================
@@ -127,133 +115,9 @@ exports.sendTestNotification = functions.https.onRequest(async (req, res) => {
 });
 
 /**
-<<<<<<< HEAD
  * ============================================================
- * 3. 前端呼叫的預覽 API (維持原樣)
- * ============================================================
-=======
- * Firestore trigger: Fetches link metadata when a new creator post is created
+ * 3. 前端呼叫的預覽 API (fetchLinkPreview)
  *
- * Collection: creator_posts
- * This function automatically populates link metadata for new posts:
- *   - link_title: From og:title or <title> tag
- *   - link_description: From og:description or meta description (max 200 chars)
- *   - link_image: From og:image
- *   - link_domain: Extracted hostname from URL
- *
- * Skips execution if link_title or link_image are already present.
- */
-exports.fetchLinkMetadata = functions.firestore
-    .document("creator_posts/{postId}")
-    .onCreate(async (snapshot, context) => {
-      const postData = snapshot.data();
-      const postId = context.params.postId;
-
-      // Validation: Check if content_url exists
-      const contentUrl = postData.content_url;
-      if (!contentUrl || typeof contentUrl !== "string") {
-        console.log(`Post ${postId}: No content_url found, skipping metadata fetch`);
-        return null;
-      }
-
-      // Skip if metadata is already present (e.g., from Web Portal)
-      if (postData.link_title || postData.link_image) {
-        console.log(`Post ${postId}: Metadata already present, skipping fetch`);
-        return null;
-      }
-
-      // Extract domain from URL
-      let domain = "";
-      let parsedUrl;
-      try {
-        parsedUrl = new URL(contentUrl);
-        domain = parsedUrl.hostname;
-        // Only allow http and https protocols
-        if (!["http:", "https:"].includes(parsedUrl.protocol)) {
-          console.error(`Post ${postId}: Invalid protocol ${parsedUrl.protocol}`);
-          await snapshot.ref.update({link_title: domain || "Link"});
-          return null;
-        }
-      } catch (error) {
-        console.error(`Post ${postId}: Invalid URL - ${contentUrl}`);
-        await snapshot.ref.update({link_title: "Link"});
-        return null;
-      }
-
-      // Fetch HTML and parse Open Graph metadata
-      try {
-        const response = await axios.get(contentUrl, {
-          timeout: 10000, // 10 second timeout
-          headers: {
-            "User-Agent": GOOGLEBOT_USER_AGENT,
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.9",
-          },
-          maxRedirects: 5,
-          validateStatus: (status) => status >= 200 && status < 400,
-        });
-
-        const html = response.data;
-        const $ = cheerio.load(html);
-
-        // Extract Open Graph metadata with fallbacks
-        let linkTitle = $("meta[property=\"og:title\"]").attr("content") ||
-                        $("title").text() ||
-                        null;
-
-        let linkDescription = $("meta[property=\"og:description\"]").attr("content") ||
-                              $("meta[name=\"description\"]").attr("content") ||
-                              null;
-
-        const linkImage = $("meta[property=\"og:image\"]").attr("content") || null;
-
-        // Data cleaning
-        // Truncate description to MAX_DESCRIPTION_LENGTH characters
-        if (linkDescription && linkDescription.length > MAX_DESCRIPTION_LENGTH) {
-          linkDescription = linkDescription.substring(0, MAX_DESCRIPTION_LENGTH - 3) + "...";
-        }
-
-        // Ensure title is not empty (default to domain name)
-        if (!linkTitle || linkTitle.trim().length === 0) {
-          linkTitle = domain;
-        } else {
-          linkTitle = linkTitle.trim();
-        }
-
-        if (linkDescription) {
-          linkDescription = linkDescription.trim();
-        }
-
-        // Update Firestore document with metadata
-        const updateData = {
-          link_title: linkTitle,
-          link_domain: domain,
-        };
-
-        if (linkDescription) {
-          updateData.link_description = linkDescription;
-        }
-
-        if (linkImage) {
-          updateData.link_image = linkImage.trim();
-        }
-
-        await snapshot.ref.update(updateData);
-
-        console.log(`Post ${postId}: Successfully fetched metadata for ${contentUrl}`);
-        return {success: true, postId: postId};
-      } catch (error) {
-        console.error(`Post ${postId}: Error fetching metadata - ${error.message}`);
-        // On error, set link_title to domain name so App stops waiting
-        await snapshot.ref.update({
-          link_title: domain || "Link",
-          link_domain: domain,
-        });
-        return {success: false, error: error.message};
-      }
-    });
-
-/**
  * Callable function: Fetches Open Graph metadata from a URL
  *
  * Input: { url: string }
@@ -262,7 +126,7 @@ exports.fetchLinkMetadata = functions.firestore
  *
  * Usage from iOS:
  *   functions.httpsCallable("fetchLinkPreview").call(["url": urlString])
->>>>>>> copilot/create-firebase-function-scrape-metadata
+ * ============================================================
  */
 exports.fetchLinkPreview = functions.https.onCall(async (data, context) => {
   if (!context.auth) return { success: false, error: "Auth required." };

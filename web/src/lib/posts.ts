@@ -6,35 +6,19 @@ import {
   getDocs, 
   getDoc,
   deleteDoc, 
-  updateDoc, // 新增這個
+  updateDoc,
   doc,
   Timestamp 
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { Post } from '@/types';
 
-// 1. 直接在這裡定義並匯出 Post 介面 (解決 Build Error)
-export interface Post {
-  id: string;
-  creator_uid: string;
-  curator_note?: string; // 筆記
-  content_url?: string;  // 原始連結
-  
-  // 連結預覽資料
-  link_title?: string;
-  link_description?: string;
-  link_image?: string;
-  link_domain?: string;
-  
-  created_at?: any;      // 時間戳記
-}
+// Re-export Post type for convenience
+export type { Post } from '@/types';
 
 /**
-<<<<<<< HEAD
- * 抓取所有文章 (已修正為 Dashboard 專用格式)
-=======
  * 檢查使用者是否為管理員
  * 邏輯：檢查 'admins' 集合中是否有該使用者的 ID
->>>>>>> copilot/create-firebase-function-scrape-metadata
  */
 async function checkIsAdmin(userId: string): Promise<boolean> {
   if (!db || !userId) return false;
@@ -64,9 +48,6 @@ export async function fetchAllPosts(currentUserId?: string): Promise<Post[]> {
 
   try {
     const postsRef = collection(db, 'creator_posts');
-<<<<<<< HEAD
-    const q = query(postsRef, orderBy('created_at', 'desc'));
-=======
     let q;
 
     // 1. 先判斷身分
@@ -86,36 +67,18 @@ export async function fetchAllPosts(currentUserId?: string): Promise<Post[]> {
       );
     }
     
->>>>>>> copilot/create-firebase-function-scrape-metadata
     const snapshot = await getDocs(q);
     
-    // 2. 直接對應資料庫欄位，不隨意改名 (解決 Dashboard 空白問題)
+    // 2. Map Firestore fields to Post interface used by PostList component
     const posts: Post[] = snapshot.docs.map((docSnapshot) => {
       const data = docSnapshot.data();
       
-<<<<<<< HEAD
-      return {
-        id: docSnapshot.id,
-        creator_uid: data.creator_uid || data.authorId || '',
-        
-        // 直接使用資料庫的原名，確保 Dashboard 讀得到
-        curator_note: data.curator_note || data.text || '',
-        content_url: data.content_url || data.url || '',
-        
-        link_title: data.link_title || data.ogTitle || '',
-        link_description: data.link_description || data.ogDescription || '',
-        link_image: data.link_image || data.imageUrl || '', // 關鍵修正
-        link_domain: data.link_domain || '',
-        
-        created_at: data.created_at || Timestamp.now(),
-=======
-      // 做欄位對應
       return {
         id: docSnapshot.id,
         authorId: data.creator_uid || data.authorId || '',
         authorName: data.authorName || 'Unknown',
         
-        text: data.curator_note || data.text || data.content || '',
+        text: data.curator_note || data.text || '',
         
         imageUrl: data.link_image || data.imageUrl,
         
@@ -128,11 +91,10 @@ export async function fetchAllPosts(currentUserId?: string): Promise<Post[]> {
         
         ogTitle: data.link_title || data.ogTitle,
         ogDescription: data.link_description || data.ogDescription,
-        ogImageUrl: data.ogImageUrl, 
+        ogImageUrl: data.ogImageUrl,
         
         reportCount: data.reportCount || 0,
         isHidden: data.isHidden || false,
->>>>>>> copilot/create-firebase-function-scrape-metadata
       };
     });
     
@@ -144,11 +106,7 @@ export async function fetchAllPosts(currentUserId?: string): Promise<Post[]> {
 }
 
 /**
-<<<<<<< HEAD
- * 刪除文章
-=======
  * Delete a post by ID
->>>>>>> copilot/create-firebase-function-scrape-metadata
  */
 export async function deletePost(postId: string): Promise<void> {
   if (!db) {
@@ -175,7 +133,7 @@ export async function updatePost(postId: string, updates: Partial<Post>): Promis
     const postRef = doc(db, 'creator_posts', postId);
     
     // 將前端的欄位名稱轉換回資料庫的欄位名稱
-    const dbUpdates: any = {
+    const dbUpdates: Record<string, unknown> = {
       updated_at: Timestamp.now()
     };
 
