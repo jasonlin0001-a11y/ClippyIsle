@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { width: 320px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 16px; background: #121212; color: white; }
+    h2 { margin-top: 0; font-size: 16px; color: #2dd4bf; }
+    input, textarea { width: 100%; box-sizing: border-box; margin-bottom: 10px; padding: 8px; border-radius: 6px; border: 1px solid #333; background: #1a1a1a; color: white; }
+    button { width: 100%; padding: 8px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; }
+    .btn-primary { background: #0d9488; color: white; }
+    .btn-primary:hover { background: #0f766e; }
+    .btn-secondary { background: #333; color: #ccc; margin-top: 5px; }
+    .hidden { display: none; }
+    #status { margin-top: 10px; font-size: 12px; color: #888; text-align: center; }
+    label { font-size: 12px; color: #888; display: block; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <div id="login-screen">
+    <h2>Login to CC ISLE</h2>
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="password" placeholder="Password" />
+    <button id="btn-login" class="btn-primary">Login</button>
+  </div>
+
+  <div id="main-screen" class="hidden">
+    <h2>Save to App</h2>
+    
+    <label>Title</label>
+    <input type="text" id="page-title" />
+    
+    <label>Memo (Optional)</label>
+    <textarea id="memo" rows="3" placeholder="Add a note..."></textarea>
+    
+    <button id="btn-save" class="btn-primary">Send to App</button>
+    <button id="btn-logout" class="btn-secondary">Logout</button>
+  </div>
+
+  <div id="status"></div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
