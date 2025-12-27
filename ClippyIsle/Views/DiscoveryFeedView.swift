@@ -8,13 +8,19 @@
 import SwiftUI
 import SafariServices
 
+// MARK: - Identifiable URL Wrapper
+/// Wrapper to make URL identifiable for sheet presentation
+struct IdentifiableURL: Identifiable {
+    let id = UUID()
+    let url: URL
+}
+
 // MARK: - Discovery Feed View
 /// Displays all creator posts from the creator_posts collection
 struct DiscoveryFeedView: View {
     @StateObject private var viewModel = FeedViewModel()
     @StateObject private var safetyService = SafetyService.shared
-    @State private var selectedURL: URL?
-    @State private var showSafari = false
+    @State private var selectedURL: IdentifiableURL?
     @State private var showSaveToast = false
     @State private var saveToastMessage = ""
     @State private var showBlockToast = false
@@ -108,10 +114,8 @@ struct DiscoveryFeedView: View {
             // Remove listener when view disappears
             viewModel.removeDiscoveryListener()
         }
-        .sheet(isPresented: $showSafari) {
-            if let url = selectedURL {
-                SafariView(url: url)
-            }
+        .sheet(item: $selectedURL) { identifiableURL in
+            SafariView(url: identifiableURL.url)
         }
     }
     
@@ -132,8 +136,7 @@ struct DiscoveryFeedView: View {
                         themeColor: themeColor,
                         onTap: {
                             if let url = URL(string: post.contentUrl) {
-                                selectedURL = url
-                                showSafari = true
+                                selectedURL = IdentifiableURL(url: url)
                             }
                         },
                         onSaveToggle: { isSaved in
