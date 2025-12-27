@@ -6,21 +6,25 @@ import { useAuth } from '@/context/AuthContext';
 import { fetchAllPosts } from '@/lib/posts';
 import { Post } from '@/types';
 import PostList from '@/components/PostList';
-import { Loader2, LogOut, ShieldAlert, ShieldCheck, RefreshCw, FileText, Plus } from 'lucide-react';
+import { Loader2, LogOut, ShieldCheck, RefreshCw, FileText, Plus, User } from 'lucide-react';
 
 export default function Dashboard() {
-  const { user, isAdmin, loading, signOut } = useAuth();
+  const { user, isAdmin, loading, signOut } = useAuth(); // isAdmin 這裡僅用於 UI 顯示，資料權限由後端 posts.ts 再次確認
   const router = useRouter();
   
   const [posts, setPosts] = useState<Post[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
   const [postsError, setPostsError] = useState<string | null>(null);
 
+  // 修正：loadPosts 依賴 user.uid
   const loadPosts = useCallback(async () => {
+    if (!user) return; // 沒登入不動作
+
     setPostsLoading(true);
     setPostsError(null);
     try {
-      const fetchedPosts = await fetchAllPosts();
+      // ✅ 關鍵修改：將 UID 傳進去，讓後端判斷要回傳什麼資料
+      const fetchedPosts = await fetchAllPosts(user.uid);
       setPosts(fetchedPosts);
     } catch (error) {
       console.error('Failed to fetch posts:', error);
@@ -28,19 +32,21 @@ export default function Dashboard() {
     } finally {
       setPostsLoading(false);
     }
-  }, []);
+  }, [user]);
 
+  // 導向邏輯
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
     }
   }, [user, loading, router]);
 
+  // 修正：只要有使用者登入就載入資料 (不再只限制 isAdmin)
   useEffect(() => {
-    if (isAdmin) {
+    if (user) {
       loadPosts();
     }
-  }, [isAdmin, loadPosts]);
+  }, [user, loadPosts]);
 
   const handleSignOut = async () => {
     try {
@@ -52,7 +58,6 @@ export default function Dashboard() {
   };
 
   const handlePostDeleted = (postId: string) => {
-    // Optimistically remove the post from UI
     setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
   };
 
@@ -80,45 +85,31 @@ export default function Dashboard() {
     );
   }
 
-  // Logged in but not admin - Access Denied
-  if (!isAdmin) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] p-4">
-        <div className="max-w-md text-center">
-          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-red-500/10 border border-red-500/20">
-            <ShieldAlert className="h-10 w-10 text-red-400" />
-          </div>
-          <h1 className="text-2xl font-bold text-[#fafafa] mb-3">Access Denied</h1>
-          <p className="text-[#fafafa]/60 mb-6">
-            You do not have administrator privileges. Only authorized admins can access this portal.
-          </p>
-          <p className="text-sm text-[#fafafa]/40 mb-6">
-            Signed in as: {user.email}
-          </p>
-          <button
-            onClick={handleSignOut}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#1a1a1a] px-6 py-3 text-[#fafafa] hover:bg-[#2a2a2a] border border-[#2a2a2a] transition-colors"
-          >
-            <LogOut className="h-5 w-5" />
-            Sign Out
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // 移除：Access Denied 區塊已刪除，因為現在一般創作者也可以進來了
 
-  // Admin Dashboard
+  // Dashboard UI
   return (
     <div className="min-h-screen bg-[#0a0a0a] p-4 md:p-8">
       <div className="max-w-[800px] mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-teal-500/20 to-blue-600/20 border border-teal-500/30">
-              <ShieldCheck className="h-6 w-6 text-teal-400" />
+            {/* 根據身分顯示不同圖示與標題 */}
+            <div className={`flex h-12 w-12 items-center justify-center rounded-full border ${
+              isAdmin 
+                ? 'bg-gradient-to-br from-teal-500/20 to-blue-600/20 border-teal-500/30' 
+                : 'bg-[#2a2a2a] border-[#3a3a3a]'
+            }`}>
+              {isAdmin ? (
+                <ShieldCheck className="h-6 w-6 text-teal-400" />
+              ) : (
+                <User className="h-6 w-6 text-teal-400" />
+              )}
             </div>
             <div>
-              <h1 className="text-xl font-bold text-[#fafafa]">CC Island Dashboard</h1>
+              <h1 className="text-xl font-bold text-[#fafafa]">
+                {isAdmin ? 'CC Island Admin' : 'Creator Dashboard'}
+              </h1>
               <p className="text-sm text-[#fafafa]/60">{user.email}</p>
             </div>
           </div>
@@ -138,9 +129,11 @@ export default function Dashboard() {
           <div className="flex items-center justify-between px-6 py-4 border-b border-[#2a2a2a]">
             <div className="flex items-center gap-3">
               <FileText className="h-5 w-5 text-teal-400" />
-              <h2 className="text-lg font-semibold text-[#fafafa]">Posts</h2>
+              <h2 className="text-lg font-semibold text-[#fafafa]">
+                {isAdmin ? 'All Posts' : 'My Posts'}
+              </h2>
               <span className="text-sm text-[#fafafa]/60">
-                ({posts.length} total)
+                ({posts.length})
               </span>
             </div>
             <div className="flex items-center gap-2">

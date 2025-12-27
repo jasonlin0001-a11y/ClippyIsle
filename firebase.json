@@ -1,11 +1,13 @@
 {
   "hosting": {
-    "public": "public",
+    "public": "web/out",
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
     ],
+    "cleanUrls": true,
+    "trailingSlash": false,
     "rewrites": [
       {
         "source": "/u/**",
@@ -18,17 +20,6 @@
       {
         "source": "/article/**",
         "destination": "/index.html"
-      }
-    ],
-    "headers": [
-      {
-        "source": "/.well-known/apple-app-site-association",
-        "headers": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ]
       }
     ]
   },
