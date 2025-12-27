@@ -18,6 +18,12 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
+    if (!auth) {
+      setError('Firebase is not configured. Please check environment variables.');
+      setLoading(false);
+      return;
+    }
+
     try {
       await signInWithEmailAndPassword(auth, email, password);
       router.push('/');
