@@ -374,15 +374,18 @@ class AuthenticationManager: ObservableObject {
             }
             
             // Handle specific Firebase Auth errors
-            let errorCode = AuthErrorCode(_bridgedNSError: error)
-            switch errorCode.code {
-            case .emailAlreadyInUse:
-                throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "This email is already in use by another account."])
-            case .weakPassword:
-                throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Password is too weak. Please use at least 6 characters."])
-            case .invalidEmail:
-                throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Invalid email address format."])
-            default:
+            if let errorCode = AuthErrorCode(_bridgedNSError: error) {
+                switch errorCode.code {
+                case .emailAlreadyInUse:
+                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "This email is already in use by another account."])
+                case .weakPassword:
+                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Password is too weak. Please use at least 6 characters."])
+                case .invalidEmail:
+                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Invalid email address format."])
+                default:
+                    throw error
+                }
+            } else {
                 throw error
             }
         }
@@ -447,19 +450,22 @@ class AuthenticationManager: ObservableObject {
             }
             
             // Handle specific Firebase Auth errors
-            let errorCode = AuthErrorCode(_bridgedNSError: error)
-            switch errorCode.code {
-            case .wrongPassword:
-                throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Incorrect password. Please try again."])
-            case .userNotFound:
-                throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "No account found with this email. Please sign up first."])
-            case .invalidEmail:
-                throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Invalid email address format."])
-            case .userDisabled:
-                throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "This account has been disabled."])
-            case .tooManyRequests:
-                throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Too many failed attempts. Please try again later."])
-            default:
+            if let errorCode = AuthErrorCode(_bridgedNSError: error) {
+                switch errorCode.code {
+                case .wrongPassword:
+                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Incorrect password. Please try again."])
+                case .userNotFound:
+                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "No account found with this email. Please sign up first."])
+                case .invalidEmail:
+                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Invalid email address format."])
+                case .userDisabled:
+                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "This account has been disabled."])
+                case .tooManyRequests:
+                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Too many failed attempts. Please try again later."])
+                default:
+                    throw error
+                }
+            } else {
                 throw error
             }
         }
@@ -496,15 +502,18 @@ class AuthenticationManager: ObservableObject {
             }
             
             // Handle specific Firebase Auth errors
-            let errorCode = AuthErrorCode(_bridgedNSError: error)
-            switch errorCode.code {
-            case .emailAlreadyInUse:
-                throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "This email is already in use. Please sign in instead."])
-            case .weakPassword:
-                throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Password is too weak. Please use at least 6 characters."])
-            case .invalidEmail:
-                throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Invalid email address format."])
-            default:
+            if let errorCode = AuthErrorCode(_bridgedNSError: error) {
+                switch errorCode.code {
+                case .emailAlreadyInUse:
+                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "This email is already in use. Please sign in instead."])
+                case .weakPassword:
+                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Password is too weak. Please use at least 6 characters."])
+                case .invalidEmail:
+                    throw NSError(domain: "AuthenticationManager", code: error.code, userInfo: [NSLocalizedDescriptionKey: "Invalid email address format."])
+                default:
+                    throw error
+                }
+            } else {
                 throw error
             }
         }
