@@ -347,17 +347,6 @@ class FeedViewModel: ObservableObject {
                     for doc in documents {
                         let data = doc.data()
                         
-                        // Debug: Print raw document data for first document
-                        if posts.isEmpty {
-                            print("📄 Sample document ID: \(doc.documentID)")
-                            print("📄 Sample document fields: \(data.keys.joined(separator: ", "))")
-                            // Debug: Print link preview field values
-                            print("📄 link_image: \(data["link_image"] ?? "nil")")
-                            print("📄 link_title: \(data["link_title"] ?? "nil")")
-                            print("📄 link_domain: \(data["link_domain"] ?? "nil")")
-                            print("📄 link_description: \(data["link_description"] ?? "nil")")
-                        }
-                        
                         // Create FeedPost with robust decoding
                         let post = FeedPost(
                             id: doc.documentID,
@@ -366,10 +355,20 @@ class FeedViewModel: ObservableObject {
                             creatorAvatarUrl: nil
                         )
                         
-                        // Debug: Print decoded post link preview fields
+                        // Debug: Print ALL fields for first post to diagnose rich preview issue
                         if posts.isEmpty {
-                            print("📄 Decoded post.linkImage: \(post.linkImage ?? "nil")")
-                            print("📄 Decoded post.linkTitle: \(post.linkTitle ?? "nil")")
+                            print("🔍 DISCOVERY FIRST POST DEBUG:")
+                            print("   id: \(post.id)")
+                            print("   title: \(post.title)")
+                            print("   contentUrl: \(post.contentUrl)")
+                            print("   linkTitle: \(post.linkTitle ?? "nil")")
+                            print("   linkImage: \(post.linkImage ?? "nil")")
+                            print("   linkDomain: \(post.linkDomain ?? "nil")")
+                            print("   linkDescription: \(post.linkDescription ?? "nil")")
+                            print("   curatorNote: \(post.curatorNote ?? "nil")")
+                            print("🔍 RAW FIRESTORE DATA:")
+                            print("   link_image raw: \(String(describing: data["link_image"]))")
+                            print("   link_title raw: \(String(describing: data["link_title"]))")
                         }
                         
                         // Validate we have at least a content_url or title

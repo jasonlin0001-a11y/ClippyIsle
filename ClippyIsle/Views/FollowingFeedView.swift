@@ -467,10 +467,20 @@ struct CreatorPostCell: View {
         // Debug: Log link preview data for troubleshooting
         let _ = print("🔍 Post \(post.id): linkImage=\(post.linkImage ?? "nil"), linkTitle=\(post.linkTitle ?? "nil")")
         
+        // Helper to parse URL, handling potential encoding issues
+        let parsedImageUrl: URL? = {
+            guard let linkImage = post.linkImage, !linkImage.isEmpty else { return nil }
+            // Try direct URL first
+            if let url = URL(string: linkImage) { return url }
+            // Try percent-encoding the string
+            if let encoded = linkImage.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+               let url = URL(string: encoded) { return url }
+            return nil
+        }()
+        
         return Button(action: onTap) {
             // Check if we have a rich link image
-            if let linkImage = post.linkImage, !linkImage.isEmpty,
-               let imageUrl = URL(string: linkImage) {
+            if let imageUrl = parsedImageUrl {
                 // Rich Link Card with image
                 VStack(alignment: .leading, spacing: 0) {
                     // Large image (16:9 aspect ratio)
