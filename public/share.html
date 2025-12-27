@@ -3,270 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CC ISLE 剪貼簿分享</title>
+    <title>CC ISLE 分享</title>
     <meta property="og:title" content="CC ISLE 剪貼簿分享">
-    <meta property="og:description" content="點擊此連結匯入剪貼簿資料">
-    <meta property="og:image" content="https://cc-isle.web.app/icon.png">
-    <meta property="og:type" content="website">
-    <meta name="twitter:card" content="summary">
+    <meta property="og:description" content="點擊此連結匯入資料">
+    <meta property="og:image" content="https://cc-isle.web.app/icon.png"> 
     
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    
+    <script>
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const docId = urlParams.get('id');
+            if (docId) {
+                // 嘗試喚醒 App
+                window.location.href = "ccisle://import?id=" + docId;
+                
+                // 顯示狀態
+                document.getElementById("status").innerText = "正在開啟 App...";
+                document.getElementById("btn").href = "ccisle://import?id=" + docId;
+            } else {
+                document.getElementById("status").innerText = "連結無效 (缺少 ID)";
+            }
+        }
+    </script>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            min-height: 100vh;
-            background: #0a0a0a;
-            color: #fafafa;
-            padding: 1rem;
-        }
-        .container {
-            max-width: 400px;
-            width: 100%;
-            text-align: center;
-        }
-        .icon {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 1.5rem;
-            background: rgba(20, 184, 166, 0.1);
-            border: 1px solid rgba(20, 184, 166, 0.2);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-        }
-        h1 { 
-            font-size: 1.5rem; 
-            margin-bottom: 0.5rem;
-            font-weight: 700;
-        }
-        .subtitle {
-            color: rgba(250, 250, 250, 0.6);
-            margin-bottom: 1.5rem;
-        }
-        .card {
-            background: #1a1a1a;
-            border: 1px solid #2a2a2a;
-            border-radius: 12px;
-            padding: 1rem;
-            margin-bottom: 1.5rem;
-            text-align: left;
-        }
-        .card-row {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.5rem 0;
-            font-size: 0.875rem;
-        }
-        .card-row span:first-child {
-            color: rgba(250, 250, 250, 0.4);
-        }
-        .password-badge {
-            background: rgba(234, 179, 8, 0.1);
-            border: 1px solid rgba(234, 179, 8, 0.2);
-            color: #eab308;
-            padding: 0.5rem 0.75rem;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            margin-top: 0.5rem;
-        }
-        .btn {
-            display: block;
-            width: 100%;
-            padding: 0.875rem 1rem;
-            background: #14b8a6;
-            color: white;
-            text-decoration: none;
-            border-radius: 12px;
-            font-weight: 600;
-            transition: background 0.2s;
-        }
-        .btn:hover { background: #0d9488; }
-        .hint {
-            color: rgba(250, 250, 250, 0.4);
-            font-size: 0.875rem;
-            margin-top: 1rem;
-        }
-        .appstore {
-            margin-top: 1.5rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid #2a2a2a;
-        }
-        .appstore p {
-            color: rgba(250, 250, 250, 0.4);
-            font-size: 0.875rem;
-            margin-bottom: 0.5rem;
-        }
-        .appstore a {
-            color: #14b8a6;
-            text-decoration: none;
-            font-size: 0.875rem;
-        }
-        .appstore a:hover { color: #2dd4bf; }
-        .error {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-            padding: 1rem;
-            border-radius: 12px;
-            margin-bottom: 1rem;
-        }
-        .loading {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1rem;
-        }
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid #2a2a2a;
-            border-top-color: #14b8a6;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        #content { display: none; }
-        #loading { display: flex; }
-        #error { display: none; }
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #f0f0f0; }
+        .box { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
+        .btn { display: inline-block; margin-top: 1rem; padding: 10px 20px; background: #007AFF; color: white; text-decoration: none; border-radius: 8px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Loading State -->
-        <div id="loading" class="loading">
-            <div class="spinner"></div>
-            <p class="subtitle">正在載入分享內容...</p>
-        </div>
-        
-        <!-- Error State -->
-        <div id="error">
-            <div class="icon">⚠️</div>
-            <h1>找不到分享</h1>
-            <p id="error-message" class="error"></p>
-        </div>
-        
-        <!-- Content State -->
-        <div id="content">
-            <div class="icon">📦</div>
-            <h1>CC ISLE 剪貼簿分享</h1>
-            <p class="subtitle">正在嘗試開啟 App...</p>
-            
-            <div class="card">
-                <div id="sharer-row" class="card-row" style="display: none;">
-                    <span>👤 分享者：</span>
-                    <span id="sharer-name"></span>
-                </div>
-                <div class="card-row">
-                    <span>📦 項目數量：</span>
-                    <span id="item-count">0 個項目</span>
-                </div>
-                <div id="password-row" class="password-badge" style="display: none;">
-                    🔐 此分享需要密碼才能匯入
-                </div>
-            </div>
-            
-            <a id="open-app-btn" href="#" class="btn">開啟 CC ISLE App</a>
-            <p class="hint">如果沒有自動跳轉，請點擊上方按鈕</p>
-            
-            <div class="appstore">
-                <p>還沒有 CC ISLE?</p>
-                <a href="https://apps.apple.com/app/cc-isle" target="_blank">🔗 在 App Store 下載</a>
-            </div>
-        </div>
+    <div class="box">
+        <h2 id="status">準備中...</h2>
+        <p>如果沒有自動跳轉，請點擊下方按鈕：</p>
+        <a id="btn" href="#" class="btn">開啟 CC ISLE</a>
     </div>
-    
-    <script>
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyAemCbtrbezzHbAecRVRbKlHwg-8xQ9zE0",
-            authDomain: "cc-isle.firebaseapp.com",
-            projectId: "cc-isle",
-            storageBucket: "cc-isle.firebasestorage.app",
-            messagingSenderId: "948415401164",
-            appId: "1:948415401164:web:4b63478a321bd7af4d4669"
-        };
-        
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        
-        // Get share ID from URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const shareId = urlParams.get('id');
-        
-        const loadingEl = document.getElementById('loading');
-        const errorEl = document.getElementById('error');
-        const contentEl = document.getElementById('content');
-        const errorMessageEl = document.getElementById('error-message');
-        const sharerRowEl = document.getElementById('sharer-row');
-        const sharerNameEl = document.getElementById('sharer-name');
-        const itemCountEl = document.getElementById('item-count');
-        const passwordRowEl = document.getElementById('password-row');
-        const openAppBtnEl = document.getElementById('open-app-btn');
-        
-        function showError(message) {
-            loadingEl.style.display = 'none';
-            contentEl.style.display = 'none';
-            errorEl.style.display = 'block';
-            errorMessageEl.textContent = message;
-        }
-        
-        function showContent(data) {
-            loadingEl.style.display = 'none';
-            errorEl.style.display = 'none';
-            contentEl.style.display = 'block';
-            
-            if (data.sharerNickname) {
-                sharerRowEl.style.display = 'flex';
-                sharerNameEl.textContent = data.sharerNickname;
-            }
-            
-            const count = data.itemCount || (data.items ? data.items.length : 0);
-            itemCountEl.textContent = count + ' 個項目';
-            
-            if (data.passwordHash) {
-                passwordRowEl.style.display = 'block';
-            }
-            
-            const deepLink = 'ccisle://import?id=' + shareId;
-            openAppBtnEl.href = deepLink;
-            
-            // Try to open app after a short delay
-            setTimeout(function() {
-                window.location.href = deepLink;
-            }, 500);
-        }
-        
-        if (!shareId) {
-            showError('連結無效：缺少分享 ID');
-        } else {
-            // Fetch share data from Firestore
-            db.collection('sharedClipboards').doc(shareId).get()
-                .then(function(doc) {
-                    if (doc.exists) {
-                        showContent(doc.data());
-                    } else {
-                        showError('找不到此分享連結，可能已過期或被刪除');
-                    }
-                })
-                .catch(function(error) {
-                    console.error('Error fetching share:', error);
-                    showError('載入分享時發生錯誤');
-                });
-        }
-    </script>
 </body>
 </html>
