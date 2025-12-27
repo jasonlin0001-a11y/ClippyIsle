@@ -196,6 +196,10 @@ struct SettingsView: View {
             .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { dismiss() } } }
             .background(SettingsModalPresenterView(isShowingTrash: $isShowingTrash, exportURL: $exportURL, isImporting: $isImporting, isShowingImportAlert: $isShowingImportAlert, importAlertMessage: $importAlertMessage, isShowingClearCacheAlert: $isShowingClearCacheAlert, isShowingCacheClearedAlert: $isShowingCacheClearedAlert, isShowingHardResetAlert: $isShowingHardResetAlert, confirmationText: $confirmationText, isShowingTagExport: $isShowingTagExport, clipboardManager: clipboardManager, dismissAction: { dismiss() }))
             .sheet(isPresented: $showPaywall) { PaywallView() }
+            .sheet(isPresented: $showLinkAccountSheet) {
+                LinkAccountView(themeColor: themeColor)
+                    .environmentObject(authManager)
+            }
             .alert("Link Preview Test Result", isPresented: $isShowingLinkPreviewResult) {
                 Button("OK") {}
             } message: {
@@ -475,10 +479,6 @@ struct SettingsView: View {
                     Spacer()
                 }
             }
-        }
-        .sheet(isPresented: $showLinkAccountSheet) {
-            LinkAccountView(themeColor: themeColor)
-                .environmentObject(authManager)
         }
     }
     
