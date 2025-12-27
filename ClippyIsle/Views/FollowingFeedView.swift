@@ -581,12 +581,13 @@ struct CreatorPostCell: View {
                         .foregroundColor(.primary)
                         .multilineTextAlignment(.leading)
                     
-                    // Description
-                    if let description = metadata.description {
+                    // Description (from metadata or post data)
+                    if let description = metadata.description ?? post.linkDescription, !description.isEmpty {
                         Text(description)
                             .font(.caption)
                             .foregroundColor(.secondary)
-                            .lineLimit(2)
+                            .lineLimit(3)
+                            .truncationMode(.tail)
                     }
                     
                     // Domain
@@ -652,7 +653,7 @@ struct CreatorPostCell: View {
                         }
                     }
                     
-                    // Title and domain below image
+                    // Title, description, and domain below image
                     VStack(alignment: .leading, spacing: 4) {
                         Text(post.linkTitle ?? post.title)
                             .font(.subheadline)
@@ -661,8 +662,18 @@ struct CreatorPostCell: View {
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
                         
+                        // Link Description (if available)
+                        if let desc = post.linkDescription, !desc.isEmpty {
+                            Text(desc)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .lineLimit(3)
+                                .truncationMode(.tail)
+                                .multilineTextAlignment(.leading)
+                        }
+                        
                         Text(post.linkDomain ?? formattedUrl)
-                            .font(.caption)
+                            .font(.caption2)
                             .foregroundColor(.secondary)
                             .lineLimit(1)
                     }
@@ -698,7 +709,7 @@ struct CreatorPostCell: View {
                         .foregroundColor(themeColor)
                 }
                 
-                // Title and URL
+                // Title, description, and URL
                 VStack(alignment: .leading, spacing: 4) {
                     Text(post.linkTitle ?? post.title)
                         .font(.subheadline)
@@ -707,8 +718,18 @@ struct CreatorPostCell: View {
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                     
+                    // Link Description (if available)
+                    if let desc = post.linkDescription, !desc.isEmpty {
+                        Text(desc)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(3)
+                            .truncationMode(.tail)
+                            .multilineTextAlignment(.leading)
+                    }
+                    
                     Text(post.linkDomain ?? formattedUrl)
-                        .font(.caption)
+                        .font(.caption2)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
