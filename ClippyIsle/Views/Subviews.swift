@@ -1073,7 +1073,7 @@ struct TagFilterView: View {
             }
             .sheet(isPresented: $showShareSheet) {
                 if let urlString = firebaseShareURL {
-                    ActivityView(activityItems: [urlString])
+                    ActivityView(activityItems: ["I'm sharing content from CC ISLE with you. Click the link to view:", urlString])
                 }
             }
             .alert("Size Limit Exceeded", isPresented: $showSizeError) {

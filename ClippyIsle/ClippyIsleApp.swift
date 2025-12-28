@@ -112,8 +112,9 @@ struct ClippyIsleApp: App {
     private func handleDeepLink(_ url: URL) {
         var shareId: String?
         
-        // Handle Firebase Hosting URL: https://cc-isle.web.app/share?id=DOC_ID
-        if url.scheme == "https" && url.host == "cc-isle.web.app" && url.path == "/share" {
+        // Handle Firebase Hosting URL: https://cc-isle.web.app/?id=DOC_ID (new format)
+        // Also support legacy format: https://cc-isle.web.app/share?id=DOC_ID
+        if url.scheme == "https" && url.host == "cc-isle.web.app" && (url.path.isEmpty || url.path == "/" || url.path == "/share") {
             if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
                let queryItems = components.queryItems,
                let idItem = queryItems.first(where: { $0.name == "id" }) {

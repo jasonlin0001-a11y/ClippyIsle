@@ -342,7 +342,9 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showPaywall) { PaywallView() }
             .sheet(isPresented: $showFirebaseShareSheet) {
-                if let urlString = firebaseShareURL { ActivityView(activityItems: [urlString]) }
+                if let urlString = firebaseShareURL { 
+                    ActivityView(activityItems: ["I'm sharing content from CC ISLE with you. Click the link to view:", urlString]) 
+                }
             }
             .sheet(isPresented: $pendingShareManager.showImportDialog) {
                 SharedItemsImportView(

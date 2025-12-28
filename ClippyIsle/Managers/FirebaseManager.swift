@@ -199,9 +199,9 @@ class FirebaseManager {
             if let error = error {
                 completion(.failure(error))
             } else {
-                // Generate shareable link with Firebase Hosting URL for Open Graph preview support
+                // Generate shareable link with Firebase Hosting URL for redirect station
                 let shareId = docRef.documentID
-                let shareURL = "https://cc-isle.web.app/share?id=\(shareId)"
+                let shareURL = "https://cc-isle.web.app/?id=\(shareId)"
                 print("✅ shareItems: Created share with ID=\(shareId), hasPassword=\(shareData["passwordHash"] != nil)")
                 completion(.success(shareURL))
             }
