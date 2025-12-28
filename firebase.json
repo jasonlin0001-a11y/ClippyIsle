@@ -1,47 +1,25 @@
 {
   "hosting": {
-    "public": "web/out",
+<<<<<<< Updated upstream
+    "public": "public",
+=======
+    "public": "web/out",  // ⚠️ 關鍵：加上 web/ 前綴
+>>>>>>> Stashed changes
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
     ],
-<<<<<<< HEAD
-    
-    // 🔥 關鍵修正：加入這行！
-    // 這會告訴 Firebase："當有人訪問 /dashboard 時，請自動開啟 dashboard.html"
-    "cleanUrls": true,
-
-    // 👇 這邊保留您原本的設定 (不用動)
-=======
+<<<<<<< Updated upstream
     "cleanUrls": true,
     "trailingSlash": false,
->>>>>>> copilot/create-firebase-function-scrape-metadata
+=======
+>>>>>>> Stashed changes
     "rewrites": [
       {
-        "source": "/u/**",
-        "destination": "/index.html"
-      },
-      {
-        "source": "/s/**",
-        "destination": "/index.html"
-      },
-      {
-        "source": "/article/**",
+        "source": "**",
         "destination": "/index.html"
       }
     ]
-  },
-  "functions": [
-    {
-      "source": "functions",
-      "codebase": "default",
-      "ignore": [
-        "node_modules",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log"
-      ]
-    }
-  ]
+  }
 }

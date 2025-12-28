@@ -1,38 +1,20 @@
-// Data models matching iOS app Firestore schema
-
 import { Timestamp } from 'firebase/firestore';
 
 export interface Post {
   id: string;
-  authorId: string;
-  authorName: string;
-  text: string;
-  imageUrl?: string;
-  timestamp: Timestamp;
-  category?: string;
-  likesCount: number;
-  // Additional fields from iOS model
-  url?: string;
+  creator_uid: string;
+  created_at: Timestamp;
+  // 為了相容各種新舊欄位
+  link_title?: string;
   ogTitle?: string;
+  link_description?: string;
   ogDescription?: string;
+  link_image?: string;
   ogImageUrl?: string;
-  reportCount?: number;
+  content_url?: string;
+  url?: string;
+  authorName?: string;
+  authorId?: string;
   isHidden?: boolean;
-}
-
-export interface User {
-  id: string;
-  displayName: string;
-  email?: string;
-  photoURL?: string;
-  bio?: string;
-  followersCount: number;
-  followingCount: number;
-  createdAt: Timestamp;
-}
-
-export interface Admin {
-  id: string;
-  name?: string;
-  role?: string;
+  [key: string]: any; // 允許額外欄位
 }

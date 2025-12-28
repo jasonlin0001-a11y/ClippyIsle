@@ -1,40 +1,24 @@
 import { 
   collection, 
+  getDocs, 
   query, 
   orderBy, 
-  where,
-  getDocs, 
-  getDoc,
+  where, 
   deleteDoc, 
-  updateDoc, // 新增這個
+<<<<<<< Updated upstream
+  updateDoc,
   doc,
   Timestamp 
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { Post } from '@/types';
 
-// 1. 直接在這裡定義並匯出 Post 介面 (解決 Build Error)
-export interface Post {
-  id: string;
-  creator_uid: string;
-  curator_note?: string; // 筆記
-  content_url?: string;  // 原始連結
-  
-  // 連結預覽資料
-  link_title?: string;
-  link_description?: string;
-  link_image?: string;
-  link_domain?: string;
-  
-  created_at?: any;      // 時間戳記
-}
+// Re-export Post type for convenience
+export type { Post } from '@/types';
 
 /**
-<<<<<<< HEAD
- * 抓取所有文章 (已修正為 Dashboard 專用格式)
-=======
  * 檢查使用者是否為管理員
  * 邏輯：檢查 'admins' 集合中是否有該使用者的 ID
->>>>>>> copilot/create-firebase-function-scrape-metadata
  */
 async function checkIsAdmin(userId: string): Promise<boolean> {
   if (!db || !userId) return false;
@@ -53,69 +37,63 @@ async function checkIsAdmin(userId: string): Promise<boolean> {
  * @param currentUserId 當前登入的使用者 ID
  */
 export async function fetchAllPosts(currentUserId?: string): Promise<Post[]> {
-  if (!db) {
-    throw new Error('Firebase is not initialized');
-  }
+=======
+  doc, 
+  updateDoc, 
+  Timestamp,
+  Firestore // 1. 多引入這個型別
+} from 'firebase/firestore';
+import { db } from './firebase'; 
+import { Post } from '@/types'; 
 
-  // 如果沒有傳入 UID (未登入)，直接回傳空陣列
-  if (!currentUserId) {
+// 1. 獲取文章列表
+export async function fetchAllPosts(userId?: string) {
+  // 防呆：如果資料庫沒連上，直接回傳空陣列
+>>>>>>> Stashed changes
+  if (!db) {
+    console.warn("Firestore not initialized");
     return [];
   }
 
   try {
+<<<<<<< Updated upstream
     const postsRef = collection(db, 'creator_posts');
-<<<<<<< HEAD
-    const q = query(postsRef, orderBy('created_at', 'desc'));
 =======
+    // 2. 修復點：加上 (db as Firestore) 告訴 TS 它是安全的
+    const postsRef = collection(db as Firestore, 'creator_posts');
+>>>>>>> Stashed changes
     let q;
 
-    // 1. 先判斷身分
-    const isAdmin = await checkIsAdmin(currentUserId);
-
-    if (isAdmin) {
-      // 👑 管理員：看全部 (依時間排序)
-      console.log(`User ${currentUserId} is Admin. Fetching ALL posts.`);
-      q = query(postsRef, orderBy('created_at', 'desc'));
-    } else {
-      // 👤 一般創作者：只看自己的 (篩選 creator_uid + 時間排序)
-      console.log(`User ${currentUserId} is Creator. Fetching OWN posts.`);
+    if (userId) {
       q = query(
         postsRef, 
-        where('creator_uid', '==', currentUserId), 
+        where('creator_uid', '==', userId), 
         orderBy('created_at', 'desc')
       );
+    } else {
+      q = query(postsRef, orderBy('created_at', 'desc'));
     }
+<<<<<<< Updated upstream
     
->>>>>>> copilot/create-firebase-function-scrape-metadata
     const snapshot = await getDocs(q);
     
-    // 2. 直接對應資料庫欄位，不隨意改名 (解決 Dashboard 空白問題)
+    // 2. Map Firestore fields to Post interface used by PostList component
     const posts: Post[] = snapshot.docs.map((docSnapshot) => {
+=======
+
+    const snapshot = await getDocs(q);
+
+    const posts = snapshot.docs.map((docSnapshot) => {
+>>>>>>> Stashed changes
       const data = docSnapshot.data();
       
-<<<<<<< HEAD
       return {
         id: docSnapshot.id,
-        creator_uid: data.creator_uid || data.authorId || '',
-        
-        // 直接使用資料庫的原名，確保 Dashboard 讀得到
-        curator_note: data.curator_note || data.text || '',
-        content_url: data.content_url || data.url || '',
-        
-        link_title: data.link_title || data.ogTitle || '',
-        link_description: data.link_description || data.ogDescription || '',
-        link_image: data.link_image || data.imageUrl || '', // 關鍵修正
-        link_domain: data.link_domain || '',
-        
-        created_at: data.created_at || Timestamp.now(),
-=======
-      // 做欄位對應
-      return {
-        id: docSnapshot.id,
+<<<<<<< Updated upstream
         authorId: data.creator_uid || data.authorId || '',
         authorName: data.authorName || 'Unknown',
         
-        text: data.curator_note || data.text || data.content || '',
+        text: data.curator_note || data.text || '',
         
         imageUrl: data.link_image || data.imageUrl,
         
@@ -128,54 +106,68 @@ export async function fetchAllPosts(currentUserId?: string): Promise<Post[]> {
         
         ogTitle: data.link_title || data.ogTitle,
         ogDescription: data.link_description || data.ogDescription,
-        ogImageUrl: data.ogImageUrl, 
+        ogImageUrl: data.ogImageUrl,
         
         reportCount: data.reportCount || 0,
         isHidden: data.isHidden || false,
->>>>>>> copilot/create-firebase-function-scrape-metadata
       };
+=======
+        ...data,
+        ogTitle: data.link_title || data.ogTitle || data.title || '(No Title)',
+        ogDescription: data.link_description || data.ogDescription || data.description || '',
+        imageUrl: data.link_image || data.ogImageUrl || data.imageUrl || '',
+        url: data.content_url || data.url || '',
+        authorName: data.authorName || 'Unknown',
+        authorId: data.creator_uid || data.authorId || '',
+        timestamp: data.created_at || Timestamp.now(),
+        created_at: data.created_at || Timestamp.now(),
+        isHidden: data.isHidden || false,
+      } as any;
+>>>>>>> Stashed changes
     });
-    
+
     return posts;
   } catch (error) {
     console.error('Error fetching posts:', error);
-    throw error;
+    return [];
   }
 }
 
+<<<<<<< Updated upstream
 /**
-<<<<<<< HEAD
- * 刪除文章
-=======
  * Delete a post by ID
->>>>>>> copilot/create-firebase-function-scrape-metadata
  */
 export async function deletePost(postId: string): Promise<void> {
   if (!db) {
     throw new Error('Firebase is not initialized');
   }
 
+=======
+// 2. 刪除文章
+export async function deletePost(postId: string) {
+  if (!db) throw new Error("Firestore not initialized");
+  
+>>>>>>> Stashed changes
   try {
-    const postRef = doc(db, 'creator_posts', postId);
-    await deleteDoc(postRef);
+    // 3. 修復點：加上 (db as Firestore)
+    await deleteDoc(doc(db as Firestore, 'creator_posts', postId));
+    return true;
   } catch (error) {
     console.error('Error deleting post:', error);
     throw error;
   }
 }
 
-/**
- * Update a post
- * 允許修改標題、描述、筆記與隱藏狀態
- */
-export async function updatePost(postId: string, updates: Partial<Post>): Promise<void> {
-  if (!db) throw new Error('Firebase is not initialized');
+// 3. 更新文章
+export async function updatePost(postId: string, updates: Partial<Post>) {
+  if (!db) throw new Error("Firestore not initialized");
 
   try {
+<<<<<<< Updated upstream
     const postRef = doc(db, 'creator_posts', postId);
     
     // 將前端的欄位名稱轉換回資料庫的欄位名稱
-    const dbUpdates: any = {
+    const dbUpdates: Record<string, unknown> = {
       updated_at: Timestamp.now()
     };
 
@@ -186,6 +178,12 @@ export async function updatePost(postId: string, updates: Partial<Post>): Promis
     if (updates.isHidden !== undefined) dbUpdates.isHidden = updates.isHidden;
 
     await updateDoc(postRef, dbUpdates);
+=======
+    // 4. 修復點：加上 (db as Firestore)
+    const postRef = doc(db as Firestore, 'creator_posts', postId);
+    await updateDoc(postRef, updates);
+    return true;
+>>>>>>> Stashed changes
   } catch (error) {
     console.error('Error updating post:', error);
     throw error;

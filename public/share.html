@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CC ISLE 分享</title>
+    <meta property="og:title" content="CC ISLE 剪貼簿分享">
+    <meta property="og:description" content="點擊此連結匯入資料">
+    <meta property="og:image" content="https://cc-isle.web.app/icon.png"> 
+    
+    <script>
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const docId = urlParams.get('id');
+            if (docId) {
+                // 嘗試喚醒 App
+                window.location.href = "ccisle://import?id=" + docId;
+                
+                // 顯示狀態
+                document.getElementById("status").innerText = "正在開啟 App...";
+                document.getElementById("btn").href = "ccisle://import?id=" + docId;
+            } else {
+                document.getElementById("status").innerText = "連結無效 (缺少 ID)";
+            }
+        }
+    </script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #f0f0f0; }
+        .box { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
+        .btn { display: inline-block; margin-top: 1rem; padding: 10px 20px; background: #007AFF; color: white; text-decoration: none; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2 id="status">準備中...</h2>
+        <p>如果沒有自動跳轉，請點擊下方按鈕：</p>
+        <a id="btn" href="#" class="btn">開啟 CC ISLE</a>
+    </div>
+</body>
+</html>
