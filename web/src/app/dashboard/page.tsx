@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+<<<<<<< Updated upstream
 import { useAuth } from '@/context/AuthContext';
 import { fetchAllPosts, Post } from '@/lib/posts';
 import PostList from '@/components/PostList';
@@ -60,17 +61,76 @@ export default function Dashboard() {
   };
 
   // Loading state
+=======
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import PostList from '@/components/PostList';
+import { fetchAllPosts } from '@/lib/posts'; // 引入抓資料的函式
+import { Post } from '@/types';
+
+export default function Dashboard() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  
+  // 新增：由 Dashboard 管理文章狀態
+  const [posts, setPosts] = useState<Post[]>([]);
+
+  // 1. 載入文章的函式
+  const loadPosts = useCallback(async (userId: string) => {
+    try {
+      // 傳入 userId，確保只抓到該作者的文章
+      const data = await fetchAllPosts(userId);
+      setPosts(data);
+    } catch (error) {
+      console.error("Failed to load posts", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
+
+    // 2. 監聽登入狀態 (加上 as any 解決 TypeScript 報錯)
+    const unsubscribe = onAuthStateChanged(auth as any, (currentUser) => {
+      if (!currentUser) {
+        router.push('/');
+      } else {
+        setUser(currentUser);
+        // 登入成功後，立刻去抓該使用者的文章
+        loadPosts(currentUser.uid);
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [router, loadPosts]);
+
+  // 3. 處理刪除後的狀態更新 (傳給子組件用)
+  const handlePostDeleted = (deletedId: string) => {
+    setPosts(currentPosts => currentPosts.filter(p => p.id !== deletedId));
+  };
+
+  // 4. 處理更新後的狀態 (重新整理)
+  const handlePostUpdated = () => {
+    if (user) loadPosts(user.uid);
+  };
+
+>>>>>>> Stashed changes
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a]">
+      <div className="min-h-screen bg-[#121212] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-10 w-10 animate-spin text-teal-500" />
-          <p className="text-[#fafafa]/60">Loading...</p>
+          <div className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="text-teal-400 font-medium">Loading...</div>
         </div>
       </div>
     );
   }
 
+<<<<<<< Updated upstream
   // Not logged in - will redirect
   if (!user) {
     return (
@@ -112,12 +172,32 @@ export default function Dashboard() {
           <button
             onClick={handleSignOut}
             className="inline-flex items-center gap-2 rounded-lg bg-red-500/10 px-4 py-2 text-sm text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors"
+=======
+  if (!user) return null;
+
+  return (
+    <main className="min-h-screen bg-[#121212] p-4 md:p-8">
+      <div className="max-w-6xl mx-auto">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-[#333] pb-6">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
+              My Dashboard
+            </h1>
+            <p className="text-gray-400 text-sm">
+              Welcome back, <span className="text-teal-400">{user.email}</span>
+            </p>
+          </div>
+          
+          <button
+            onClick={() => auth?.signOut()}
+            className="px-5 py-2.5 bg-[#2a2a2a] hover:bg-[#333] text-gray-300 hover:text-white rounded-xl transition-all border border-[#333] hover:border-gray-500 text-sm font-medium"
+>>>>>>> Stashed changes
           >
-            <LogOut className="h-4 w-4" />
             Sign Out
           </button>
-        </div>
+        </header>
 
+<<<<<<< Updated upstream
         {/* Posts Section */}
         <div className="rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] overflow-hidden">
           {/* Section Header */}
@@ -171,7 +251,17 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+=======
+        {/* 5. 關鍵修復：這裡把資料傳給子組件 
+               PostList 不再自己抓資料，而是顯示我們傳給它的 posts
+        */}
+        <PostList 
+          posts={posts} 
+          onPostDeleted={handlePostDeleted} 
+          onPostUpdated={handlePostUpdated}
+        />
+>>>>>>> Stashed changes
       </div>
-    </div>
+    </main>
   );
 }

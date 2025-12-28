@@ -1,38 +1,25 @@
 {
   "hosting": {
+<<<<<<< Updated upstream
     "public": "public",
+=======
+    "public": "web/out",  // ⚠️ 關鍵：加上 web/ 前綴
+>>>>>>> Stashed changes
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
     ],
+<<<<<<< Updated upstream
     "cleanUrls": true,
     "trailingSlash": false,
+=======
+>>>>>>> Stashed changes
     "rewrites": [
       {
-        "source": "/u/**",
-        "destination": "/index.html"
-      },
-      {
-        "source": "/s/**",
-        "destination": "/index.html"
-      },
-      {
-        "source": "/article/**",
+        "source": "**",
         "destination": "/index.html"
       }
     ]
-  },
-  "functions": [
-    {
-      "source": "functions",
-      "codebase": "default",
-      "ignore": [
-        "node_modules",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log"
-      ]
-    }
-  ]
+  }
 }
