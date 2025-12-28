@@ -169,17 +169,21 @@ class FirebaseManager {
         let sharerUID = authManager.currentUID
         let sharerNickname = authManager.userProfile?.nickname
         
-        // Create a new document in sharedClipboards collection
+        // Create a new document in creator_posts collection
+        // creator_uid is REQUIRED by Firestore security rules
+        guard let creatorUID = sharerUID else {
+            completion(.failure(NSError(domain: "FirebaseManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User must be authenticated to share"])))
+            return
+        }
+        
         var shareData: [String: Any] = [
             "items": itemsData,
             "createdAt": Timestamp(date: Date()),
-            "itemCount": items.count
+            "itemCount": items.count,
+            "creator_uid": creatorUID  // Required field for security rules
         ]
         
         // Add sharer info if available
-        if let uid = sharerUID {
-            shareData["sharerUID"] = uid
-        }
         if let nickname = sharerNickname {
             shareData["sharerNickname"] = nickname
         }
@@ -194,14 +198,14 @@ class FirebaseManager {
         }
         
         // Add document and get auto-generated ID
-        let docRef = db.collection("sharedClipboards").document()
+        let docRef = db.collection("creator_posts").document()
         docRef.setData(shareData) { error in
             if let error = error {
                 completion(.failure(error))
             } else {
-                // Generate shareable link with Firebase Hosting URL for Open Graph preview support
+                // Generate shareable link with Firebase Hosting URL for redirect station
                 let shareId = docRef.documentID
-                let shareURL = "https://cc-isle.web.app/share?id=\(shareId)"
+                let shareURL = "https://cc-isle.web.app/?id=\(shareId)"
                 print("✅ shareItems: Created share with ID=\(shareId), hasPassword=\(shareData["passwordHash"] != nil)")
                 completion(.success(shareURL))
             }
@@ -214,7 +218,7 @@ class FirebaseManager {
     ///   - shareId: The share document ID to fetch metadata for
     ///   - completion: Result callback with ShareMetadata or error
     func getShareMetadata(shareId: String, completion: @escaping (Result<ShareMetadata, Error>) -> Void) {
-        db.collection("sharedClipboards").document(shareId).getDocument { snapshot, error in
+        db.collection("creator_posts").document(shareId).getDocument { snapshot, error in
             if let error = error {
                 print("❌ getShareMetadata error: \(error.localizedDescription)")
                 completion(.failure(error))
@@ -246,7 +250,7 @@ class FirebaseManager {
     ///   - password: The password to verify (nil if no password protection)
     ///   - completion: Result callback with array of raw item dictionaries or error
     func downloadItems(byShareId shareId: String, password: String?, completion: @escaping (Result<[[String: Any]], Error>) -> Void) {
-        db.collection("sharedClipboards").document(shareId).getDocument { [weak self] snapshot, error in
+        db.collection("creator_posts").document(shareId).getDocument { [weak self] snapshot, error in
             if let error = error {
                 completion(.failure(error))
                 return
